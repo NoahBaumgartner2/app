@@ -21,7 +21,19 @@
       "Bash(curl -s -c /tmp/test-cookies.txt -o /dev/null -w '%{http_code} POST /register\\\\n' -X POST http://localhost:3000/register -d 'username=testuser&password=test123')",
       "Bash(curl -s -b /tmp/test-cookies.txt -c /tmp/test-cookies.txt -o /dev/null -w '%{http_code} POST /login\\\\n' -X POST http://localhost:3000/register -d 'username=admin&password=geheim')",
       "Bash(pkill -f \"node.*server\")",
-      "Bash(curl *)"
+      "Bash(curl *)",
+      "Bash(fuser -k 3000/tcp)",
+      "Bash(dpkg -l)",
+      "Bash(sudo apt-get install -y texlive-latex-extra texlive-lang-german texlive-fonts-recommended lmodern)",
+      "Bash(tar -xz -f /tmp/tectonic.tar.gz -C /tmp)",
+      "Bash(mkdir -p ~/.local/bin)",
+      "Bash(mv /tmp/tectonic ~/.local/bin/)",
+      "Bash(~/.local/bin/tectonic --version)",
+      "Bash(pkill -f \"node server.js\")",
+      "Bash(pkill -f \"nodemon\")",
+      "Bash(lsof *)",
+      "Bash(kill 227936)",
+      "Bash(kill 228315)"
     ]
   }
 }

@@ -1475,5 +1475,27 @@ if (hash && hash.includes('access_token=')) {
   setTimeout(() => log('Google Drive erfolgreich verbunden.', 'success'), 100);
 }
 </script>
+<script>
+// ── Secret auto-load / auto-save ───────────────────────────────────────────
+(async () => {
+  const s = await fetch('/api/secrets').then(r => r.ok ? r.json() : {}).catch(() => ({}));
+  if (s.google_client_id) {
+    document.getElementById('clientId').value = s.google_client_id;
+    localStorage.setItem('gdrive_client_id', s.google_client_id);
+  }
+})();
+
+let _secretTimer;
+document.getElementById('clientId').addEventListener('input', function() {
+  clearTimeout(_secretTimer);
+  _secretTimer = setTimeout(() => {
+    fetch('/api/secrets', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key: 'google_client_id', value: this.value.trim() })
+    });
+  }, 700);
+});
+</script>
 </body>
 </html>

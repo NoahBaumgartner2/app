@@ -521,10 +521,10 @@
           </div>
           <span class="copy-success" id="copy-success">✓ In Zwischenablage kopiert!</span>
 
-          <div id="no-pdf-hint" class="alert alert-info" style="display:none">
-            💡 <strong>pdflatex nicht verfügbar:</strong> Kopiere den LaTeX-Code und kompiliere ihn auf
-            <a href="https://overleaf.com" target="_blank" style="color:var(--sky)">Overleaf.com</a> (kostenlos).
-          </div>
+          <button class="btn btn-outline btn-sm" id="compile-server-btn" onclick="compileAndDownloadPdf()" style="display:none">
+            🖨️ PDF auf Server kompilieren
+          </button>
+          <div id="compile-status" class="alert alert-info" style="display:none"></div>
 
           <div class="latex-preview-wrap">
             <div class="latex-toolbar">
@@ -645,10 +645,10 @@
       const pdfBtn = document.getElementById('download-pdf-btn');
       if (currentPdfBase64) {
         pdfBtn.style.display = 'inline-flex';
-        document.getElementById('no-pdf-hint').style.display = 'none';
+        document.getElementById('compile-server-btn').style.display = 'none';
       } else {
         pdfBtn.style.display = 'none';
-        document.getElementById('no-pdf-hint').style.display = 'block';
+        document.getElementById('compile-server-btn').style.display = 'inline-flex';
       }
 
       // Stats
@@ -719,6 +719,44 @@
     document.body.removeChild(form);
   }
 
+  // ── PDF auf Server kompilieren ────────────────────────────────────────────
+  async function compileAndDownloadPdf() {
+    if (!currentLatex) return;
+    const btn    = document.getElementById('compile-server-btn');
+    const status = document.getElementById('compile-status');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner" style="border-color:rgba(0,0,0,.2);border-top-color:#333"></span> Wird kompiliert…';
+    status.style.display = 'none';
+    try {
+      const res = await fetch('/apps/latex-study/api/compile-pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ latex: currentLatex, fileName: currentFileName })
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || `HTTP ${res.status}`);
+      }
+      const blob = await res.blob();
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href = url; a.download = `${currentFileName}.pdf`;
+      document.body.appendChild(a); a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      // Swap to direct download button for next time
+      currentPdfBase64 = '';
+      document.getElementById('download-pdf-btn').style.display = 'none';
+      btn.style.display = 'inline-flex';
+    } catch (err) {
+      status.textContent = '❌ ' + err.message;
+      status.style.display = 'block';
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '🖨️ PDF auf Server kompilieren';
+    }
+  }
+
   // ── Verlauf ────────────────────────────────────────────────────────────────
   function addToHistory(name, subject, chars) {
     const item = { name, subject, chars, latex: currentLatex, pdf: currentPdfBase64 };
@@ -752,8 +790,8 @@
     document.getElementById('latex-file-label').textContent = `${item.name}.tex`;
     document.getElementById('result-panel').style.display = 'block';
     const pdfBtn = document.getElementById('download-pdf-btn');
-    if (item.pdf) { pdfBtn.style.display = 'inline-flex'; document.getElementById('no-pdf-hint').style.display = 'none'; }
-    else          { pdfBtn.style.display = 'none';         document.getElementById('no-pdf-hint').style.display = 'block'; }
+    if (item.pdf) { pdfBtn.style.display = 'inline-flex'; document.getElementById('compile-server-btn').style.display = 'none'; }
+    else          { pdfBtn.style.display = 'none';         document.getElementById('compile-server-btn').style.display = 'inline-flex'; }
     document.getElementById('result-panel').scrollIntoView({ behavior: 'smooth' });
   }
 
@@ -783,6 +821,27 @@
     document.getElementById('progress-wrap').style.display = 'none';
   }
   function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+</script>
+<script>
+// ── Secret auto-load / auto-save ───────────────────────────────────────────
+(async () => {
+  const s = await fetch('/api/secrets').then(r => r.ok ? r.json() : {}).catch(() => ({}));
+  if (s.gemini_api_key) {
+    document.getElementById('api-key').value = s.gemini_api_key;
+  }
+})();
+
+let _secretTimer;
+document.getElementById('api-key').addEventListener('input', function() {
+  clearTimeout(_secretTimer);
+  _secretTimer = setTimeout(() => {
+    fetch('/api/secrets', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key: 'gemini_api_key', value: this.value.trim() })
+    });
+  }, 700);
+});
 </script>
 </body>
 </html>

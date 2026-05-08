@@ -11,18 +11,29 @@ const SQLiteStore = require('connect-sqlite3')(session);
 const sqlite3    = require('sqlite3').verbose();
 const bcrypt     = require('bcrypt');
 
-const app  = express();
-const PORT = process.env.PORT || 3000;
+const app      = express();
+const PORT     = process.env.PORT || 3000;
+const TECTONIC = path.join(os.homedir(), '.local', 'bin', 'tectonic');
 
 // ══════════════════════════════════════════════════════════════════════════════
 //  DATENBANK
 // ══════════════════════════════════════════════════════════════════════════════
 const db = new sqlite3.Database(path.join(__dirname, 'users.db'));
-db.run(`CREATE TABLE IF NOT EXISTS users (
-  id       INTEGER PRIMARY KEY AUTOINCREMENT,
-  username TEXT    UNIQUE NOT NULL,
-  password TEXT    NOT NULL
-)`);
+db.serialize(() => {
+  db.run(`CREATE TABLE IF NOT EXISTS users (
+    id       INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT    UNIQUE NOT NULL,
+    password TEXT    NOT NULL
+  )`);
+  db.run(`CREATE TABLE IF NOT EXISTS secrets (
+    id       INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id  INTEGER NOT NULL,
+    key_name TEXT    NOT NULL,
+    value    TEXT    NOT NULL DEFAULT '',
+    UNIQUE(user_id, key_name),
+    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+  )`);
+});
 
 // ══════════════════════════════════════════════════════════════════════════════
 //  MIDDLEWARE
@@ -100,6 +111,33 @@ app.get('/api/me', checkAuth, (req, res) => {
   res.json({ username: req.session.username });
 });
 
+// ── Secrets ────────────────────────────────────────────────────────────────
+app.get('/api/secrets', checkAuth, (req, res) => {
+  db.all(
+    'SELECT key_name, value FROM secrets WHERE user_id = ?',
+    [req.session.userId],
+    (err, rows) => {
+      if (err) return res.status(500).json({ error: err.message });
+      const result = {};
+      rows.forEach(r => { result[r.key_name] = r.value; });
+      res.json(result);
+    }
+  );
+});
+
+app.post('/api/secrets', checkAuth, (req, res) => {
+  const { key, value } = req.body;
+  if (!key) return res.status(400).json({ error: 'key fehlt.' });
+  db.run(
+    'INSERT OR REPLACE INTO secrets (user_id, key_name, value) VALUES (?, ?, ?)',
+    [req.session.userId, key, value ?? ''],
+    (err) => {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json({ ok: true });
+    }
+  );
+});
+
 // ══════════════════════════════════════════════════════════════════════════════
 //  DASHBOARD  (geschützt)
 // ══════════════════════════════════════════════════════════════════════════════
@@ -123,23 +161,23 @@ app.use('/apps/podcast-compressor', checkAuth, (req, res, next) => {
 // ══════════════════════════════════════════════════════════════════════════════
 app.use('/apps/latex-converter', checkAuth, express.static(path.join(__dirname, 'apps/latexConverter')));
 
-function checkPdflatex() {
-  return new Promise(resolve => {
-    execFile('pdflatex', ['--version'], (err) => resolve(!err));
-  });
+async function findLatexCompiler() {
+  const hasPdflatex = await new Promise(r => execFile('pdflatex', ['--version'], err => r(!err)));
+  if (hasPdflatex) return 'pdflatex';
+  const hasTectonic = await new Promise(r => execFile(TECTONIC, ['--version'], err => r(!err)));
+  if (hasTectonic) return TECTONIC;
+  return null;
 }
 
-function runPdflatex(texFile, cwd) {
+function runLatexCompiler(compiler, texFile, cwd) {
+  const args = compiler === TECTONIC
+    ? ['--chatter', 'minimal', texFile]
+    : ['-interaction=nonstopmode', '-halt-on-error', '-output-directory', cwd, texFile];
   return new Promise((resolve, reject) => {
-    execFile(
-      'pdflatex',
-      ['-interaction=nonstopmode', '-halt-on-error', '-output-directory', cwd, texFile],
-      { cwd, timeout: 30_000 },
-      (err, stdout, stderr) => {
-        if (err) reject(new Error('pdflatex Fehler: ' + (stderr || err.message)));
-        else resolve(stdout);
-      }
-    );
+    execFile(compiler, args, { cwd, timeout: 120_000 }, (err, stdout, stderr) => {
+      if (err) reject(new Error(path.basename(compiler) + ' Fehler: ' + (stderr || stdout || err.message)));
+      else resolve(stdout);
+    });
   });
 }
 
@@ -148,9 +186,9 @@ app.post('/apps/latex-converter/compile', checkAuth, async (req, res) => {
   if (!latex || typeof latex !== 'string')
     return res.status(400).json({ error: 'Kein LaTeX-Code übermittelt.' });
 
-  const hasPdflatex = await checkPdflatex();
-  if (!hasPdflatex)
-    return res.status(500).json({ error: 'pdflatex nicht gefunden. Bitte TeX Live installieren.' });
+  const compiler = await findLatexCompiler();
+  if (!compiler)
+    return res.status(500).json({ error: 'Kein LaTeX-Compiler gefunden (pdflatex oder tectonic).' });
 
   const tmpDir  = fs.mkdtempSync(path.join(os.tmpdir(), 'latex-'));
   const texFile = path.join(tmpDir, 'main.tex');
@@ -159,8 +197,8 @@ app.post('/apps/latex-converter/compile', checkAuth, async (req, res) => {
 
   try {
     fs.writeFileSync(texFile, latex, 'utf8');
-    await runPdflatex(texFile, tmpDir);
-    await runPdflatex(texFile, tmpDir);
+    await runLatexCompiler(compiler, texFile, tmpDir);
+    if (compiler !== TECTONIC) await runLatexCompiler(compiler, texFile, tmpDir);
 
     if (!fs.existsSync(pdfFile)) {
       const log = fs.existsSync(logFile) ? fs.readFileSync(logFile, 'utf8').slice(-2000) : '';
@@ -286,7 +324,7 @@ ${summary}
 
 async function summarizeWithGemini(apiKey, pdfBuffer, fileName, subjectHint) {
   const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+  const model = genAI.getGenerativeModel({ model: 'gemini-3-flash-preview' });
 
   const pdfBase64 = pdfBuffer.toString('base64');
   const prompt = `Du bist ein Experte für BWL-Fächer (Wirtschaftsinformatik, Marketing, Controlling, Rechnungswesen, Management, etc.).
@@ -316,27 +354,26 @@ Beginne direkt mit dem ersten \\section{} ohne Präambel.`;
   return result.response.text();
 }
 
-function compileLaTeX(latexContent) {
-  return new Promise((resolve, reject) => {
-    const tmpDir  = tmp.dirSync({ unsafeCleanup: true });
-    const texFile = path.join(tmpDir.name, 'summary.tex');
-    const pdfFile = path.join(tmpDir.name, 'summary.pdf');
+async function compileLaTeX(latexContent) {
+  const compiler = await findLatexCompiler();
+  if (!compiler) throw new Error('Kein LaTeX-Compiler gefunden (pdflatex oder tectonic).');
 
-    fs.writeFileSync(texFile, latexContent, 'utf8');
+  const tmpDir  = tmp.dirSync({ unsafeCleanup: true });
+  const texFile = path.join(tmpDir.name, 'summary.tex');
+  const pdfFile = path.join(tmpDir.name, 'summary.pdf');
 
-    const cmd = `cd "${tmpDir.name}" && pdflatex -interaction=nonstopmode -output-directory="${tmpDir.name}" "${texFile}" 2>&1 && pdflatex -interaction=nonstopmode -output-directory="${tmpDir.name}" "${texFile}" 2>&1`;
-
-    exec(cmd, { timeout: 60000 }, (error, stdout) => {
-      if (fs.existsSync(pdfFile)) {
-        const pdfBuffer = fs.readFileSync(pdfFile);
-        tmpDir.removeCallback();
-        resolve(pdfBuffer);
-      } else {
-        tmpDir.removeCallback();
-        reject(new Error(`LaTeX-Kompilierung fehlgeschlagen.\n\nLog:\n${stdout}`));
-      }
-    });
-  });
+  fs.writeFileSync(texFile, latexContent, 'utf8');
+  try {
+    await runLatexCompiler(compiler, texFile, tmpDir.name);
+    if (compiler !== TECTONIC) await runLatexCompiler(compiler, texFile, tmpDir.name);
+    if (!fs.existsSync(pdfFile)) throw new Error('PDF wurde nicht erstellt.');
+    const pdfBuffer = fs.readFileSync(pdfFile);
+    tmpDir.removeCallback();
+    return pdfBuffer;
+  } catch (err) {
+    tmpDir.removeCallback();
+    throw err;
+  }
 }
 
 app.post('/apps/latex-study/api/summarize', checkAuth, upload.single('pdf'), async (req, res) => {
@@ -387,6 +424,21 @@ app.post('/apps/latex-study/api/latex-only', checkAuth, upload.single('pdf'), as
   }
 });
 
+app.post('/apps/latex-study/api/compile-pdf', checkAuth, async (req, res) => {
+  try {
+    const { latex, fileName } = req.body;
+    if (!latex) return res.status(400).json({ error: 'Kein LaTeX-Code angegeben.' });
+
+    const pdfBuffer = await compileLaTeX(latex);
+    const safeName  = (fileName || 'zusammenfassung').replace(/[^a-z0-9_\-]/gi, '_') + '.pdf';
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${safeName}"`);
+    res.send(pdfBuffer);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 
 // ══════════════════════════════════════════════════════════════════════════════
 //  NEUE APP HINZUFÜGEN
@@ -401,13 +453,16 @@ app.post('/apps/latex-study/api/latex-only', checkAuth, upload.single('pdf'), as
 
 // ── Start ──────────────────────────────────────────────────────────────────
 app.listen(PORT, async () => {
-  const hasPdflatex = await checkPdflatex();
+  const compiler = await findLatexCompiler();
+  const compilerLabel = compiler
+    ? `✓ ${path.basename(compiler)}`
+    : '✗ kein Compiler gefunden';
   console.log(`
 ╔═══════════════════════════════════════════════╗
 ║   Dashboard                                   ║
 ║   http://localhost:${PORT}                       ║
 ║                                               ║
-║   pdflatex:  ${hasPdflatex ? '✓ gefunden' : '✗ nicht gefunden'}                  ║
+║   LaTeX:  ${compilerLabel.padEnd(35)}║
 ╚═══════════════════════════════════════════════╝
   `);
 });

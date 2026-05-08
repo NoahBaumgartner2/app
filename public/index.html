@@ -278,6 +278,95 @@
       header, main { padding-left: 1.25rem; padding-right: 1.25rem; }
       .status-bar  { padding-left: 1.25rem; padding-right: 1.25rem; }
     }
+
+    /* ── Secrets ── */
+    .secrets-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 1.5rem;
+      box-shadow: var(--shadow);
+      display: flex;
+      flex-direction: column;
+      gap: 1.1rem;
+    }
+
+    .secret-row {
+      display: grid;
+      grid-template-columns: 180px 1fr auto auto;
+      align-items: center;
+      gap: 12px;
+    }
+
+    @media (max-width: 700px) {
+      .secret-row { grid-template-columns: 1fr auto auto; }
+      .secret-meta { display: none; }
+    }
+
+    .secret-label {
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    .secret-meta {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .secret-input-wrap {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .secret-input-wrap input {
+      width: 100%;
+      padding: 7px 36px 7px 11px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 13px;
+      font-family: 'JetBrains Mono', monospace;
+      background: var(--bg);
+      color: var(--text);
+      outline: none;
+      transition: border-color .15s;
+    }
+
+    .secret-input-wrap input:focus { border-color: var(--accent); }
+
+    .secret-eye {
+      position: absolute;
+      right: 9px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--muted);
+      font-size: 14px;
+      padding: 0;
+      line-height: 1;
+    }
+
+    .secret-eye:hover { color: var(--text); }
+
+    .saved-indicator {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: #3ecf4a;
+      opacity: 0;
+      transition: opacity .3s;
+      white-space: nowrap;
+      min-width: 60px;
+      text-align: right;
+    }
+
+    .saved-indicator.visible { opacity: 1; }
+
+    .secrets-divider {
+      height: 1px;
+      background: var(--border);
+      margin: 0 -1.5rem;
+    }
   </style>
 </head>
 <body>
@@ -302,6 +391,35 @@
 <main>
   <div class="section-label">Anwendungen</div>
   <div class="apps-grid" id="appsGrid"></div>
+
+  <div class="section-label" style="margin-top:2.5rem">API-Schlüssel</div>
+  <div class="secrets-card">
+
+    <!-- Gemini API Key -->
+    <div class="secret-row">
+      <div class="secret-label">Gemini API Key</div>
+      <div class="secret-meta">LaTeX Konverter &amp; StudyLaTeX</div>
+      <div class="secret-input-wrap">
+        <input type="password" id="s-gemini" placeholder="AIza…" autocomplete="off" spellcheck="false" />
+        <button class="secret-eye" onclick="toggleEye('s-gemini', this)" title="Anzeigen">👁</button>
+      </div>
+      <span class="saved-indicator" id="ind-gemini">✓ gespeichert</span>
+    </div>
+
+    <div class="secrets-divider"></div>
+
+    <!-- Google Drive Client-ID -->
+    <div class="secret-row">
+      <div class="secret-label">Google Client-ID</div>
+      <div class="secret-meta">Vorlesungs-Kompressor</div>
+      <div class="secret-input-wrap">
+        <input type="text" id="s-google" placeholder="xxxxx.apps.googleusercontent.com" autocomplete="off" spellcheck="false" />
+        <button class="secret-eye" onclick="toggleEye('s-google', this)" title="Verbergen">🔤</button>
+      </div>
+      <span class="saved-indicator" id="ind-google">✓ gespeichert</span>
+    </div>
+
+  </div>
 </main>
 
 <div class="status-bar">
@@ -400,6 +518,57 @@ function renderApps() {
 }
 
 renderApps();
+
+// ── Secrets ────────────────────────────────────────────────────────────────
+const SECRET_MAP = {
+  'gemini_api_key': 's-gemini',
+  'google_client_id': 's-google',
+};
+const IND_MAP = {
+  's-gemini': 'ind-gemini',
+  's-google':  'ind-google',
+};
+
+async function loadSecrets() {
+  const secrets = await fetch('/api/secrets').then(r => r.ok ? r.json() : {}).catch(() => ({}));
+  for (const [key, elId] of Object.entries(SECRET_MAP)) {
+    if (secrets[key] !== undefined) {
+      document.getElementById(elId).value = secrets[key];
+    }
+  }
+}
+
+function saveSecret(key, value, indicatorId) {
+  fetch('/api/secrets', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ key, value })
+  }).then(() => {
+    const ind = document.getElementById(indicatorId);
+    ind.classList.add('visible');
+    setTimeout(() => ind.classList.remove('visible'), 2000);
+  });
+}
+
+function toggleEye(inputId, btn) {
+  const input = document.getElementById(inputId);
+  input.type = input.type === 'password' ? 'text' : 'password';
+  btn.textContent = input.type === 'password' ? '👁' : '🙈';
+}
+
+// Debounced auto-save für jedes Secret-Feld
+const saveTimers = {};
+for (const [key, elId] of Object.entries(SECRET_MAP)) {
+  document.getElementById(elId).addEventListener('input', function() {
+    clearTimeout(saveTimers[elId]);
+    saveTimers[elId] = setTimeout(
+      () => saveSecret(key, this.value.trim(), IND_MAP[elId]),
+      700
+    );
+  });
+}
+
+loadSecrets();
 </script>
 
 </body>

@@ -646,5 +646,27 @@ ${content}
     }
   }
 </script>
+<script>
+// ── Secret auto-load / auto-save ───────────────────────────────────────────
+(async () => {
+  const s = await fetch('/api/secrets').then(r => r.ok ? r.json() : {}).catch(() => ({}));
+  if (s.gemini_api_key) {
+    document.getElementById('apiKey').value = s.gemini_api_key;
+    updateApiStatus();
+  }
+})();
+
+let _secretTimer;
+document.getElementById('apiKey').addEventListener('input', function() {
+  clearTimeout(_secretTimer);
+  _secretTimer = setTimeout(() => {
+    fetch('/api/secrets', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key: 'gemini_api_key', value: this.value.trim() })
+    });
+  }, 700);
+});
+</script>
 </body>
 </html>
