@@ -1,0 +1,12 @@
+{
+  "name": "notizen-latex-pdf",
+  "version": "1.0.0",
+  "description": "Handnotizen mit Gemini Vision in LaTeX umwandeln und als PDF herunterladen",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  }
+}

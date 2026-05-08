@@ -1,0 +1,1479 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vorlesungs-Kompressor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f0f0f;
+    --bg2: #171717;
+    --bg3: #1f1f1f;
+    --bg4: #2a2a2a;
+    --border: #2e2e2e;
+    --border2: #3a3a3a;
+    --text: #f0f0f0;
+    --text2: #999;
+    --text3: #555;
+    --accent: #4ade80;
+    --accent-dim: #166534;
+    --accent-bg: #0d2818;
+    --blue: #60a5fa;
+    --blue-bg: #0c1f3a;
+    --amber: #fbbf24;
+    --amber-bg: #2a1d00;
+    --red: #f87171;
+    --red-bg: #2a0d0d;
+    --mono: 'DM Mono', monospace;
+    --sans: 'Instrument Sans', sans-serif;
+    --radius: 10px;
+    --radius-sm: 6px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Header */
+  header {
+    border-bottom: 1px solid var(--border);
+    padding: 0 2rem;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    background: var(--bg);
+    z-index: 100;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+
+  .logo-icon {
+    width: 28px;
+    height: 28px;
+    background: var(--accent);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .logo-icon svg { width: 16px; height: 16px; }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .badge {
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 3px 8px;
+    border-radius: 20px;
+    background: var(--bg3);
+    color: var(--text2);
+    border: 1px solid var(--border);
+  }
+
+  /* Main layout */
+  main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 360px;
+    gap: 0;
+    max-width: 1200px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 2rem;
+    gap: 2rem;
+  }
+
+  /* Left panel */
+  .panel-left { display: flex; flex-direction: column; gap: 1.5rem; }
+
+  /* Right panel */
+  .panel-right { display: flex; flex-direction: column; gap: 1rem; }
+
+  /* Section */
+  .section {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+
+  .section-header {
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .section-num {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--bg4);
+    border: 1px solid var(--border2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text2);
+    flex-shrink: 0;
+  }
+
+  .section-num.active {
+    background: var(--accent-bg);
+    border-color: var(--accent-dim);
+    color: var(--accent);
+  }
+
+  .section-num.done {
+    background: var(--accent-bg);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .section-title {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text);
+  }
+
+  .section-body { padding: 18px; }
+
+  /* Drop zone */
+  .drop-zone {
+    border: 1.5px dashed var(--border2);
+    border-radius: var(--radius);
+    padding: 3rem 2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    position: relative;
+  }
+
+  .drop-zone:hover, .drop-zone.drag-over {
+    border-color: var(--accent-dim);
+    background: var(--accent-bg);
+  }
+
+  .drop-zone input[type="file"] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+  }
+
+  .drop-icon {
+    width: 48px;
+    height: 48px;
+    background: var(--bg3);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 12px;
+    border: 1px solid var(--border);
+  }
+
+  .drop-icon svg { width: 22px; height: 22px; color: var(--text2); }
+
+  .drop-title {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+
+  .drop-sub {
+    font-size: 12px;
+    color: var(--text3);
+    font-family: var(--mono);
+  }
+
+  /* File list */
+  .file-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 280px;
+    overflow-y: auto;
+  }
+
+  .file-list::-webkit-scrollbar { width: 4px; }
+  .file-list::-webkit-scrollbar-track { background: transparent; }
+  .file-list::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+  .file-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    background: var(--bg3);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    transition: border-color 0.15s;
+  }
+
+  .file-item.compressing { border-color: var(--blue); }
+  .file-item.done { border-color: var(--accent-dim); }
+  .file-item.error { border-color: var(--red); }
+
+  .file-thumb {
+    width: 32px;
+    height: 32px;
+    background: var(--bg4);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    border: 1px solid var(--border);
+  }
+
+  .file-thumb svg { width: 16px; height: 16px; color: var(--text3); }
+
+  .file-info { flex: 1; min-width: 0; }
+
+  .file-name {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 2px;
+  }
+
+  .file-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .file-size {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text3);
+  }
+
+  .file-tag {
+    font-family: var(--mono);
+    font-size: 10px;
+    padding: 1px 6px;
+    border-radius: 3px;
+  }
+
+  .file-tag.big { background: var(--amber-bg); color: var(--amber); }
+  .file-tag.ok { background: var(--accent-bg); color: var(--accent); }
+
+  .file-progress {
+    height: 2px;
+    background: var(--bg4);
+    border-radius: 1px;
+    margin-top: 5px;
+    overflow: hidden;
+  }
+
+  .file-progress-fill {
+    height: 100%;
+    background: var(--blue);
+    border-radius: 1px;
+    transition: width 0.3s ease;
+  }
+
+  .file-status {
+    font-family: var(--mono);
+    font-size: 11px;
+    flex-shrink: 0;
+    padding: 3px 8px;
+    border-radius: 4px;
+  }
+
+  .file-status.pending { color: var(--text3); }
+  .file-status.compressing { color: var(--blue); background: var(--blue-bg); }
+  .file-status.done { color: var(--accent); background: var(--accent-bg); }
+  .file-status.error { color: var(--red); background: var(--red-bg); }
+  .file-status.skip { color: var(--text3); }
+
+  /* Form elements */
+  label {
+    display: block;
+    font-size: 12px;
+    color: var(--text2);
+    font-family: var(--mono);
+    margin-bottom: 6px;
+    letter-spacing: 0.03em;
+  }
+
+  input[type="number"], input[type="text"], select {
+    width: 100%;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 8px 12px;
+    font-size: 14px;
+    color: var(--text);
+    font-family: var(--sans);
+    outline: none;
+    transition: border-color 0.15s;
+  }
+
+  input:focus, select:focus { border-color: var(--accent-dim); }
+
+  select {
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23555' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 32px;
+  }
+
+  select option { background: var(--bg3); }
+
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .form-group { margin-bottom: 12px; }
+  .form-group:last-child { margin-bottom: 0; }
+
+  .input-row {
+    display: flex;
+    gap: 8px;
+  }
+
+  .input-row input { flex: 1; }
+
+  /* Buttons */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 9px 16px;
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+    font-weight: 500;
+    font-family: var(--sans);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    border: none;
+    text-decoration: none;
+  }
+
+  .btn svg { width: 15px; height: 15px; flex-shrink: 0; }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #0a1a0f;
+  }
+
+  .btn-primary:hover { background: #6ee7a0; }
+  .btn-primary:active { transform: scale(0.98); }
+
+  .btn-primary:disabled {
+    background: var(--bg4);
+    color: var(--text3);
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--text2);
+    border: 1px solid var(--border);
+  }
+
+  .btn-ghost:hover { background: var(--bg3); border-color: var(--border2); color: var(--text); }
+
+  .btn-danger {
+    background: var(--red-bg);
+    color: var(--red);
+    border: 1px solid transparent;
+  }
+
+  .btn-danger:hover { border-color: var(--red); }
+
+  .btn-sm { padding: 5px 10px; font-size: 12px; }
+  .btn-sm svg { width: 13px; height: 13px; }
+
+  .btn-icon {
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    justify-content: center;
+    background: var(--bg3);
+    color: var(--text2);
+    border: 1px solid var(--border);
+  }
+
+  .btn-icon:hover { background: var(--bg4); color: var(--text); }
+
+  /* Drive status */
+  .drive-status {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    background: var(--bg3);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    font-size: 13px;
+    color: var(--text2);
+    margin-bottom: 12px;
+  }
+
+  .drive-status.connected {
+    background: var(--accent-bg);
+    border-color: var(--accent-dim);
+    color: var(--accent);
+  }
+
+  .drive-status svg { width: 18px; height: 18px; flex-shrink: 0; }
+
+  .drive-status .drive-btn {
+    margin-left: auto;
+  }
+
+  /* Info/warning boxes */
+  .info-box, .warn-box, .success-box {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    padding: 10px 14px;
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    line-height: 1.5;
+    margin-top: 10px;
+  }
+
+  .info-box { background: var(--blue-bg); color: #93c5fd; border: 1px solid #1e3a5f; }
+  .warn-box { background: var(--amber-bg); color: #fcd34d; border: 1px solid #451a03; }
+  .success-box { background: var(--accent-bg); color: var(--accent); border: 1px solid var(--accent-dim); }
+
+  .info-box svg, .warn-box svg, .success-box svg {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  /* Log */
+  .log-wrap {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+  }
+
+  .log-header {
+    padding: 6px 12px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .log-title {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text3);
+    letter-spacing: 0.05em;
+  }
+
+  .log-body {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text2);
+    padding: 10px 12px;
+    max-height: 180px;
+    overflow-y: auto;
+    line-height: 1.8;
+  }
+
+  .log-body::-webkit-scrollbar { width: 3px; }
+  .log-body::-webkit-scrollbar-thumb { background: var(--border2); }
+
+  .log-line { display: flex; gap: 8px; }
+  .log-time { color: var(--text3); flex-shrink: 0; }
+  .log-msg { color: var(--text2); }
+  .log-msg.success { color: var(--accent); }
+  .log-msg.error { color: var(--red); }
+  .log-msg.info { color: var(--blue); }
+
+  /* Stats sidebar */
+  .stat-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+  }
+
+  .stat-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text3);
+    letter-spacing: 0.05em;
+    margin-bottom: 6px;
+  }
+
+  .stat-value {
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--text);
+    letter-spacing: -0.03em;
+    font-family: var(--mono);
+  }
+
+  .stat-value.green { color: var(--accent); }
+  .stat-value.blue { color: var(--blue); }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  /* Progress ring */
+  .progress-section {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .progress-ring-wrap {
+    position: relative;
+    width: 100px;
+    height: 100px;
+  }
+
+  .progress-ring-wrap svg { transform: rotate(-90deg); }
+
+  .progress-ring-bg { fill: none; stroke: var(--bg4); stroke-width: 6; }
+  .progress-ring-fill {
+    fill: none;
+    stroke: var(--accent);
+    stroke-width: 6;
+    stroke-linecap: round;
+    stroke-dasharray: 283;
+    stroke-dashoffset: 283;
+    transition: stroke-dashoffset 0.5s ease;
+  }
+
+  .progress-center {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--mono);
+    font-size: 18px;
+    font-weight: 500;
+    color: var(--text);
+  }
+
+  .progress-label {
+    font-size: 13px;
+    color: var(--text2);
+    text-align: center;
+  }
+
+  .progress-sublabel {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text3);
+    text-align: center;
+  }
+
+  /* Actions row */
+  .actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  /* Divider */
+  .sep {
+    height: 1px;
+    background: var(--border);
+    margin: 14px 0;
+  }
+
+  /* File count row */
+  .file-count-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+
+  .file-count-label {
+    font-size: 12px;
+    color: var(--text3);
+    font-family: var(--mono);
+  }
+
+  /* Idle state */
+  .idle-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    gap: 8px;
+    color: var(--text3);
+  }
+
+  .idle-state svg { width: 32px; height: 32px; margin-bottom: 4px; }
+  .idle-state p { font-size: 13px; text-align: center; }
+
+  /* Tooltip hint */
+  .hint {
+    font-size: 12px;
+    color: var(--text3);
+    font-family: var(--mono);
+    margin-top: 6px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .hint svg { width: 12px; height: 12px; }
+
+  /* Responsive */
+  @media (max-width: 900px) {
+    main { grid-template-columns: 1fr; }
+    .panel-right { order: -1; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .progress-section { display: none; }
+  }
+
+  /* Animations */
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+
+  .pulsing { animation: pulse 1.5s ease-in-out infinite; }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  .spinning { animation: spin 1s linear infinite; }
+
+  /* Footer */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 12px 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .footer-text {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text3);
+  }
+
+  .footer-dots {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+
+  .footer-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--border2);
+  }
+
+  .footer-dot.green { background: var(--accent); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <a href="/" style="font-size:12px;color:var(--text2);text-decoration:none;font-family:var(--mono);margin-right:14px">← Dashboard</a>
+    <div class="logo-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#0a1a0f" stroke-width="2.5" stroke-linecap="round">
+        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+        <polyline points="17 8 12 3 7 8"/>
+        <line x1="12" y1="3" x2="12" y2="15"/>
+      </svg>
+    </div>
+    Vorlesungs-Kompressor
+  </div>
+  <div class="header-right">
+    <span class="badge">FFmpeg WASM</span>
+    <span class="badge">Google Drive API</span>
+    <span class="badge" id="ffmpeg-badge">ffmpeg: nicht geladen</span>
+  </div>
+</header>
+
+<main>
+  <!-- LEFT PANEL -->
+  <div class="panel-left">
+
+    <!-- Step 1: Files -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-num active" id="num1">1</div>
+        <span class="section-title">Dateien auswählen</span>
+        <div style="margin-left:auto;display:flex;gap:6px" id="file-actions-header" style="display:none">
+          <button class="btn btn-ghost btn-sm" onclick="clearFiles()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
+            Leeren
+          </button>
+        </div>
+      </div>
+      <div class="section-body">
+        <div class="drop-zone" id="dropZone">
+          <input type="file" id="fileInput" multiple accept="video/*,.mp4,.mkv,.avi,.mov,.webm" onchange="handleFileInput(this.files)">
+          <div class="drop-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+              <path d="M3 7v4a1 1 0 001 1h3m10-5v4a1 1 0 01-1 1h-3m-4 4v6m0 0l-2-2m2 2l2-2"/>
+              <rect x="3" y="3" width="7" height="5" rx="1"/>
+              <rect x="14" y="3" width="7" height="5" rx="1"/>
+            </svg>
+          </div>
+          <div class="drop-title">Ordner oder Dateien ablegen</div>
+          <div class="drop-sub">MP4 · MKV · AVI · MOV · WEBM</div>
+        </div>
+        <div id="fileListWrap" style="display:none; margin-top:14px">
+          <div class="file-count-row">
+            <span class="file-count-label" id="fileCountLabel">0 Dateien</span>
+            <button class="btn btn-ghost btn-sm" onclick="clearFiles()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
+              Leeren
+            </button>
+          </div>
+          <div class="file-list" id="fileItems"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 2: Settings -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-num" id="num2">2</div>
+        <span class="section-title">Komprimierungseinstellungen</span>
+      </div>
+      <div class="section-body">
+        <div class="form-row">
+          <div class="form-group">
+            <label>ZIELGRÖSSE (MB)</label>
+            <input type="number" id="targetSize" value="195" min="50" max="1900">
+          </div>
+          <div class="form-group">
+            <label>ALGORITHMUS</label>
+            <select id="qualityMode">
+              <option value="auto">Auto (empfohlen)</option>
+              <option value="crf">Qualitätsbasiert (CRF)</option>
+              <option value="bitrate">Bitratenbasiert</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>VIDEO-CODEC</label>
+          <select id="videoCodec">
+            <option value="libx264">H.264 (beste Kompatibilität)</option>
+            <option value="libx265">H.265 (bessere Kompression, langsamer)</option>
+          </select>
+        </div>
+        <div class="hint">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          NotebookLM-Limit: 200 MB — Standard 195 MB lässt Puffer
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 3: Google Drive -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-num" id="num3">3</div>
+        <span class="section-title">Google Drive</span>
+      </div>
+      <div class="section-body">
+        <div class="drive-status" id="driveStatus">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M22 12c0-5.52-4.48-10-10-10S2 6.48 2 12s4.48 10 10 10 10-4.48 10-10z"/>
+            <path d="M15 9l-6 6M9 9l6 6"/>
+          </svg>
+          <span id="driveStatusText">Nicht verbunden</span>
+          <button class="btn btn-ghost btn-sm drive-btn" id="driveConnectBtn" onclick="connectDrive()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4M10 17l5-5-5-5M15 12H3"/></svg>
+            Verbinden
+          </button>
+        </div>
+
+        <div class="form-group">
+          <label>CLIENT-ID (Google OAuth)</label>
+          <input type="text" id="clientId" placeholder="xxxxx.apps.googleusercontent.com">
+        </div>
+
+        <div class="form-group">
+          <label>ZIELORDNER IN GOOGLE DRIVE</label>
+          <input type="text" id="driveFolder" placeholder="z.B. Vorlesungen/HS25/Komprimiert">
+        </div>
+
+        <div class="info-box">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+          <span>Ordner wird automatisch erstellt falls nicht vorhanden. Verschachtelte Pfade (mit /) werden unterstützt.</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 4: Run -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-num" id="num4">4</div>
+        <span class="section-title">Starten</span>
+      </div>
+      <div class="section-body">
+        <div class="actions" style="margin-bottom:14px">
+          <button class="btn btn-primary" id="startBtn" onclick="startProcessing()">
+            <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            Komprimieren & Hochladen
+          </button>
+          <button class="btn btn-danger" id="stopBtn" onclick="stopProcessing()" style="display:none">
+            <svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="1"/></svg>
+            Abbrechen
+          </button>
+        </div>
+        <div id="logWrap" style="display:none">
+          <div class="log-wrap">
+            <div class="log-header">
+              <span class="log-title">KONSOLE</span>
+              <button class="btn btn-ghost btn-sm" onclick="clearLog()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6"/></svg>
+                Leeren
+              </button>
+            </div>
+            <div class="log-body" id="logBody"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div class="panel-right">
+
+    <!-- Progress ring -->
+    <div class="progress-section">
+      <div class="progress-ring-wrap">
+        <svg width="100" height="100" viewBox="0 0 100 100">
+          <circle class="progress-ring-bg" cx="50" cy="50" r="45"/>
+          <circle class="progress-ring-fill" id="progressRing" cx="50" cy="50" r="45"/>
+        </svg>
+        <div class="progress-center" id="progressPct">—</div>
+      </div>
+      <div class="progress-label" id="progressLabel">Bereit</div>
+      <div class="progress-sublabel" id="progressSub">Dateien auswählen um zu starten</div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-label">DATEIEN</div>
+        <div class="stat-value" id="statFiles">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">ERLEDIGT</div>
+        <div class="stat-value green" id="statDone">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">GESAMT</div>
+        <div class="stat-value blue" id="statSize">0 MB</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">GESPART</div>
+        <div class="stat-value green" id="statSaved">—</div>
+      </div>
+    </div>
+
+    <!-- Current file -->
+    <div class="section" id="currentFileSection" style="display:none">
+      <div class="section-header">
+        <div class="section-num active pulsing">▶</div>
+        <span class="section-title">Aktuell</span>
+      </div>
+      <div class="section-body">
+        <div style="font-size:13px;font-weight:500;color:var(--text);margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" id="currentFileName">—</div>
+        <div style="font-size:12px;color:var(--text3);font-family:var(--mono)" id="currentFileStatus">—</div>
+        <div style="margin-top:10px">
+          <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+            <span style="font-family:var(--mono);font-size:11px;color:var(--text3)">FORTSCHRITT</span>
+            <span style="font-family:var(--mono);font-size:11px;color:var(--blue)" id="currentPct">0%</span>
+          </div>
+          <div style="height:3px;background:var(--bg4);border-radius:2px;overflow:hidden">
+            <div style="height:100%;background:var(--blue);border-radius:2px;transition:width 0.3s" id="currentBar"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Info -->
+    <div class="section">
+      <div class="section-header">
+        <span class="section-title" style="font-size:12px;color:var(--text3)">Info</span>
+      </div>
+      <div class="section-body" style="padding:14px">
+        <div style="display:flex;flex-direction:column;gap:8px;font-size:12px;color:var(--text3);font-family:var(--mono);line-height:1.6">
+          <div>→ Komprimierung läuft lokal im Browser</div>
+          <div>→ Keine Daten werden an Server gesendet</div>
+          <div>→ FFmpeg WASM ~25 MB (einmalig)</div>
+          <div>→ Dateien unter Zielgrösse: direkter Upload</div>
+          <div>→ Ordner werden automatisch erstellt</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<footer>
+  <span class="footer-text">Vorlesungs-Kompressor · lokal · kein Server</span>
+  <div class="footer-dots">
+    <div class="footer-dot" id="dot-ffmpeg"></div>
+    <div class="footer-dot" id="dot-drive"></div>
+    <div class="footer-dot" id="dot-ready"></div>
+  </div>
+</footer>
+
+<script>
+// ── State ──────────────────────────────────────────────────────────────────
+let files = [];
+let isProcessing = false;
+let stopRequested = false;
+let driveConnected = false;
+let ffmpegReady = false;
+let ffmpegInstance = null;
+let currentFileIndex = -1;
+let totalSavedBytes = 0;
+
+// ── File handling ──────────────────────────────────────────────────────────
+function handleFileInput(fileList) {
+  addFiles(Array.from(fileList));
+}
+
+function addFiles(newFiles) {
+  const videos = newFiles.filter(f =>
+    f.type.startsWith('video/') || /\.(mp4|mkv|avi|mov|webm)$/i.test(f.name)
+  );
+  if (!videos.length) { log('Keine Videodateien gefunden.', 'error'); return; }
+  files = [...files, ...videos.map(f => ({ file: f, status: 'pending', progress: 0, originalSize: f.size, compressedSize: null }))];
+  renderFiles();
+  updateStats();
+}
+
+function clearFiles() {
+  if (isProcessing) return;
+  files = [];
+  renderFiles();
+  updateStats();
+  updateProgress(0, 'Bereit', 'Dateien auswählen um zu starten');
+}
+
+function renderFiles() {
+  const wrap = document.getElementById('fileListWrap');
+  const items = document.getElementById('fileItems');
+  const count = document.getElementById('fileCountLabel');
+  if (!files.length) { wrap.style.display = 'none'; return; }
+  wrap.style.display = 'block';
+  const target = (parseInt(document.getElementById('targetSize').value) || 195) * 1024 * 1024;
+  count.textContent = files.length + ' Datei' + (files.length !== 1 ? 'en' : '');
+  items.innerHTML = files.map((f, i) => {
+    const mb = (f.file.size / 1024 / 1024).toFixed(1);
+    const big = f.file.size > target;
+    const statusLabels = { pending: 'wartend', compressing: 'komprimiere…', done: 'fertig', error: 'fehler', skip: 'übersprungen' };
+    return `<div class="file-item ${f.status}" id="fi-${i}">
+      <div class="file-thumb">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="20" height="20" rx="2"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
+      </div>
+      <div class="file-info">
+        <div class="file-name">${f.file.name}</div>
+        <div class="file-meta">
+          <span class="file-size">${mb} MB</span>
+          <span class="file-tag ${big ? 'big' : 'ok'}">${big ? 'wird komprimiert' : 'unter limit'}</span>
+        </div>
+        ${f.status === 'compressing' ? `<div class="file-progress"><div class="file-progress-fill" style="width:${f.progress}%"></div></div>` : ''}
+      </div>
+      <span class="file-status ${f.status}">${statusLabels[f.status] || f.status}</span>
+    </div>`;
+  }).join('');
+}
+
+function updateStats() {
+  document.getElementById('statFiles').textContent = files.length;
+  const done = files.filter(f => f.status === 'done').length;
+  document.getElementById('statDone').textContent = done;
+  const totalMB = files.reduce((s, f) => s + f.file.size, 0) / 1024 / 1024;
+  document.getElementById('statSize').textContent = totalMB.toFixed(0) + ' MB';
+  if (totalSavedBytes > 0) {
+    document.getElementById('statSaved').textContent = (totalSavedBytes / 1024 / 1024).toFixed(0) + ' MB';
+  }
+}
+
+// ── Drop zone ──────────────────────────────────────────────────────────────
+const dz = document.getElementById('dropZone');
+
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag-over'); });
+dz.addEventListener('dragleave', e => { if (!dz.contains(e.relatedTarget)) dz.classList.remove('drag-over'); });
+dz.addEventListener('drop', async e => {
+  e.preventDefault();
+  dz.classList.remove('drag-over');
+  const collected = [];
+  const traverse = entry => new Promise(res => {
+    if (entry.isFile) {
+      entry.getFile(f => {
+        if (/\.(mp4|mkv|avi|mov|webm)$/i.test(f.name)) collected.push(f);
+        res();
+      });
+    } else if (entry.isDirectory) {
+      const reader = entry.createReader();
+      const readAll = () => reader.readEntries(async entries => {
+        if (!entries.length) return res();
+        await Promise.all(entries.map(e => traverse(e)));
+        readAll();
+      });
+      readAll();
+    } else res();
+  });
+  for (const item of e.dataTransfer.items) {
+    if (item.webkitGetAsEntry) await traverse(item.webkitGetAsEntry());
+  }
+  if (collected.length) addFiles(collected);
+});
+
+// ── Progress ───────────────────────────────────────────────────────────────
+function updateProgress(pct, label, sub) {
+  const ring = document.getElementById('progressRing');
+  const circumference = 283;
+  const offset = circumference - (pct / 100) * circumference;
+  ring.style.strokeDashoffset = offset;
+  document.getElementById('progressPct').textContent = pct > 0 ? Math.round(pct) + '%' : '—';
+  document.getElementById('progressLabel').textContent = label;
+  document.getElementById('progressSub').textContent = sub || '';
+}
+
+function setCurrentFile(name, status, pct) {
+  const s = document.getElementById('currentFileSection');
+  s.style.display = 'block';
+  document.getElementById('currentFileName').textContent = name;
+  document.getElementById('currentFileStatus').textContent = status;
+  document.getElementById('currentPct').textContent = Math.round(pct) + '%';
+  document.getElementById('currentBar').style.width = pct + '%';
+}
+
+// ── Log ────────────────────────────────────────────────────────────────────
+function log(msg, type = 'default') {
+  document.getElementById('logWrap').style.display = 'block';
+  const body = document.getElementById('logBody');
+  const now = new Date();
+  const t = now.toTimeString().slice(0, 8);
+  const line = document.createElement('div');
+  line.className = 'log-line';
+  line.innerHTML = `<span class="log-time">${t}</span><span class="log-msg ${type}">${msg}</span>`;
+  body.appendChild(line);
+  body.scrollTop = body.scrollHeight;
+}
+
+function clearLog() {
+  document.getElementById('logBody').innerHTML = '';
+}
+
+// ── Google Drive (neue Google Identity Services API) ───────────────────────
+let accessToken = null;
+let tokenClient = null;
+
+function connectDrive() {
+  const clientId = document.getElementById('clientId').value.trim();
+  if (!clientId) {
+    alert('Bitte zuerst die Client-ID eingeben.');
+    document.getElementById('clientId').focus();
+    return;
+  }
+
+  // Speichert die Client-ID im Browser, damit sie nach dem Redirect nicht weg ist
+  localStorage.setItem('gdrive_client_id', clientId);
+
+  log('Leite zu Google Login weiter...', 'info');
+
+  const oauth2Endpoint = 'https://accounts.google.com/o/oauth2/v2/auth';
+  const redirectUri = window.location.origin;
+  const scope = 'https://www.googleapis.com/auth/drive.file';
+
+  // URL für den direkten Redirect zusammenbauen
+  const url = `${oauth2Endpoint}?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=token&scope=${scope}`;
+  
+  window.location.href = url;
+}
+
+function loadScript(src) {
+  return new Promise((resolve, reject) => {
+    if (document.querySelector(`script[src="${src}"]`)) { resolve(); return; }
+    const s = document.createElement('script');
+    s.src = src;
+    s.onload = resolve;
+    s.onerror = () => reject(new Error('Script konnte nicht geladen werden: ' + src));
+    document.head.appendChild(s);
+  });
+}
+
+function disconnectDrive() {
+  driveConnected = false;
+  accessToken = null;
+  tokenClient = null;
+  const status = document.getElementById('driveStatus');
+  status.className = 'drive-status';
+  status.innerHTML = `
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+      <path d="M22 12c0-5.52-4.48-10-10-10S2 6.48 2 12s4.48 10 10 10 10-4.48 10-10z"/>
+      <path d="M15 9l-6 6M9 9l6 6"/>
+    </svg>
+    <span>Nicht verbunden</span>
+    <button class="btn btn-ghost btn-sm drive-btn" onclick="connectDrive()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4M10 17l5-5-5-5M15 12H3"/></svg>
+      Verbinden
+    </button>`;
+  document.getElementById('dot-drive').classList.remove('green');
+}
+
+async function driveRequest(method, path, params, body) {
+  const url = new URL('https://www.googleapis.com' + path);
+  if (params) Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
+  const opts = {
+    method,
+    headers: { Authorization: 'Bearer ' + accessToken }
+  };
+  if (body) {
+    opts.headers['Content-Type'] = 'application/json';
+    opts.body = JSON.stringify(body);
+  }
+  const res = await fetch(url, opts);
+  if (!res.ok) throw new Error('Drive API Fehler ' + res.status + ': ' + await res.text());
+  return res.json();
+}
+
+async function getOrCreateFolder(folderPath) {
+  const parts = folderPath.split('/').map(p => p.trim()).filter(Boolean);
+  let parentId = 'root';
+  for (const part of parts) {
+    const q = `name='${part.replace(/'/g, "\\'")}' and mimeType='application/vnd.google-apps.folder' and '${parentId}' in parents and trashed=false`;
+    const res = await driveRequest('GET', '/drive/v3/files', { q, fields: 'files(id,name)', spaces: 'drive' });
+    if (res.files && res.files.length > 0) {
+      parentId = res.files[0].id;
+    } else {
+      const created = await driveRequest('POST', '/drive/v3/files', { fields: 'id' }, {
+        name: part,
+        mimeType: 'application/vnd.google-apps.folder',
+        parents: [parentId]
+      });
+      parentId = created.id;
+    }
+  }
+  return parentId;
+}
+
+async function uploadToDrive(blob, folderPath, filename) {
+  log(`Upload: ${filename} (${(blob.size/1024/1024).toFixed(1)} MB)…`, 'info');
+  const folderId = await getOrCreateFolder(folderPath);
+  const metadata = { name: filename, parents: [folderId] };
+  const file = blob instanceof Blob ? blob : new Blob([blob], { type: 'video/mp4' });
+  const form = new FormData();
+  form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+  form.append('file', file);
+  const res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,size', {
+    method: 'POST',
+    headers: { Authorization: 'Bearer ' + accessToken },
+    body: form
+  });
+  if (!res.ok) throw new Error('Upload fehlgeschlagen (' + res.status + '): ' + await res.text());
+  return res.json();
+}
+
+// ── FFmpeg ─────────────────────────────────────────────────────────────────
+async function loadFFmpeg() {
+  if (ffmpegReady) return ffmpegInstance;
+  log('FFmpeg WASM wird geladen (~25 MB)…', 'info');
+  document.getElementById('ffmpeg-badge').textContent = 'ffmpeg: lädt…';
+  document.getElementById('ffmpeg-badge').style.color = 'var(--amber)';
+  return new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = 'https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js';
+    script.onload = async () => {
+      try {
+        const { createFFmpeg, fetchFile } = FFmpeg;
+        const ff = createFFmpeg({
+          log: false,
+          progress: ({ ratio }) => {
+            if (currentFileIndex >= 0 && files[currentFileIndex]) {
+              const pct = Math.round(ratio * 100);
+              files[currentFileIndex].progress = pct;
+              setCurrentFile(files[currentFileIndex].file.name, 'Komprimiere mit FFmpeg…', pct);
+              renderFiles();
+              const done = files.filter(f => f.status === 'done').length;
+              const totalPct = ((done + ratio) / files.length) * 100;
+              updateProgress(totalPct, `${done + 1} / ${files.length}`, files[currentFileIndex].file.name);
+            }
+          }
+        });
+        await ff.load();
+        ffmpegInstance = { ff, fetchFile };
+        ffmpegReady = true;
+        document.getElementById('ffmpeg-badge').textContent = 'ffmpeg: bereit';
+        document.getElementById('ffmpeg-badge').style.color = 'var(--accent)';
+        document.getElementById('dot-ffmpeg').classList.add('green');
+        checkReady();
+        log('FFmpeg geladen und bereit.', 'success');
+        resolve(ffmpegInstance);
+      } catch(e) { reject(e); }
+    };
+    script.onerror = () => reject(new Error('FFmpeg konnte nicht geladen werden.'));
+    document.head.appendChild(script);
+  });
+}
+
+function getVideoDuration(file) {
+  return new Promise(resolve => {
+    const v = document.createElement('video');
+    v.preload = 'metadata';
+    v.onloadedmetadata = () => { URL.revokeObjectURL(v.src); resolve(v.duration || 3600); };
+    v.onerror = () => resolve(3600);
+    v.src = URL.createObjectURL(file);
+  });
+}
+
+// ── Main processing ────────────────────────────────────────────────────────
+async function startProcessing() {
+  if (!files.length) { log('Keine Dateien ausgewählt.', 'error'); return; }
+  if (!driveConnected) { log('Bitte zuerst Google Drive verbinden.', 'error'); return; }
+  const folderPath = document.getElementById('driveFolder').value.trim();
+  if (!folderPath) { log('Bitte Zielordner angeben.', 'error'); document.getElementById('driveFolder').focus(); return; }
+
+  isProcessing = true;
+  stopRequested = false;
+  totalSavedBytes = 0;
+
+  document.getElementById('startBtn').disabled = true;
+  document.getElementById('stopBtn').style.display = 'flex';
+  document.getElementById('currentFileSection').style.display = 'block';
+
+  const targetMB = parseInt(document.getElementById('targetSize').value) || 195;
+  const targetBytes = targetMB * 1024 * 1024;
+
+  try {
+    const { ff, fetchFile } = await loadFFmpeg();
+
+    for (let i = 0; i < files.length; i++) {
+      if (stopRequested) { log('Verarbeitung abgebrochen.', 'error'); break; }
+      currentFileIndex = i;
+      const item = files[i];
+      item.status = 'compressing';
+      item.progress = 0;
+      renderFiles();
+
+      const fileMB = item.file.size / 1024 / 1024;
+      log(`[${i+1}/${files.length}] ${item.file.name} (${fileMB.toFixed(1)} MB)`);
+
+      try {
+        let uploadBlob;
+        let outName;
+
+        if (item.file.size <= targetBytes) {
+          log('Datei bereits unter Zielgrösse, lade direkt hoch…');
+          setCurrentFile(item.file.name, 'Direkter Upload (bereits klein genug)', 100);
+          uploadBlob = item.file;
+          outName = item.file.name;
+        } else {
+          log(`Komprimiere: ${fileMB.toFixed(1)} MB → ~${targetMB} MB…`);
+          setCurrentFile(item.file.name, 'Lese Datei…', 0);
+
+          const inputName = `in_${i}.mp4`;
+          const outputName = `out_${i}.mp4`;
+
+          const arrayBuffer = await item.file.arrayBuffer();
+          ff.FS('writeFile', inputName, new Uint8Array(arrayBuffer));
+
+          const duration = await getVideoDuration(item.file);
+          log(`Video-Dauer: ${Math.round(duration)}s`);
+
+          // Calculate bitrate
+          const audioBitrate = 96; // kbps
+          const audioBytes = (audioBitrate * 1000 / 8) * duration;
+          const availableBytes = targetBytes * 0.93 - audioBytes;
+          const videoBitrate = Math.max(100, Math.floor((availableBytes * 8) / (duration * 1000)));
+          log(`Ziel-Bitrate: ${videoBitrate} kbps Video + ${audioBitrate} kbps Audio`);
+
+          const codec = document.getElementById('videoCodec').value;
+          const args = [
+            '-i', inputName,
+            '-c:v', codec,
+            '-b:v', `${videoBitrate}k`,
+            '-maxrate', `${Math.round(videoBitrate * 1.5)}k`,
+            '-bufsize', `${Math.round(videoBitrate * 2)}k`,
+            '-c:a', 'aac',
+            '-b:a', `${audioBitrate}k`,
+            '-movflags', '+faststart',
+            '-y', outputName
+          ];
+
+          setCurrentFile(item.file.name, 'FFmpeg komprimiert…', 0);
+          await ff.run(...args);
+
+          const data = ff.FS('readFile', outputName);
+          uploadBlob = new Blob([data.buffer], { type: 'video/mp4' });
+
+          // cleanup
+          try { ff.FS('unlink', inputName); } catch(e) {}
+          try { ff.FS('unlink', outputName); } catch(e) {}
+
+          const outMB = uploadBlob.size / 1024 / 1024;
+          const saved = item.file.size - uploadBlob.size;
+          totalSavedBytes += Math.max(0, saved);
+          log(`Komprimiert: ${outMB.toFixed(1)} MB (${saved > 0 ? '-' + (saved/1024/1024).toFixed(1) + ' MB' : 'ähnliche Größe'})`, 'success');
+          outName = item.file.name.replace(/\.[^.]+$/, '') + '_compressed.mp4';
+        }
+
+
+        // Schritt 1: Lokaler Download als Sicherheitsnetz
+        const localUrl = URL.createObjectURL(uploadBlob);
+        const a = document.createElement('a');
+        a.href = localUrl;
+        a.download = outName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(localUrl), 10000);
+        log(`Lokal gespeichert: ${outName}`, 'success');
+
+        // Schritt 2: Google Drive Upload
+        setCurrentFile(item.file.name, 'Hochladen zu Google Drive…', 100);
+        try {
+          await uploadToDrive(uploadBlob, folderPath, outName);
+          item.status = 'done';
+          item.compressedSize = uploadBlob.size;
+          log(`Drive-Upload erfolgreich: ${outName}`, 'success');
+        } catch(uploadErr) {
+          // Drive-Upload fehlgeschlagen - Datei ist aber bereits lokal gesichert
+          item.status = 'done';
+          item.compressedSize = uploadBlob.size;
+          const isAuthErr = uploadErr.message.includes('401') || uploadErr.message.includes('403');
+          log(`WARNUNG: Drive-Upload fehlgeschlagen (${isAuthErr ? 'Token abgelaufen' : uploadErr.message}) - Video wurde lokal gesichert.`, 'error');
+          const el = document.getElementById(`fi-${i}`);
+          if (el) { el.classList.remove('error'); el.classList.add('done'); }
+        }
+
+      } catch(e) {
+        item.status = 'error';
+        log(`Fehler: ${e.message}`, 'error');
+      }
+
+      renderFiles();
+      updateStats();
+    }
+
+    const done = files.filter(f => f.status === 'done').length;
+    updateProgress(100, 'Fertig!', `${done}/${files.length} Dateien verarbeitet`);
+    log(`Fertig! ${done}/${files.length} Dateien verarbeitet.`, 'success');
+    document.getElementById('currentFileSection').style.display = 'none';
+
+  } catch(e) {
+    log('Kritischer Fehler: ' + e.message, 'error');
+    updateProgress(0, 'Fehler', e.message);
+  }
+
+  isProcessing = false;
+  currentFileIndex = -1;
+  document.getElementById('startBtn').disabled = false;
+  document.getElementById('stopBtn').style.display = 'none';
+}
+
+function stopProcessing() {
+  stopRequested = true;
+  log('Abbruch angefordert…');
+}
+
+function checkReady() {
+  if (ffmpegReady && driveConnected) {
+    document.getElementById('dot-ready').classList.add('green');
+  }
+}
+
+// ── Init ───────────────────────────────────────────────────────────────────
+document.getElementById('targetSize').addEventListener('change', renderFiles);
+
+// 1. Client-ID wiederherstellen, falls vorhanden
+const savedClientId = localStorage.getItem('gdrive_client_id');
+if (savedClientId) {
+  document.getElementById('clientId').value = savedClientId;
+}
+
+// 2. Prüfen, ob wir vom Google Redirect zurückkehren
+const hash = window.location.hash;
+if (hash && hash.includes('access_token=')) {
+  // Token aus der URL extrahieren
+  const params = new URLSearchParams(hash.substring(1));
+  accessToken = params.get('access_token');
+
+  // Die URL oben in der Leiste aufräumen, damit der Token dort verschwindet
+  window.history.replaceState(null, null, window.location.pathname);
+
+  // UI aktualisieren
+  driveConnected = true;
+  const status = document.getElementById('driveStatus');
+  status.className = 'drive-status connected';
+  status.innerHTML = `
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+      <path d="M22 11.08V12a10 10 0 11-5.93-9.14"/>
+      <polyline points="22 4 12 14.01 9 11.01"/>
+    </svg>
+    <span>Google Drive verbunden</span>
+    <button class="btn btn-ghost btn-sm drive-btn" onclick="disconnectDrive()">Trennen</button>`;
+  document.getElementById('dot-drive').classList.add('green');
+  checkReady();
+  
+  // Kurze Verzögerung, damit das UI erst lädt, bevor der Log geschrieben wird
+  setTimeout(() => log('Google Drive erfolgreich verbunden.', 'success'), 100);
+}
+</script>
+</body>
+</html>

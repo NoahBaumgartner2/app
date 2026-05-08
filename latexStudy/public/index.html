@@ -1,0 +1,880 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>StudyLaTeX – Vorlesungs­zusammenfassung</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Source+Sans+3:ital,wght@0,300;0,400;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    /* ── Reset & Variablen ─────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --ink:       #1a1a2e;
+      --navy:      #162447;
+      --azure:     #1f4e79;
+      --sky:       #2980b9;
+      --cream:     #faf8f3;
+      --paper:     #f4f1ea;
+      --gold:      #c9a84c;
+      --gold-lt:   #f0e0aa;
+      --red:       #c0392b;
+      --green:     #27ae60;
+      --muted:     #6b7280;
+      --border:    #ddd8cc;
+      --shadow:    0 4px 24px rgba(26,36,71,.10);
+      --shadow-lg: 0 12px 48px rgba(26,36,71,.15);
+      --r:         8px;
+      --transition: .22s cubic-bezier(.4,0,.2,1);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Source Sans 3', sans-serif;
+      background: var(--cream);
+      color: var(--ink);
+      min-height: 100vh;
+      font-size: 16px;
+      line-height: 1.65;
+    }
+
+    /* ── Hintergrund-Textur ────────────────────────────────────────────── */
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image:
+        radial-gradient(circle at 15% 20%, rgba(41,128,185,.06) 0%, transparent 50%),
+        radial-gradient(circle at 85% 75%, rgba(26,54,93,.05) 0%, transparent 50%);
+      pointer-events: none; z-index: 0;
+    }
+
+    /* ── Header ────────────────────────────────────────────────────────── */
+    header {
+      background: var(--navy);
+      color: white;
+      padding: 0 2rem;
+      position: sticky; top: 0; z-index: 100;
+      box-shadow: 0 2px 20px rgba(0,0,0,.25);
+    }
+    .header-inner {
+      max-width: 1100px; margin: 0 auto;
+      display: flex; align-items: center; gap: 1rem;
+      height: 60px;
+    }
+    .logo-mark {
+      width: 36px; height: 36px;
+      background: var(--gold);
+      border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Playfair Display', serif;
+      font-weight: 700; font-size: 1.1rem; color: var(--navy);
+      flex-shrink: 0;
+    }
+    .logo-text {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.15rem; font-weight: 600;
+      letter-spacing: .02em;
+    }
+    .logo-text span { color: var(--gold); }
+    .header-badge {
+      margin-left: auto;
+      font-size: .72rem; font-weight: 600; letter-spacing: .1em;
+      text-transform: uppercase;
+      background: rgba(201,168,76,.15);
+      color: var(--gold-lt);
+      border: 1px solid rgba(201,168,76,.3);
+      padding: .25rem .75rem; border-radius: 20px;
+    }
+
+    /* ── Hero ──────────────────────────────────────────────────────────── */
+    .hero {
+      text-align: center;
+      padding: 3.5rem 2rem 2rem;
+      position: relative; z-index: 1;
+    }
+    .hero h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(2rem, 5vw, 3rem);
+      color: var(--navy);
+      line-height: 1.2;
+    }
+    .hero h1 em { color: var(--sky); font-style: normal; }
+    .hero p {
+      color: var(--muted); max-width: 540px; margin: .8rem auto 0;
+      font-size: 1.05rem; font-weight: 300;
+    }
+
+    /* ── Layout ────────────────────────────────────────────────────────── */
+    .container {
+      max-width: 1100px; margin: 0 auto;
+      padding: 0 1.5rem 4rem;
+      position: relative; z-index: 1;
+    }
+    .grid-main {
+      display: grid;
+      grid-template-columns: 380px 1fr;
+      gap: 2rem; align-items: start;
+      margin-top: 2rem;
+    }
+    @media (max-width: 860px) {
+      .grid-main { grid-template-columns: 1fr; }
+    }
+
+    /* ── Cards ─────────────────────────────────────────────────────────── */
+    .card {
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    .card-header {
+      background: var(--navy);
+      color: white;
+      padding: .9rem 1.4rem;
+      display: flex; align-items: center; gap: .6rem;
+      font-family: 'Playfair Display', serif;
+      font-size: 1rem; font-weight: 600;
+    }
+    .card-header .icon { font-size: 1.1rem; }
+    .card-body { padding: 1.5rem; }
+
+    /* ── Formular ──────────────────────────────────────────────────────── */
+    .field { margin-bottom: 1.2rem; }
+    label {
+      display: block;
+      font-size: .8rem; font-weight: 600; letter-spacing: .08em;
+      text-transform: uppercase; color: var(--muted);
+      margin-bottom: .4rem;
+    }
+    input[type="text"],
+    input[type="password"],
+    select {
+      width: 100%;
+      padding: .6rem .9rem;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-family: inherit; font-size: .95rem;
+      background: var(--cream);
+      color: var(--ink);
+      transition: border-color var(--transition), box-shadow var(--transition);
+      outline: none;
+    }
+    input:focus, select:focus {
+      border-color: var(--sky);
+      box-shadow: 0 0 0 3px rgba(41,128,185,.12);
+      background: white;
+    }
+    .input-hint {
+      font-size: .78rem; color: var(--muted); margin-top: .3rem;
+    }
+
+    /* ── Drop-Zone ─────────────────────────────────────────────────────── */
+    .drop-zone {
+      border: 2px dashed var(--border);
+      border-radius: var(--r);
+      padding: 2rem 1rem;
+      text-align: center;
+      cursor: pointer;
+      transition: all var(--transition);
+      background: var(--cream);
+      position: relative;
+    }
+    .drop-zone:hover, .drop-zone.drag-over {
+      border-color: var(--sky);
+      background: rgba(41,128,185,.04);
+    }
+    .drop-zone input[type="file"] {
+      position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+    }
+    .drop-icon { font-size: 2.5rem; margin-bottom: .5rem; }
+    .drop-label { font-size: .9rem; color: var(--muted); font-weight: 400; }
+    .drop-label strong { color: var(--sky); }
+    .file-chosen {
+      display: none;
+      align-items: center; gap: .5rem;
+      background: rgba(39,174,96,.08);
+      border: 1px solid rgba(39,174,96,.3);
+      border-radius: 6px; padding: .5rem .8rem;
+      font-size: .85rem; color: var(--green);
+      margin-top: .8rem;
+      font-weight: 600;
+    }
+
+    /* ── Buttons ───────────────────────────────────────────────────────── */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      gap: .5rem;
+      padding: .7rem 1.4rem;
+      border: none; border-radius: 6px;
+      font-family: inherit; font-size: .95rem; font-weight: 600;
+      cursor: pointer;
+      transition: all var(--transition);
+      text-decoration: none;
+    }
+    .btn-primary {
+      background: var(--navy); color: white; width: 100%;
+      font-size: 1rem; padding: .85rem;
+      letter-spacing: .02em;
+    }
+    .btn-primary:hover:not(:disabled) { background: var(--azure); transform: translateY(-1px); box-shadow: var(--shadow); }
+    .btn-primary:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+    .btn-gold { background: var(--gold); color: var(--navy); }
+    .btn-gold:hover { background: #b8973d; }
+    .btn-outline {
+      background: transparent;
+      border: 1.5px solid var(--border);
+      color: var(--ink);
+    }
+    .btn-outline:hover { border-color: var(--sky); color: var(--sky); }
+    .btn-sm { padding: .4rem .9rem; font-size: .85rem; }
+
+    /* ── Progress ──────────────────────────────────────────────────────── */
+    .progress-wrap {
+      display: none;
+      margin-top: 1rem;
+    }
+    .progress-bar-bg {
+      height: 6px; background: var(--paper); border-radius: 3px; overflow: hidden;
+    }
+    .progress-bar-fill {
+      height: 100%; background: linear-gradient(90deg, var(--sky), var(--gold));
+      border-radius: 3px; width: 0%;
+      transition: width .4s ease;
+      animation: progress-anim 2s ease-in-out infinite;
+    }
+    @keyframes progress-anim {
+      0%   { background-position: 0% 50%; }
+      100% { background-position: 100% 50%; }
+    }
+    .progress-label {
+      font-size: .8rem; color: var(--muted); margin-top: .4rem; text-align: center;
+    }
+
+    /* ── Status / Alerts ───────────────────────────────────────────────── */
+    .alert {
+      padding: .8rem 1.1rem;
+      border-radius: 6px;
+      font-size: .9rem;
+      display: none;
+      margin-top: 1rem;
+    }
+    .alert-error   { background: rgba(192,57,43,.08); border: 1px solid rgba(192,57,43,.3); color: #922b21; }
+    .alert-success { background: rgba(39,174,96,.08); border: 1px solid rgba(39,174,96,.3); color: #1e8449; }
+    .alert-info    { background: rgba(41,128,185,.08); border: 1px solid rgba(41,128,185,.3); color: #1a5276; }
+
+    /* ── Result Panel ──────────────────────────────────────────────────── */
+    #result-panel { display: none; }
+
+    .result-actions {
+      display: flex; flex-wrap: wrap; gap: .7rem;
+      margin-bottom: 1rem;
+    }
+
+    /* ── LaTeX Preview ─────────────────────────────────────────────────── */
+    .latex-preview-wrap {
+      position: relative;
+    }
+    .latex-toolbar {
+      display: flex; align-items: center; justify-content: space-between;
+      background: var(--navy); color: white;
+      padding: .5rem 1rem;
+      border-radius: 6px 6px 0 0;
+      font-size: .78rem;
+    }
+    .latex-toolbar-left { display: flex; align-items: center; gap: .5rem; }
+    .dot { width: 10px; height: 10px; border-radius: 50%; }
+    .dot-r { background: #e74c3c; }
+    .dot-y { background: #f39c12; }
+    .dot-g { background: #2ecc71; }
+    #latex-output {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: .78rem;
+      background: #0d1117;
+      color: #e6edf3;
+      padding: 1.2rem;
+      border-radius: 0 0 6px 6px;
+      border: 1px solid #30363d;
+      border-top: none;
+      min-height: 300px;
+      max-height: 520px;
+      overflow-y: auto;
+      white-space: pre;
+      line-height: 1.5;
+      tab-size: 2;
+    }
+
+    /* ── Summary History ───────────────────────────────────────────────── */
+    .history-list { display: flex; flex-direction: column; gap: .6rem; }
+    .history-item {
+      display: flex; align-items: center; gap: .8rem;
+      padding: .65rem 1rem;
+      background: var(--cream);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all var(--transition);
+      font-size: .88rem;
+    }
+    .history-item:hover { border-color: var(--sky); background: rgba(41,128,185,.04); }
+    .history-item .hi-icon { font-size: 1.2rem; flex-shrink: 0; }
+    .history-item .hi-name { font-weight: 600; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .history-item .hi-meta { color: var(--muted); font-size: .78rem; }
+    .history-empty { text-align: center; color: var(--muted); font-size: .88rem; padding: 1.5rem; }
+
+    /* ── Stats ─────────────────────────────────────────────────────────── */
+    .stats-row {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 1rem; margin-bottom: 1.5rem;
+    }
+    .stat-card {
+      text-align: center; padding: 1rem;
+      background: var(--paper); border-radius: var(--r);
+      border: 1px solid var(--border);
+    }
+    .stat-num {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.6rem; font-weight: 700; color: var(--navy);
+    }
+    .stat-lbl { font-size: .75rem; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); }
+
+    /* ── Tips ──────────────────────────────────────────────────────────── */
+    .tip-box {
+      background: linear-gradient(135deg, var(--navy) 0%, var(--azure) 100%);
+      color: white; border-radius: var(--r);
+      padding: 1.2rem 1.5rem; margin-top: 1.5rem;
+    }
+    .tip-box h4 {
+      font-family: 'Playfair Display', serif;
+      font-size: .95rem; margin-bottom: .5rem;
+      color: var(--gold-lt);
+    }
+    .tip-box ul { padding-left: 1.2rem; }
+    .tip-box li { font-size: .84rem; margin-bottom: .3rem; opacity: .9; }
+
+    /* ── LaTeX Copy Feedback ──────────────────────────────────────────── */
+    .copy-success { display: none; color: var(--green); font-size: .82rem; }
+
+    /* ── Spinner ──────────────────────────────────────────────────────── */
+    .spinner {
+      display: inline-block; width: 16px; height: 16px;
+      border: 2px solid rgba(255,255,255,.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Responsive tweaks ─────────────────────────────────────────────── */
+    @media (max-width: 600px) {
+      .stats-row { grid-template-columns: 1fr 1fr; }
+      .result-actions { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Header ────────────────────────────────────────────────────────────── -->
+<header>
+  <div class="header-inner">
+    <div class="logo-mark">S</div>
+    <div class="logo-text">Study<span>LaTeX</span></div>
+    <div class="header-badge">KI-Prüfungsvorbereitung</div>
+  </div>
+</header>
+
+<!-- ── Hero ──────────────────────────────────────────────────────────────── -->
+<div class="hero">
+  <h1>Vorlesungsfolien zu <em>LaTeX-Zusammenfassungen</em></h1>
+  <p>Lade deine BWL-Folien hoch und erhalte eine ausführliche, druckfertige Zusammenfassung als PDF.</p>
+</div>
+
+<!-- ── Hauptinhalt ────────────────────────────────────────────────────────── -->
+<div class="container">
+  <div class="grid-main">
+
+    <!-- ── Linke Spalte: Formular ── -->
+    <div style="display:flex; flex-direction:column; gap:1.5rem;">
+
+      <!-- Einstellungen -->
+      <div class="card">
+        <div class="card-header"><span class="icon">⚙️</span> Einstellungen</div>
+        <div class="card-body">
+
+          <div class="field">
+            <label>Gemini API-Key</label>
+            <input type="password" id="api-key" placeholder="AIza..." />
+            <div class="input-hint">
+              Erhalte deinen Key auf
+              <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:var(--sky)">Google AI Studio</a>
+            </div>
+          </div>
+
+          <div class="field">
+            <label>Fach</label>
+            <select id="subject">
+              <option value="Wirtschaftsinformatik">Wirtschaftsinformatik</option>
+              <option value="Marketing">Marketing</option>
+              <option value="Controlling">Controlling</option>
+              <option value="Rechnungswesen">Rechnungswesen / Buchhaltung</option>
+              <option value="Management">Management & Organisation</option>
+              <option value="Finanzierung">Finanzierung & Investition</option>
+              <option value="Mikroökonomie">Mikroökonomie</option>
+              <option value="Makroökonomie">Makroökonomie</option>
+              <option value="Statistik">Statistik & Methoden</option>
+              <option value="Recht">Wirtschaftsrecht</option>
+              <option value="Logistik">Logistik & Supply Chain</option>
+              <option value="Entrepreneurship">Entrepreneurship</option>
+              <option value="Sonstiges">Sonstiges BWL-Fach</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label>Titel der Zusammenfassung <span style="font-weight:300;text-transform:none">(optional)</span></label>
+            <input type="text" id="doc-title" placeholder="z.B. Vorlesung 3 – CRM-Systeme" />
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Upload -->
+      <div class="card">
+        <div class="card-header"><span class="icon">📄</span> PDF hochladen</div>
+        <div class="card-body">
+          <div class="drop-zone" id="drop-zone">
+            <input type="file" id="pdf-input" accept=".pdf" />
+            <div class="drop-icon">📂</div>
+            <div class="drop-label"><strong>Klicken oder Datei hineinziehen</strong><br>PDF-Vorlesungsfolien (max. 5 MB)</div>
+          </div>
+          <div class="file-chosen" id="file-chosen">
+            <span>✅</span> <span id="file-name-label">–</span>
+          </div>
+
+          <div id="alert-error" class="alert alert-error"></div>
+          <div id="alert-success" class="alert alert-success"></div>
+
+          <div class="progress-wrap" id="progress-wrap">
+            <div class="progress-bar-bg"><div class="progress-bar-fill" id="progress-fill"></div></div>
+            <div class="progress-label" id="progress-label">KI analysiert Folien…</div>
+          </div>
+
+          <button class="btn btn-primary" id="submit-btn" style="margin-top:1.2rem" onclick="submitForm()">
+            <span>✨</span> Zusammenfassung erstellen
+          </button>
+        </div>
+      </div>
+
+      <!-- Tipps -->
+      <div class="tip-box">
+        <h4>💡 Tipps für beste Ergebnisse</h4>
+        <ul>
+          <li>Textbasierte PDFs funktionieren besser als gescannte</li>
+          <li>Wähle das passende Fach für spezifischere Erklärungen</li>
+          <li>Gib einen Titel an, damit das PDF schön beschriftet ist</li>
+          <li>Kompiliere den LaTeX-Code mit <code style="font-size:.78rem">pdflatex</code> oder Overleaf</li>
+        </ul>
+      </div>
+
+    </div>
+
+    <!-- ── Rechte Spalte: Ergebnis & Historie ── -->
+    <div style="display:flex; flex-direction:column; gap:1.5rem;">
+
+      <!-- Statistiken -->
+      <div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-num" id="stat-count">0</div>
+          <div class="stat-lbl">Erstellt</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num" id="stat-chars">–</div>
+          <div class="stat-lbl">Zeichen</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num" id="stat-pages">–</div>
+          <div class="stat-lbl">Seiten est.</div>
+        </div>
+      </div>
+
+      <!-- Ergebnis -->
+      <div class="card" id="result-panel">
+        <div class="card-header"><span class="icon">📋</span> LaTeX-Zusammenfassung</div>
+        <div class="card-body">
+
+          <div class="result-actions">
+            <button class="btn btn-gold btn-sm" id="download-pdf-btn" onclick="openPrintablePDF()" style="display:none">
+              📄 Als PDF speichern
+            </button>
+            <button class="btn btn-outline btn-sm" onclick="copyLatex()">
+              📋 LaTeX kopieren
+            </button>
+            <button class="btn btn-outline btn-sm" onclick="downloadLatex()">
+              💾 .tex herunterladen
+            </button>
+            <button class="btn btn-outline btn-sm" onclick="openOverleaf()">
+              🔗 In Overleaf öffnen
+            </button>
+          </div>
+          <span class="copy-success" id="copy-success">✓ In Zwischenablage kopiert!</span>
+
+
+          <div class="latex-preview-wrap">
+            <div class="latex-toolbar">
+              <div class="latex-toolbar-left">
+                <div class="dot dot-r"></div>
+                <div class="dot dot-y"></div>
+                <div class="dot dot-g"></div>
+                <span style="margin-left:.5rem; opacity:.7">LaTeX-Vorschau</span>
+              </div>
+              <span id="latex-file-label" style="opacity:.6; font-size:.72rem"></span>
+            </div>
+            <pre id="latex-output">Hier erscheint dein LaTeX-Code…</pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- Verlauf -->
+      <div class="card">
+        <div class="card-header"><span class="icon">🕒</span> Verlauf dieser Sitzung</div>
+        <div class="card-body" style="padding:1rem">
+          <div class="history-list" id="history-list">
+            <div class="history-empty">Noch keine Zusammenfassungen erstellt.</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ── Script ────────────────────────────────────────────────────────────── -->
+<script>
+  // ── State ──────────────────────────────────────────────────────────────────
+  let currentLatex = '';
+  let currentPdfBase64 = '';
+  let currentFileName = '';
+  let summaryCount = 0;
+  const history = [];
+
+  // ── Drag & Drop ────────────────────────────────────────────────────────────
+  const dropZone = document.getElementById('drop-zone');
+  const pdfInput = document.getElementById('pdf-input');
+
+  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZone.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if (file && file.type === 'application/pdf') setFile(file);
+  });
+  pdfInput.addEventListener('change', () => {
+    if (pdfInput.files[0]) setFile(pdfInput.files[0]);
+  });
+
+  function setFile(file) {
+    const dt = new DataTransfer();
+    dt.items.add(file);
+    pdfInput.files = dt.files;
+    const fc = document.getElementById('file-chosen');
+    document.getElementById('file-name-label').textContent = `${file.name} (${(file.size/1024/1024).toFixed(1)} MB)`;
+    fc.style.display = 'flex';
+    clearAlerts();
+    // Auto-Titel setzen wenn leer
+    if (!document.getElementById('doc-title').value) {
+      document.getElementById('doc-title').value = file.name.replace('.pdf','').replace(/[-_]/g,' ');
+    }
+  }
+
+  // ── Formular absenden ──────────────────────────────────────────────────────
+  async function submitForm() {
+    clearAlerts();
+    const apiKey = document.getElementById('api-key').value.trim();
+    const subject = document.getElementById('subject').value;
+    const title   = document.getElementById('doc-title').value.trim();
+    const file    = pdfInput.files[0];
+
+    if (!apiKey)  return showError('Bitte Gemini API-Key eingeben.');
+    if (!file)    return showError('Bitte eine PDF-Datei auswählen.');
+
+    const btn = document.getElementById('submit-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> KI analysiert Folien…';
+
+    showProgress('Vorlesungsfolien werden an Gemini übermittelt…', 20);
+
+    const formData = new FormData();
+    formData.append('pdf', file);
+    formData.append('apiKey', apiKey);
+    formData.append('subject', subject);
+    formData.append('title', title);
+
+    try {
+      setProgress(50, 'Gemini erstellt ausführliche Zusammenfassung…');
+
+      const res = await fetch('/api/summarize', { method: 'POST', body: formData });
+      const rawText = await res.text();
+      let data;
+      try {
+        data = JSON.parse(rawText);
+      } catch {
+        throw new Error(`Server-Fehler (${res.status}): ${rawText.substring(0, 300)}`);
+      }
+
+      if (!res.ok || !data.success) throw new Error(data.error || 'Unbekannter Fehler');
+
+      setProgress(90, 'LaTeX-Dokument wird aufgebaut…');
+      await sleep(400);
+      setProgress(100, 'Fertig!');
+      await sleep(300);
+      hideProgress();
+
+      // Ergebnis anzeigen
+      currentLatex       = data.latex;
+      currentPdfBase64   = data.pdf || '';
+      currentFileName    = data.fileName || title || 'Zusammenfassung';
+
+      document.getElementById('latex-output').textContent = data.latex;
+      document.getElementById('latex-file-label').textContent = `${currentFileName}.tex`;
+      document.getElementById('result-panel').style.display = 'block';
+      document.getElementById('result-panel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+      // PDF-Button immer anzeigen wenn LaTeX vorhanden
+      document.getElementById('download-pdf-btn').style.display = 'inline-flex';
+
+      // Stats
+      summaryCount++;
+      const chars = data.charCount || data.latex.length;
+      const pagesEst = Math.ceil(chars / 3000);
+      document.getElementById('stat-count').textContent = summaryCount;
+      document.getElementById('stat-chars').textContent = chars > 1000 ? `${(chars/1000).toFixed(1)}k` : chars;
+      document.getElementById('stat-pages').textContent = `~${pagesEst}`;
+
+      // Verlauf
+      addToHistory(currentFileName, subject, chars);
+      showSuccess(`✅ Zusammenfassung für "${currentFileName}" erstellt!`);
+
+    } catch (err) {
+      hideProgress();
+      showError(err.message);
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '<span>✨</span> Zusammenfassung erstellen';
+    }
+  }
+
+  // ── PDF (client-seitig via Print-Dialog) ──────────────────────────────────
+  function openPrintablePDF() {
+    if (!currentLatex) return;
+    const win = window.open('', '_blank');
+    if (!win) { showError('Pop-up wurde blockiert. Bitte Pop-ups für diese Seite erlauben.'); return; }
+    win.document.write(buildPrintHtml(currentLatex, currentFileName));
+    win.document.close();
+    setTimeout(() => { win.focus(); win.print(); }, 700);
+  }
+
+  function buildPrintHtml(latex, title) {
+    const body = convertLatexBody(latex);
+    return `<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8">
+<title>${esc(title)}</title><style>
+body{font-family:Georgia,serif;max-width:820px;margin:40px auto;padding:0 24px;color:#1a1a2e;line-height:1.75;font-size:15px}
+h1{color:#1a365d;font-size:1.9rem;border-bottom:3px solid #c9a84c;padding-bottom:.4em;margin-bottom:1.5em}
+h2{color:#1a365d;font-size:1.35rem;border-bottom:1.5px solid #2980b9;padding-bottom:.25em;margin-top:2.2em}
+h3{color:#2980b9;font-size:1.1rem;margin-top:1.6em}
+h4{color:#555;font-size:1rem;font-style:italic;margin-top:1.2em}
+p{margin:.7em 0}
+ul,ol{margin:.4em 0 .4em 1.6em}li{margin:.25em 0}
+code{font-family:monospace;background:#f0f0f0;padding:1px 4px;border-radius:3px;font-size:.88em}
+.env-def{background:#eef6ff;border-left:4px solid #2980b9;padding:.75em 1.1em;margin:1em 0;border-radius:0 6px 6px 0}
+.env-key{background:#fffde7;border-left:4px solid #e74c3c;padding:.75em 1.1em;margin:1em 0;border-radius:0 6px 6px 0;font-weight:500}
+.env-info{background:#f5f5ff;border:1px solid #7986cb;border-radius:6px;padding:.75em 1.1em;margin:1em 0}
+.env-title{font-weight:bold;color:#3949ab;margin-bottom:.4em}
+.env-box{background:#f9f9f9;border:1px solid #ccc;border-radius:6px;padding:.75em 1.1em;margin:1em 0}
+hr{border:none;border-top:1px solid #ddd;margin:2em 0}
+@media print{
+  body{margin:0;padding:1cm 2cm;max-width:100%}
+  h2,h3{page-break-after:avoid}
+  .env-def,.env-key,.env-info{page-break-inside:avoid}
+}
+</style></head><body>
+<h1>${esc(title)}</h1>${body}</body></html>`;
+  }
+
+  function convertLatexBody(latex) {
+    // Extract content after \tableofcontents + \newpage
+    let body = '';
+    const tocI = latex.indexOf('\\tableofcontents');
+    const npI  = latex.indexOf('\\newpage', tocI > -1 ? tocI : 0);
+    const endI = latex.lastIndexOf('\\end{document}');
+    if (npI > -1 && endI > -1) {
+      body = latex.slice(npI + 8, endI);
+    } else {
+      const m = latex.match(/\\begin\{document\}([\s\S]*?)\\end\{document\}/);
+      body = m ? m[1] : latex;
+    }
+
+    // Custom environments
+    body = body.replace(/\\begin\{definitionbox\}([\s\S]*?)\\end\{definitionbox\}/g,
+      (_, c) => `<div class="env-def">${fmtInline(c.trim())}</div>`);
+    body = body.replace(/\\begin\{keybox\}([\s\S]*?)\\end\{keybox\}/g,
+      (_, c) => `<div class="env-key">${fmtInline(c.trim())}</div>`);
+    body = body.replace(/\\begin\{infobox\}\{([^}]*)\}([\s\S]*?)\\end\{infobox\}/g,
+      (_, t, c) => `<div class="env-info"><div class="env-title">${fmtInline(t)}</div>${fmtInline(c.trim())}</div>`);
+    body = body.replace(/\\begin\{tcolorbox\}[\s\S]*?\\end\{tcolorbox\}/g,
+      (m) => { const c = m.replace(/^[\s\S]*?\]/, '').replace(/\\end\{tcolorbox\}$/, ''); return `<div class="env-box">${fmtInline(c.trim())}</div>`; });
+
+    // Lists (repeat for nesting)
+    for (let p = 0; p < 4; p++) {
+      body = body.replace(/\\begin\{enumerate\}([\s\S]*?)\\end\{enumerate\}/g,
+        (_, c) => '<ol>' + c.split(/\\item\b/).slice(1).map(s => `<li>${fmtInline(s.trim())}</li>`).join('') + '</ol>');
+      body = body.replace(/\\begin\{itemize\}([\s\S]*?)\\end\{itemize\}/g,
+        (_, c) => '<ul>' + c.split(/\\item\b/).slice(1).map(s => `<li>${fmtInline(s.trim())}</li>`).join('') + '</ul>');
+    }
+
+    // Sections
+    body = body.replace(/\\section\*?\{([^{}]+)\}/g,   '<h2>$1</h2>');
+    body = body.replace(/\\subsection\*?\{([^{}]+)\}/g,'<h3>$1</h3>');
+    body = body.replace(/\\subsubsection\*?\{([^{}]+)\}/g,'<h4>$1</h4>');
+
+    // Inline formatting
+    body = fmtInline(body);
+    body = body.replace(/\\newpage\b/g, '<hr>');
+
+    // Strip remaining LaTeX commands (repeat for nested braces)
+    for (let i = 0; i < 7; i++)
+      body = body.replace(/\\[a-zA-Z@*]+\*?(?:\[[^\]]*\])?\{([^{}]*)\}/g, '$1');
+    body = body.replace(/\\[a-zA-Z@*]+\*?(?:\[[^\]]*\])?/g, '');
+    body = body.replace(/[{}]/g, '');
+
+    // Wrap plain text in <p>
+    return body.split(/\n{2,}/).map(p => {
+      p = p.trim();
+      if (!p) return '';
+      if (/^<[hHdDuUoO]|^<hr/.test(p)) return p;
+      return `<p>${p.replace(/\n/g, ' ')}</p>`;
+    }).filter(Boolean).join('\n');
+  }
+
+  function fmtInline(t) {
+    t = t.replace(/\\textbf\{([^{}]+)\}/g,    '<strong>$1</strong>');
+    t = t.replace(/\\textit\{([^{}]+)\}/g,    '<em>$1</em>');
+    t = t.replace(/\\emph\{([^{}]+)\}/g,      '<em>$1</em>');
+    t = t.replace(/\\texttt\{([^{}]+)\}/g,    '<code>$1</code>');
+    t = t.replace(/\\underline\{([^{}]+)\}/g, '<u>$1</u>');
+    t = t.replace(/\$([^$\n]+)\$/g,           '<i>$1</i>');
+    t = t.replace(/\\\\/g, '<br>');
+    t = t.replace(/\\&/g, '&amp;');
+    t = t.replace(/\\%/g, '%');
+    t = t.replace(/\\ldots\b/g, '…');
+    return t;
+  }
+
+  function esc(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function downloadLatex() {
+    if (!currentLatex) return;
+    const blob = new Blob([currentLatex], { type: 'text/plain;charset=utf-8' });
+    triggerDownload(URL.createObjectURL(blob), `${currentFileName}.tex`);
+  }
+
+  function triggerDownload(url, name) {
+    const a = document.createElement('a');
+    a.href = url; a.download = name;
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  async function copyLatex() {
+    if (!currentLatex) return;
+    await navigator.clipboard.writeText(currentLatex);
+    const el = document.getElementById('copy-success');
+    el.style.display = 'inline';
+    setTimeout(() => el.style.display = 'none', 2500);
+  }
+
+  function openOverleaf() {
+    if (!currentLatex) return;
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = 'https://www.overleaf.com/docs';
+    form.target = '_blank';
+    const snap = document.createElement('input');
+    snap.type = 'hidden'; snap.name = 'snip'; snap.value = currentLatex;
+    const type = document.createElement('input');
+    type.type = 'hidden'; type.name = 'snip_type'; type.value = 'main.tex';
+    form.appendChild(snap); form.appendChild(type);
+    document.body.appendChild(form); form.submit();
+    document.body.removeChild(form);
+  }
+
+  // ── Verlauf ────────────────────────────────────────────────────────────────
+  function addToHistory(name, subject, chars) {
+    const item = { name, subject, chars, latex: currentLatex, pdf: currentPdfBase64 };
+    history.unshift(item);
+
+    const list = document.getElementById('history-list');
+    if (list.querySelector('.history-empty')) list.innerHTML = '';
+
+    const el = document.createElement('div');
+    el.className = 'history-item';
+    el.innerHTML = `
+      <span class="hi-icon">📄</span>
+      <div style="flex:1;overflow:hidden">
+        <div class="hi-name">${name}</div>
+        <div class="hi-meta">${subject} · ${(chars/1000).toFixed(1)}k Zeichen</div>
+      </div>
+      <button class="btn btn-outline btn-sm" style="flex-shrink:0" onclick="restoreHistory(${history.length-1})">
+        Laden
+      </button>
+    `;
+    list.prepend(el);
+  }
+
+  function restoreHistory(idx) {
+    const item = history[idx];
+    if (!item) return;
+    currentLatex     = item.latex;
+    currentPdfBase64 = item.pdf;
+    currentFileName  = item.name;
+    document.getElementById('latex-output').textContent = item.latex;
+    document.getElementById('latex-file-label').textContent = `${item.name}.tex`;
+    document.getElementById('result-panel').style.display = 'block';
+    document.getElementById('download-pdf-btn').style.display = 'inline-flex';
+    document.getElementById('result-panel').scrollIntoView({ behavior: 'smooth' });
+  }
+
+  // ── Hilfsfunktionen ────────────────────────────────────────────────────────
+  function showError(msg) {
+    const el = document.getElementById('alert-error');
+    el.textContent = '❌ ' + msg; el.style.display = 'block';
+  }
+  function showSuccess(msg) {
+    const el = document.getElementById('alert-success');
+    el.textContent = msg; el.style.display = 'block';
+    setTimeout(() => el.style.display = 'none', 4000);
+  }
+  function clearAlerts() {
+    document.getElementById('alert-error').style.display = 'none';
+    document.getElementById('alert-success').style.display = 'none';
+  }
+  function showProgress(label, pct) {
+    document.getElementById('progress-wrap').style.display = 'block';
+    setProgress(pct, label);
+  }
+  function setProgress(pct, label) {
+    document.getElementById('progress-fill').style.width = pct + '%';
+    if (label) document.getElementById('progress-label').textContent = label;
+  }
+  function hideProgress() {
+    document.getElementById('progress-wrap').style.display = 'none';
+  }
+  function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+</script>
+</body>
+</html>

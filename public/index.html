@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #f8f8f7;
+      --surface:   #ffffff;
+      --border:    rgba(0,0,0,.08);
+      --border-hv: rgba(0,0,0,.18);
+      --text:      #111;
+      --muted:     #666;
+      --accent:    #111;
+      --radius:    14px;
+      --shadow:    0 1px 4px rgba(0,0,0,.06), 0 4px 20px rgba(0,0,0,.05);
+      --shadow-hv: 0 2px 8px rgba(0,0,0,.09), 0 8px 32px rgba(0,0,0,.08);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg:        #111;
+        --surface:   #1a1a1a;
+        --border:    rgba(255,255,255,.08);
+        --border-hv: rgba(255,255,255,.18);
+        --text:      #f0f0ee;
+        --muted:     #888;
+        --accent:    #f0f0ee;
+        --shadow:    0 1px 4px rgba(0,0,0,.3), 0 4px 20px rgba(0,0,0,.25);
+        --shadow-hv: 0 2px 8px rgba(0,0,0,.4), 0 8px 32px rgba(0,0,0,.3);
+      }
+    }
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    header {
+      padding: 2.5rem 3rem 0;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .header-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0.4rem;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 18px;
+      font-weight: 600;
+      letter-spacing: -0.3px;
+    }
+
+    .logo-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--text);
+    }
+
+    .header-badge {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--muted);
+      background: var(--border);
+      padding: 3px 10px;
+      border-radius: 20px;
+    }
+
+    .header-subtitle {
+      font-size: 14px;
+      color: var(--muted);
+      margin-top: 0.2rem;
+    }
+
+    /* ── Grid ── */
+    main {
+      padding: 2rem 3rem 4rem;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .section-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 1rem;
+      margin-top: 2.5rem;
+    }
+
+    .apps-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 16px;
+    }
+
+    /* ── App Card ── */
+    .app-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      text-decoration: none;
+      color: inherit;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      box-shadow: var(--shadow);
+      transition: box-shadow 0.18s, border-color 0.18s, transform 0.12s;
+      cursor: pointer;
+    }
+
+    .app-card:hover {
+      box-shadow: var(--shadow-hv);
+      border-color: var(--border-hv);
+      transform: translateY(-2px);
+    }
+
+    .card-top {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+    }
+
+    .app-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      flex-shrink: 0;
+    }
+
+    .card-title-group { flex: 1; }
+
+    .app-name {
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: -0.2px;
+      margin-bottom: 3px;
+    }
+
+    .app-desc {
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .card-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .tag {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      padding: 2px 8px;
+      border-radius: 4px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--muted);
+    }
+
+    .card-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-top: 0.75rem;
+      border-top: 1px solid var(--border);
+    }
+
+    .app-port {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .open-btn {
+      font-size: 13px;
+      font-weight: 500;
+      font-family: 'Inter', sans-serif;
+      padding: 6px 14px;
+      border-radius: 8px;
+      background: var(--accent);
+      color: var(--bg);
+      border: none;
+      cursor: pointer;
+      transition: opacity 0.15s;
+      text-decoration: none;
+      display: inline-block;
+    }
+
+    .open-btn:hover { opacity: 0.75; }
+
+    /* ── Add-Card ── */
+    .add-card {
+      background: transparent;
+      border: 1.5px dashed var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      color: var(--muted);
+      min-height: 160px;
+      cursor: default;
+    }
+
+    .add-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      border: 1.5px dashed var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+    }
+
+    .add-label {
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    .add-hint {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      text-align: center;
+      line-height: 1.6;
+    }
+
+    /* ── Status bar ── */
+    .status-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      padding: 10px 3rem;
+      border-top: 1px solid var(--border);
+      background: var(--surface);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .status-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: #3ecf4a;
+    }
+
+    @media (max-width: 600px) {
+      header, main { padding-left: 1.25rem; padding-right: 1.25rem; }
+      .status-bar  { padding-left: 1.25rem; padding-right: 1.25rem; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-top">
+    <div class="logo">
+      <div class="logo-dot"></div>
+      Dashboard
+    </div>
+    <span class="header-badge" id="appCount">– Apps</span>
+  </div>
+  <p class="header-subtitle">Alle lokalen Tools auf einen Blick</p>
+</header>
+
+<main>
+  <div class="section-label">Anwendungen</div>
+  <div class="apps-grid" id="appsGrid"></div>
+</main>
+
+<div class="status-bar">
+  <div class="status-dot"></div>
+  <span>localhost:3000 · läuft</span>
+</div>
+
+<script>
+// ── Google OAuth Redirect-Handler ──────────────────────────────────────────
+// Nach Google-Login landet der Nutzer auf der Dashboard-Root mit #access_token=...
+// → direkt zur Podcast-Compressor-App weiterleiten.
+if (window.location.hash.includes('access_token=')) {
+  window.location.replace('/apps/podcast-compressor/' + window.location.hash);
+}
+
+// ── App-Registrierung ──────────────────────────────────────────────────────
+// Neue App hinzufügen: Eintrag in dieses Array ergänzen.
+const apps = [
+  {
+    id:   'latex-converter',
+    name: 'LaTeX Konverter',
+    desc: 'Foto von handschriftlichen Notizen hochladen – Gemini wandelt sie in LaTeX um und kompiliert ein PDF.',
+    icon: '📝',
+    color: '#e8f0fe',
+    colorDark: '#0d1f4a',
+    tags: ['LaTeX', 'Gemini Vision', 'PDF', 'pdflatex'],
+    path: '/apps/latex-converter',
+  },
+  {
+    id:   'latex-study',
+    name: 'StudyLaTeX',
+    desc: 'Vorlesungs-PDF hochladen – Gemini erstellt eine ausführliche LaTeX-Zusammenfassung mit PDF-Export.',
+    icon: '📚',
+    color: '#e6f4ea',
+    colorDark: '#0a2e14',
+    tags: ['LaTeX', 'Gemini', 'Zusammenfassung', 'BWL'],
+    path: '/apps/latex-study',
+  },
+  {
+    id:   'podcast-compressor',
+    name: 'Vorlesungs-Kompressor',
+    desc: 'Vorlesungsvideos direkt im Browser mit FFmpeg WASM komprimieren und zu Google Drive hochladen.',
+    icon: '🎬',
+    color: '#fce8e6',
+    colorDark: '#2a0a08',
+    tags: ['FFmpeg', 'Video', 'Google Drive', 'WASM'],
+    path: '/apps/podcast-compressor',
+  },
+];
+
+// ── Render ─────────────────────────────────────────────────────────────────
+const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+function renderApps() {
+  const grid = document.getElementById('appsGrid');
+  document.getElementById('appCount').textContent = apps.length + ' App' + (apps.length !== 1 ? 's' : '');
+
+  grid.innerHTML = apps.map(app => `
+    <a class="app-card" href="${app.path}" title="${app.name} öffnen">
+      <div class="card-top">
+        <div class="app-icon" style="background:${isDark ? app.colorDark : app.color}">${app.icon}</div>
+        <div class="card-title-group">
+          <div class="app-name">${app.name}</div>
+          <div class="app-desc">${app.desc}</div>
+        </div>
+      </div>
+      <div class="card-tags">
+        ${app.tags.map(t => `<span class="tag">${t}</span>`).join('')}
+      </div>
+      <div class="card-footer">
+        <span class="app-port">${app.path}</span>
+        <span class="open-btn">Öffnen →</span>
+      </div>
+    </a>
+  `).join('');
+
+  // Add-Karte
+  grid.insertAdjacentHTML('beforeend', `
+    <div class="add-card">
+      <div class="add-icon">+</div>
+      <div class="add-label">Neue App hinzufügen</div>
+      <div class="add-hint">
+        1. apps/&lt;name&gt;/index.html anlegen<br>
+        2. Route in server.js eintragen<br>
+        3. Karte oben im apps-Array ergänzen
+      </div>
+    </div>
+  `);
+}
+
+renderApps();
+</script>
+
+</body>
+</html>

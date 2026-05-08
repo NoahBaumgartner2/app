@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Notizen → LaTeX → PDF</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg-primary: #ffffff;
+    --bg-secondary: #f6f5f0;
+    --bg-tertiary: #efede6;
+    --bg-info: #e6f1fb;
+    --bg-success: #eaf3de;
+    --bg-warning: #faeeda;
+    --text-primary: #1a1a18;
+    --text-secondary: #5f5e5a;
+    --text-tertiary: #888780;
+    --text-info: #185fa5;
+    --text-success: #3b6d11;
+    --text-warning: #854f0b;
+    --border-light: rgba(26,26,24,0.12);
+    --border-medium: rgba(26,26,24,0.25);
+    --radius-md: 8px;
+    --radius-lg: 12px;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg-primary: #1e1e1c;
+      --bg-secondary: #2a2a27;
+      --bg-tertiary: #242422;
+      --bg-info: #0c2a4a;
+      --bg-success: #122b06;
+      --bg-warning: #3a200a;
+      --text-primary: #f0ede4;
+      --text-secondary: #a8a69e;
+      --text-tertiary: #6e6c66;
+      --text-info: #85b7eb;
+      --text-success: #97c459;
+      --text-warning: #ef9f27;
+      --border-light: rgba(240,237,228,0.12);
+      --border-medium: rgba(240,237,228,0.25);
+    }
+  }
+
+  body {
+    font-family: 'EB Garamond', Georgia, serif;
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ─── HEADER ─── */
+  .app-header {
+    padding: 1.5rem 2rem;
+    border-bottom: 0.5px solid var(--border-light);
+    background: var(--bg-primary);
+  }
+
+  .header-top {
+    display: flex;
+    align-items: baseline;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .app-title {
+    font-size: 22px;
+    font-weight: 500;
+    letter-spacing: -0.3px;
+  }
+
+  .app-subtitle {
+    font-size: 15px;
+    color: var(--text-secondary);
+    font-style: italic;
+  }
+
+  .api-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 14px;
+    background: var(--bg-secondary);
+    border-radius: var(--radius-md);
+    border: 0.5px solid var(--border-light);
+  }
+
+  .api-bar label {
+    font-size: 12px;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 0.5px;
+  }
+
+  .api-bar input {
+    flex: 1;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--text-primary);
+    min-width: 0;
+  }
+
+  .api-status {
+    font-size: 11px;
+    font-family: 'JetBrains Mono', monospace;
+    padding: 3px 10px;
+    border-radius: 20px;
+    white-space: nowrap;
+  }
+  .api-status.empty { background: var(--bg-warning); color: var(--text-warning); }
+  .api-status.set   { background: var(--bg-success); color: var(--text-success); }
+
+  /* ─── MAIN GRID ─── */
+  .main-content {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    flex: 1;
+  }
+
+  .panel {
+    padding: 1.5rem 2rem;
+    background: var(--bg-primary);
+    border-right: 0.5px solid var(--border-light);
+  }
+  .panel:last-child { border-right: none; }
+
+  .panel-title {
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-secondary);
+    margin-bottom: 1rem;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* ─── UPLOAD ─── */
+  .upload-zone {
+    border: 1.5px dashed var(--border-medium);
+    border-radius: var(--radius-lg);
+    padding: 2.5rem 2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: var(--bg-secondary);
+    position: relative;
+    margin-bottom: 1rem;
+  }
+  .upload-zone:hover, .upload-zone.dragover {
+    border-color: var(--text-info);
+    background: var(--bg-info);
+  }
+  .upload-zone input[type=file] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+    width: 100%;
+    height: 100%;
+  }
+  .upload-icon { font-size: 36px; color: var(--text-tertiary); margin-bottom: 10px; display: block; }
+  .upload-text { font-size: 16px; color: var(--text-secondary); margin-bottom: 4px; }
+  .upload-hint { font-size: 12px; color: var(--text-tertiary); font-family: 'JetBrains Mono', monospace; }
+
+  .preview-img {
+    width: 100%;
+    border-radius: var(--radius-md);
+    border: 0.5px solid var(--border-light);
+    max-height: 320px;
+    object-fit: contain;
+    background: var(--bg-secondary);
+    display: none;
+    margin-bottom: 8px;
+  }
+
+  .img-info {
+    font-size: 12px;
+    color: var(--text-secondary);
+    font-family: 'JetBrains Mono', monospace;
+    margin-bottom: 12px;
+    display: none;
+  }
+
+  /* ─── BUTTONS ─── */
+  .convert-btn {
+    width: 100%;
+    padding: 11px;
+    font-family: 'EB Garamond', serif;
+    font-size: 17px;
+    background: var(--text-primary);
+    color: var(--bg-primary);
+    border: none;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: opacity 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+  .convert-btn:hover { opacity: 0.82; }
+  .convert-btn:disabled { opacity: 0.38; cursor: not-allowed; }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spin { animation: spin 0.7s linear infinite; display: inline-block; }
+
+  .editor-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+  }
+
+  .action-btn {
+    flex: 1;
+    padding: 9px 12px;
+    font-family: 'EB Garamond', serif;
+    font-size: 15px;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    border: 0.5px solid var(--border-medium);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: background 0.15s;
+  }
+  .action-btn:hover { background: var(--bg-secondary); }
+  .action-btn:disabled { opacity: 0.38; cursor: not-allowed; }
+  .action-btn.primary {
+    background: var(--text-primary);
+    color: var(--bg-primary);
+    border-color: transparent;
+  }
+  .action-btn.primary:hover { opacity: 0.82; }
+
+  /* ─── LATEX EDITOR ─── */
+  .latex-editor {
+    width: 100%;
+    min-height: 380px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    line-height: 1.7;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    border: 0.5px solid var(--border-light);
+    border-radius: var(--radius-md);
+    padding: 1rem;
+    resize: vertical;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .latex-editor:focus { border-color: var(--border-medium); }
+
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 380px;
+    color: var(--text-tertiary);
+    gap: 10px;
+    font-style: italic;
+    background: var(--bg-secondary);
+    border-radius: var(--radius-md);
+    border: 0.5px solid var(--border-light);
+  }
+  .empty-state i { font-size: 32px; }
+
+  /* ─── STATUS BAR ─── */
+  .status-bar {
+    padding: 9px 2rem;
+    background: var(--bg-primary);
+    border-top: 0.5px solid var(--border-light);
+    font-size: 12px;
+    color: var(--text-secondary);
+    font-family: 'JetBrains Mono', monospace;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .status-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--border-medium);
+    flex-shrink: 0;
+  }
+  .status-dot.active  { background: #3b6d11; }
+  .status-dot.error   { background: #a32d2d; }
+  .status-dot.loading { background: #185fa5; animation: pulse 1s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  /* ─── PDF PROGRESS ─── */
+  .pdf-progress {
+    margin-top: 10px;
+    padding: 10px 14px;
+    background: var(--bg-info);
+    border-radius: var(--radius-md);
+    border: 0.5px solid var(--border-light);
+    font-size: 13px;
+    color: var(--text-info);
+    font-family: 'JetBrains Mono', monospace;
+    display: none;
+  }
+
+  /* ─── RESPONSIVE ─── */
+  @media (max-width: 720px) {
+    .main-content { grid-template-columns: 1fr; }
+    .panel { border-right: none; border-bottom: 0.5px solid var(--border-light); }
+    .header-top { flex-direction: column; gap: 4px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="app-header">
+  <div class="header-top">
+    <h1 class="app-title"><i class="ti ti-notebook" style="font-size:20px;vertical-align:-2px;margin-right:8px"></i>Notizen → LaTeX → PDF</h1>
+    <span class="app-subtitle">Algorithmen, Wahrscheinlichkeit &amp; Information</span>
+  </div>
+  <div class="api-bar">
+    <label>GEMINI API KEY</label>
+    <input type="password" id="apiKey" placeholder="AIza..." oninput="updateApiStatus()" autocomplete="off" />
+    <span class="api-status empty" id="apiStatus">nicht gesetzt</span>
+  </div>
+</header>
+
+<!-- MAIN -->
+<main class="main-content">
+
+  <!-- LEFT: Upload -->
+  <section class="panel">
+    <div class="panel-title"><i class="ti ti-camera"></i>&nbsp; Bild hochladen</div>
+
+    <div class="upload-zone" id="uploadZone">
+      <input type="file" id="fileInput" accept="image/*" onchange="handleFile(event)" />
+      <i class="ti ti-photo-up upload-icon"></i>
+      <div class="upload-text">Foto der Notizen ablegen oder klicken</div>
+      <div class="upload-hint">JPG · PNG · WEBP · HEIC &nbsp;·&nbsp; max 20 MB</div>
+    </div>
+
+    <img id="previewImg" class="preview-img" alt="Vorschau der Notizen" />
+    <div class="img-info" id="imgInfo"></div>
+
+    <button class="convert-btn" id="convertBtn" onclick="convertToLatex()" disabled>
+      <i class="ti ti-wand" id="convertIcon"></i>
+      <span id="convertLabel">Mit Gemini in LaTeX umwandeln</span>
+    </button>
+  </section>
+
+  <!-- RIGHT: Editor -->
+  <section class="panel">
+    <div class="panel-title"><i class="ti ti-code"></i>&nbsp; LaTeX-Code</div>
+
+    <div id="emptyState" class="empty-state">
+      <i class="ti ti-file-text"></i>
+      <span>Noch kein LaTeX generiert</span>
+    </div>
+
+    <textarea class="latex-editor" id="latexEditor" style="display:none" spellcheck="false"
+      placeholder="LaTeX-Code erscheint hier..."></textarea>
+
+    <div class="pdf-progress" id="pdfProgress">
+      <i class="ti ti-loader spin"></i>&nbsp; Kompiliere LaTeX zu PDF über Server...
+    </div>
+
+    <div class="editor-actions">
+      <button class="action-btn" onclick="copyLatex()" id="copyBtn" disabled>
+        <i class="ti ti-copy"></i> Kopieren
+      </button>
+      <button class="action-btn" onclick="downloadTex()" id="texBtn" disabled>
+        <i class="ti ti-file-code"></i> .tex
+      </button>
+      <button class="action-btn primary" onclick="downloadPdf()" id="pdfBtn" disabled>
+        <i class="ti ti-file-type-pdf"></i> PDF herunterladen
+      </button>
+    </div>
+  </section>
+
+</main>
+
+<!-- STATUS BAR -->
+<footer class="status-bar">
+  <div class="status-dot" id="statusDot"></div>
+  <span id="statusMsg">Bereit &nbsp;·&nbsp; API-Key eingeben und Bild hochladen</span>
+</footer>
+
+<script>
+  let imageBase64 = null;
+  let imageMime   = null;
+
+  /* ── API KEY ── */
+  function updateApiStatus() {
+    const key = document.getElementById('apiKey').value.trim();
+    const el  = document.getElementById('apiStatus');
+    if (key.length > 10) {
+      el.textContent = 'gesetzt';
+      el.className   = 'api-status set';
+    } else {
+      el.textContent = 'nicht gesetzt';
+      el.className   = 'api-status empty';
+    }
+    checkReady();
+  }
+
+  function checkReady() {
+    const key = document.getElementById('apiKey').value.trim();
+    document.getElementById('convertBtn').disabled = !(key.length > 10 && imageBase64);
+  }
+
+  /* ── FILE UPLOAD ── */
+  function handleFile(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    if (file.size > 20 * 1024 * 1024) {
+      setStatus('Datei zu gross · Maximum 20 MB', 'error');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const result  = e.target.result;
+      imageBase64   = result.split(',')[1];
+      imageMime     = file.type || 'image/jpeg';
+
+      const preview     = document.getElementById('previewImg');
+      preview.src       = result;
+      preview.style.display = 'block';
+
+      const info        = document.getElementById('imgInfo');
+      info.textContent  = file.name + ' · ' + (file.size / 1024).toFixed(0) + ' KB';
+      info.style.display = 'block';
+
+      document.getElementById('uploadZone').style.borderStyle = 'solid';
+      setStatus('Bild geladen: ' + file.name, '');
+      checkReady();
+    };
+    reader.readAsDataURL(file);
+  }
+
+  /* Drag & Drop */
+  const zone = document.getElementById('uploadZone');
+  zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+  zone.addEventListener('drop', e => {
+    e.preventDefault();
+    zone.classList.remove('dragover');
+    const file = e.dataTransfer.files[0];
+    if (file) handleFile({ target: { files: [file] } });
+  });
+
+  /* ── STATUS ── */
+  function setStatus(msg, mode) {
+    document.getElementById('statusMsg').textContent = msg;
+    const dot = document.getElementById('statusDot');
+    dot.className = 'status-dot' + (mode ? ' ' + mode : '');
+  }
+
+  /* ── GEMINI API CALL ── */
+  async function convertToLatex() {
+    const key = document.getElementById('apiKey').value.trim();
+    if (!key || !imageBase64) return;
+
+    const btn   = document.getElementById('convertBtn');
+    const icon  = document.getElementById('convertIcon');
+    const label = document.getElementById('convertLabel');
+
+    btn.disabled   = true;
+    icon.className = 'ti ti-loader spin';
+    label.textContent = 'Gemini analysiert Notizen...';
+    setStatus('Sende Bild an Gemini Vision API...', 'loading');
+
+    const prompt = `Du bist ein LaTeX-Experte für mathematische Vorlesungsnotizen.
+Analysiere dieses Bild handgeschriebener Notizen aus einer Vorlesung über Algorithmen, Wahrscheinlichkeit und Informationstheorie.
+
+Erstelle einen vollständigen, mit pdflatex kompilierbaren LaTeX-Code:
+1. \\documentclass{article} mit den Paketen: amsmath, amssymb, amsthm, geometry (a4paper, margin=2.5cm), fontenc (T1), inputenc (utf8), babel (ngerman)
+2. Definiere Theorem-Umgebungen: theorem, lemma, definition, corollary, proof
+3. Erkenne und setze ALLE mathematischen Formeln korrekt in LaTeX (inline mit $...$ und display mit \\[...\\])
+4. Erkenne Strukturen: Definitionen → \\begin{definition}, Sätze → \\begin{theorem}, Beweise → \\begin{proof}
+5. Erkenne Algorithmen und stelle sie mit Pseudocode oder itemize dar
+6. Erstelle Sections/Subsections basierend auf dem Inhalt
+7. Setze Titel, Autor (Vorlesungsnotizen) und Datum (\\today)
+8. Gib NUR den reinen LaTeX-Code zurück, ohne Markdown-Blöcke, ohne Erklärungen`;
+
+    try {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${key}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{
+              parts: [
+                { text: prompt },
+                { inline_data: { mime_type: imageMime, data: imageBase64 } }
+              ]
+            }],
+            generationConfig: { maxOutputTokens: 8192, temperature: 0.1 }
+          })
+        }
+      );
+
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.error?.message || 'HTTP ' + response.status);
+      }
+
+      const data = await response.json();
+      let latex   = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+
+      /* Markdown-Fences entfernen falls vorhanden */
+      latex = latex.replace(/```latex\n?/gi, '').replace(/```\n?/g, '').trim();
+
+      /* Fallback: vollständiges Dokument sicherstellen */
+      if (!latex.includes('\\documentclass')) {
+        latex = buildFallbackDocument(latex);
+      }
+
+      showEditor(latex);
+      setStatus('LaTeX erfolgreich generiert · ' + latex.split('\n').length + ' Zeilen', 'active');
+
+    } catch (err) {
+      setStatus('Fehler: ' + err.message, 'error');
+      console.error(err);
+    } finally {
+      btn.disabled      = false;
+      icon.className    = 'ti ti-wand';
+      label.textContent = 'Mit Gemini in LaTeX umwandeln';
+      checkReady();
+    }
+  }
+
+  function buildFallbackDocument(content) {
+    return `\\documentclass{article}
+\\usepackage[T1]{fontenc}
+\\usepackage[utf8]{inputenc}
+\\usepackage[ngerman]{babel}
+\\usepackage{amsmath, amssymb, amsthm}
+\\usepackage{geometry}
+\\geometry{a4paper, margin=2.5cm}
+
+\\newtheorem{theorem}{Satz}
+\\newtheorem{lemma}[theorem]{Lemma}
+\\newtheorem{definition}{Definition}
+\\newtheorem{corollary}[theorem]{Korollar}
+
+\\title{Vorlesungsnotizen\\\\Algorithmen, Wahrscheinlichkeit und Information}
+\\author{Notizen}
+\\date{\\today}
+
+\\begin{document}
+\\maketitle
+
+${content}
+
+\\end{document}`;
+  }
+
+  function showEditor(latex) {
+    document.getElementById('emptyState').style.display = 'none';
+    const editor = document.getElementById('latexEditor');
+    editor.style.display = 'block';
+    editor.value = latex;
+    document.getElementById('copyBtn').disabled = false;
+    document.getElementById('texBtn').disabled  = false;
+    document.getElementById('pdfBtn').disabled  = false;
+  }
+
+  /* ── COPY ── */
+  function copyLatex() {
+    const code = document.getElementById('latexEditor').value;
+    navigator.clipboard.writeText(code).then(() => {
+      setStatus('LaTeX-Code in Zwischenablage kopiert', 'active');
+    });
+  }
+
+  /* ── DOWNLOAD .tex ── */
+  function downloadTex() {
+    const latex = document.getElementById('latexEditor').value;
+    if (!latex) return;
+    const blob = new Blob([latex], { type: 'text/plain;charset=utf-8' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = 'vorlesungsnotizen.tex';
+    a.click();
+    URL.revokeObjectURL(url);
+    setStatus('.tex-Datei heruntergeladen', 'active');
+  }
+
+  /* ── PDF via lokaler Server ── */
+  async function downloadPdf() {
+    const latex = document.getElementById('latexEditor').value;
+    if (!latex) return;
+
+    const btn      = document.getElementById('pdfBtn');
+    const progress = document.getElementById('pdfProgress');
+
+    btn.disabled          = true;
+    progress.style.display = 'block';
+    setStatus('Kompiliere LaTeX zu PDF...', 'loading');
+
+    try {
+      const response = await fetch('/compile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ latex })
+      });
+
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.error || 'Kompilierungsfehler');
+      }
+
+      const blob = await response.blob();
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href     = url;
+      a.download = 'vorlesungsnotizen.pdf';
+      a.click();
+      URL.revokeObjectURL(url);
+      setStatus('PDF erfolgreich heruntergeladen', 'active');
+
+    } catch (err) {
+      setStatus('PDF-Fehler: ' + err.message + ' · Lade stattdessen .tex herunter', 'error');
+      downloadTex();
+    } finally {
+      btn.disabled           = false;
+      progress.style.display = 'none';
+    }
+  }
+</script>
+</body>
+</html>
