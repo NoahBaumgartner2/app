@@ -1,42 +1,127 @@
-const express  = require('express');
-const { execFile, exec, execSync } = require('child_process');
-const fs       = require('fs');
-const os       = require('os');
-const path     = require('path');
-const multer   = require('multer');
+const express    = require('express');
+const { execFile, exec } = require('child_process');
+const fs         = require('fs');
+const os         = require('os');
+const path       = require('path');
+const multer     = require('multer');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
-const tmp      = require('tmp');
+const tmp        = require('tmp');
+const session    = require('express-session');
+const SQLiteStore = require('connect-sqlite3')(session);
+const sqlite3    = require('sqlite3').verbose();
+const bcrypt     = require('bcrypt');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
 
+// ══════════════════════════════════════════════════════════════════════════════
+//  DATENBANK
+// ══════════════════════════════════════════════════════════════════════════════
+const db = new sqlite3.Database(path.join(__dirname, 'users.db'));
+db.run(`CREATE TABLE IF NOT EXISTS users (
+  id       INTEGER PRIMARY KEY AUTOINCREMENT,
+  username TEXT    UNIQUE NOT NULL,
+  password TEXT    NOT NULL
+)`);
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  MIDDLEWARE
+// ══════════════════════════════════════════════════════════════════════════════
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
+app.use(session({
+  store: new SQLiteStore({ db: 'sessions.db', dir: __dirname }),
+  secret: process.env.SESSION_SECRET || 'dashboard-local-secret-bitte-aendern',
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    httpOnly: true,
+    sameSite: 'lax',
+    maxAge: 7 * 24 * 60 * 60 * 1000   // 7 Tage
+  }
+}));
+
+// ── Auth-Middleware ────────────────────────────────────────────────────────
+function checkAuth(req, res, next) {
+  if (req.session.userId) return next();
+  const isApi = req.originalUrl.includes('/api/') || req.originalUrl.includes('/compile');
+  if (isApi) return res.status(401).json({ error: 'Nicht angemeldet.' });
+  res.redirect('/login.html');
+}
+
 // ══════════════════════════════════════════════════════════════════════════════
-//  DASHBOARD
+//  AUTH-ROUTEN  (vor checkAuth — kein Schutz nötig)
 // ══════════════════════════════════════════════════════════════════════════════
-app.use(express.static(path.join(__dirname, 'public')));
+
+app.get('/login.html', (req, res) => {
+  res.sendFile(path.join(__dirname, 'login.html'));
+});
+
+app.post('/register', async (req, res) => {
+  const { username, password } = req.body;
+  if (!username || !password)
+    return res.status(400).send('Benutzername und Passwort erforderlich.');
+  try {
+    const hash = await bcrypt.hash(password, 10);
+    db.run(
+      'INSERT INTO users (username, password) VALUES (?, ?)',
+      [username, hash],
+      (err) => {
+        if (err) return res.status(409).send('Benutzername bereits vergeben.');
+        res.redirect('/login.html?registered=1');
+      }
+    );
+  } catch {
+    res.status(500).send('Serverfehler.');
+  }
+});
+
+app.post('/login', (req, res) => {
+  const { username, password } = req.body;
+  if (!username || !password)
+    return res.status(400).send('Benutzername und Passwort erforderlich.');
+  db.get('SELECT * FROM users WHERE username = ?', [username], async (err, user) => {
+    if (err || !user) return res.status(401).send('Ungültige Anmeldedaten.');
+    const match = await bcrypt.compare(password, user.password);
+    if (!match)  return res.status(401).send('Ungültige Anmeldedaten.');
+    req.session.userId   = user.id;
+    req.session.username = user.username;
+    res.redirect('/');
+  });
+});
+
+app.post('/logout', (req, res) => {
+  req.session.destroy(() => res.redirect('/login.html'));
+});
+
+// Gibt den eingeloggten Usernamen zurück (für das Dashboard-Frontend)
+app.get('/api/me', checkAuth, (req, res) => {
+  res.json({ username: req.session.username });
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  DASHBOARD  (geschützt)
+// ══════════════════════════════════════════════════════════════════════════════
+app.use(checkAuth, express.static(path.join(__dirname, 'public')));
 
 
 // ══════════════════════════════════════════════════════════════════════════════
 //  APP: PODCAST COMPRESSOR  →  /apps/podcast-compressor
 //  (COOP/COEP headers sind für SharedArrayBuffer / FFmpeg WASM nötig)
 // ══════════════════════════════════════════════════════════════════════════════
-app.use('/apps/podcast-compressor', (req, res, next) => {
+app.use('/apps/podcast-compressor', checkAuth, (req, res, next) => {
   res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
   res.setHeader('Cross-Origin-Embedder-Policy', 'credentialless');
   next();
 }, express.static(path.join(__dirname, 'apps/podcastCompressor')));
-
-// Keine eigenen API-Routen — alles läuft client-seitig via FFmpeg WASM
 
 
 // ══════════════════════════════════════════════════════════════════════════════
 //  APP: LATEX KONVERTER  →  /apps/latex-converter
 //  Bild hochladen → Gemini Vision → LaTeX → PDF (pdflatex)
 // ══════════════════════════════════════════════════════════════════════════════
-app.use('/apps/latex-converter', express.static(path.join(__dirname, 'apps/latexConverter')));
+app.use('/apps/latex-converter', checkAuth, express.static(path.join(__dirname, 'apps/latexConverter')));
 
 function checkPdflatex() {
   return new Promise(resolve => {
@@ -58,7 +143,7 @@ function runPdflatex(texFile, cwd) {
   });
 }
 
-app.post('/apps/latex-converter/compile', async (req, res) => {
+app.post('/apps/latex-converter/compile', checkAuth, async (req, res) => {
   const { latex } = req.body;
   if (!latex || typeof latex !== 'string')
     return res.status(400).json({ error: 'Kein LaTeX-Code übermittelt.' });
@@ -99,7 +184,7 @@ app.post('/apps/latex-converter/compile', async (req, res) => {
 //  APP: LATEX STUDY  →  /apps/latex-study
 //  PDF-Folien hochladen → Gemini → LaTeX-Zusammenfassung → PDF
 // ══════════════════════════════════════════════════════════════════════════════
-app.use('/apps/latex-study', express.static(path.join(__dirname, 'apps/latexStudy')));
+app.use('/apps/latex-study', checkAuth, express.static(path.join(__dirname, 'apps/latexStudy')));
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -254,7 +339,7 @@ function compileLaTeX(latexContent) {
   });
 }
 
-app.post('/apps/latex-study/api/summarize', upload.single('pdf'), async (req, res) => {
+app.post('/apps/latex-study/api/summarize', checkAuth, upload.single('pdf'), async (req, res) => {
   try {
     const { apiKey, subject, title } = req.body;
     if (!req.file) return res.status(400).json({ error: 'Keine PDF-Datei hochgeladen.' });
@@ -270,12 +355,7 @@ app.post('/apps/latex-study/api/summarize', upload.single('pdf'), async (req, re
     const latexDoc = buildLatexDocument(docTitle, docSubject, summary, date);
 
     let pdfBuffer = null;
-    let pdfError  = null;
-    try {
-      pdfBuffer = await compileLaTeX(latexDoc);
-    } catch (e) {
-      pdfError = e.message;
-    }
+    try { pdfBuffer = await compileLaTeX(latexDoc); } catch (_) {}
 
     const responseData = { success: true, latex: latexDoc, fileName: docTitle, subject: docSubject, charCount: summary.length };
     if (pdfBuffer) responseData.pdf = pdfBuffer.toString('base64');
@@ -287,7 +367,7 @@ app.post('/apps/latex-study/api/summarize', upload.single('pdf'), async (req, re
   }
 });
 
-app.post('/apps/latex-study/api/latex-only', upload.single('pdf'), async (req, res) => {
+app.post('/apps/latex-study/api/latex-only', checkAuth, upload.single('pdf'), async (req, res) => {
   try {
     const { apiKey, subject, title } = req.body;
     if (!req.file) return res.status(400).json({ error: 'Keine PDF-Datei hochgeladen.' });
@@ -311,10 +391,10 @@ app.post('/apps/latex-study/api/latex-only', upload.single('pdf'), async (req, r
 // ══════════════════════════════════════════════════════════════════════════════
 //  NEUE APP HINZUFÜGEN
 //  1. Ordner anlegen:  apps/meineApp/index.html  (+ weitere Dateien)
-//  2. Statische Dateien einbinden:
-//       app.use('/apps/meine-app', express.static(path.join(__dirname, 'apps/meineApp')));
+//  2. Statische Dateien einbinden (mit checkAuth):
+//       app.use('/apps/meine-app', checkAuth, express.static(path.join(__dirname, 'apps/meineApp')));
 //  3. API-Routen falls nötig:
-//       app.post('/apps/meine-app/api/meinRoute', async (req, res) => { ... });
+//       app.post('/apps/meine-app/api/meinRoute', checkAuth, async (req, res) => { ... });
 //  4. Karte im Dashboard ergänzen: public/index.html → apps-Array
 // ══════════════════════════════════════════════════════════════════════════════
 

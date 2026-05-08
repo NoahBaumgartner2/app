@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Anmelden · Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #f8f8f7;
+      --surface:  #ffffff;
+      --border:   rgba(0,0,0,.1);
+      --text:     #111;
+      --muted:    #666;
+      --accent:   #111;
+      --danger:   #c0392b;
+      --success:  #27ae60;
+      --radius:   12px;
+      --shadow:   0 1px 4px rgba(0,0,0,.06), 0 4px 24px rgba(0,0,0,.07);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg:      #111;
+        --surface: #1a1a1a;
+        --border:  rgba(255,255,255,.1);
+        --text:    #f0f0ee;
+        --muted:   #888;
+        --accent:  #f0f0ee;
+        --shadow:  0 1px 4px rgba(0,0,0,.3), 0 4px 24px rgba(0,0,0,.3);
+      }
+    }
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+    }
+
+    /* ── Logo ── */
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 17px;
+      font-weight: 600;
+      letter-spacing: -0.3px;
+      margin-bottom: 2rem;
+    }
+
+    .logo-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--text);
+    }
+
+    /* ── Tabs ── */
+    .tabs {
+      display: flex;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 3px;
+      margin-bottom: 1.5rem;
+      width: 100%;
+      max-width: 380px;
+    }
+
+    .tab {
+      flex: 1;
+      padding: 7px;
+      text-align: center;
+      font-size: 14px;
+      font-weight: 500;
+      border-radius: 6px;
+      cursor: pointer;
+      color: var(--muted);
+      border: none;
+      background: transparent;
+      font-family: inherit;
+      transition: all .15s;
+    }
+
+    .tab.active {
+      background: var(--surface);
+      color: var(--text);
+      box-shadow: 0 1px 3px rgba(0,0,0,.1);
+    }
+
+    /* ── Card ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 2rem;
+      width: 100%;
+      max-width: 380px;
+      box-shadow: var(--shadow);
+    }
+
+    .card-title {
+      font-size: 18px;
+      font-weight: 600;
+      letter-spacing: -0.3px;
+      margin-bottom: 1.5rem;
+    }
+
+    /* ── Form ── */
+    .field { margin-bottom: 1rem; }
+
+    label {
+      display: block;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    input[type="text"],
+    input[type="password"] {
+      width: 100%;
+      padding: 9px 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 14px;
+      font-family: inherit;
+      background: var(--bg);
+      color: var(--text);
+      outline: none;
+      transition: border-color .15s, box-shadow .15s;
+    }
+
+    input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(0,0,0,.08);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      input:focus { box-shadow: 0 0 0 3px rgba(255,255,255,.08); }
+    }
+
+    /* ── Button ── */
+    .btn {
+      width: 100%;
+      padding: 10px;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      font-family: inherit;
+      background: var(--accent);
+      color: var(--bg);
+      cursor: pointer;
+      margin-top: 0.5rem;
+      transition: opacity .15s;
+    }
+
+    .btn:hover { opacity: 0.8; }
+    .btn:active { opacity: 0.65; }
+
+    /* ── Alerts ── */
+    .alert {
+      padding: 9px 12px;
+      border-radius: 8px;
+      font-size: 13px;
+      margin-bottom: 1rem;
+      display: none;
+    }
+
+    .alert-error   { background: rgba(192,57,43,.1); border: 1px solid rgba(192,57,43,.25); color: var(--danger); }
+    .alert-success { background: rgba(39,174,96,.1);  border: 1px solid rgba(39,174,96,.25);  color: var(--success); }
+
+    /* ── Divider ── */
+    .divider {
+      height: 1px;
+      background: var(--border);
+      margin: 1.5rem 0;
+    }
+
+    /* ── Footer ── */
+    .footer {
+      margin-top: 1.5rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    /* Form-Panels */
+    .form-panel { display: none; }
+    .form-panel.active { display: block; }
+  </style>
+</head>
+<body>
+
+<div class="logo">
+  <div class="logo-dot"></div>
+  Dashboard
+</div>
+
+<!-- Tab-Switcher -->
+<div class="tabs">
+  <button class="tab active" id="tab-login"    onclick="switchTab('login')">Anmelden</button>
+  <button class="tab"        id="tab-register" onclick="switchTab('register')">Registrieren</button>
+</div>
+
+<div class="card">
+
+  <!-- ── Login-Formular ── -->
+  <div class="form-panel active" id="panel-login">
+    <div class="card-title">Willkommen zurück</div>
+
+    <div id="login-error"   class="alert alert-error"></div>
+    <div id="login-success" class="alert alert-success"></div>
+
+    <form method="POST" action="/login" onsubmit="return onSubmit('login')">
+      <div class="field">
+        <label>Benutzername</label>
+        <input type="text" name="username" id="login-username"
+               autocomplete="username" autocapitalize="none" required />
+      </div>
+      <div class="field">
+        <label>Passwort</label>
+        <input type="password" name="password" id="login-password"
+               autocomplete="current-password" required />
+      </div>
+      <button class="btn" type="submit">Anmelden →</button>
+    </form>
+  </div>
+
+  <!-- ── Registrierungs-Formular ── -->
+  <div class="form-panel" id="panel-register">
+    <div class="card-title">Konto erstellen</div>
+
+    <div id="register-error"   class="alert alert-error"></div>
+    <div id="register-success" class="alert alert-success"></div>
+
+    <form method="POST" action="/register" onsubmit="return onSubmit('register')">
+      <div class="field">
+        <label>Benutzername</label>
+        <input type="text" name="username" id="reg-username"
+               autocomplete="username" autocapitalize="none" required />
+      </div>
+      <div class="field">
+        <label>Passwort</label>
+        <input type="password" name="password" id="reg-password"
+               autocomplete="new-password" required minlength="6" />
+      </div>
+      <button class="btn" type="submit">Konto erstellen →</button>
+    </form>
+  </div>
+
+</div>
+
+<div class="footer">Nur für lokale Nutzung · Sessions werden 7 Tage gespeichert</div>
+
+<script>
+  // ── Tab-Switching ──────────────────────────────────────────────────────────
+  function switchTab(tab) {
+    document.getElementById('panel-login').classList.toggle('active', tab === 'login');
+    document.getElementById('panel-register').classList.toggle('active', tab === 'register');
+    document.getElementById('tab-login').classList.toggle('active', tab === 'login');
+    document.getElementById('tab-register').classList.toggle('active', tab === 'register');
+  }
+
+  // ── Fehler via AJAX statt Seiten-Reload ───────────────────────────────────
+  function onSubmit(type) {
+    const form   = event.target;
+    const errEl  = document.getElementById(type + '-error');
+    const okEl   = document.getElementById(type + '-success');
+    errEl.style.display = 'none';
+    okEl.style.display  = 'none';
+
+    fetch(form.action, {
+      method: 'POST',
+      body: new URLSearchParams(new FormData(form)),
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      redirect: 'manual'
+    }).then(async res => {
+      if (res.type === 'opaqueredirect' || res.status === 302 || res.redirected) {
+        window.location.href = res.url || '/';
+        return;
+      }
+      if (res.ok || res.status < 400) {
+        if (type === 'register') {
+          okEl.textContent = '✓ Konto erstellt. Bitte jetzt anmelden.';
+          okEl.style.display = 'block';
+          form.reset();
+          setTimeout(() => switchTab('login'), 1200);
+        } else {
+          window.location.href = '/';
+        }
+      } else {
+        const text = await res.text();
+        errEl.textContent = text || 'Fehler beim Anmelden.';
+        errEl.style.display = 'block';
+      }
+    }).catch(() => form.submit());
+
+    return false;
+  }
+
+  // ── ?registered=1 → Hinweis anzeigen ──────────────────────────────────────
+  if (new URLSearchParams(location.search).get('registered') === '1') {
+    const el = document.getElementById('login-success');
+    el.textContent = '✓ Konto erstellt — bitte jetzt anmelden.';
+    el.style.display = 'block';
+  }
+</script>
+
+</body>
+</html>

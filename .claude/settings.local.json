@@ -13,7 +13,15 @@
       "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000/apps/podcast-compressor/)",
       "Bash(curl -sI http://localhost:3000/apps/podcast-compressor/)",
       "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000/)",
-      "Bash(curl -sI \"http://localhost:3000/#access_token=TEST\")"
+      "Bash(curl -sI \"http://localhost:3000/#access_token=TEST\")",
+      "Bash(node *)",
+      "Bash(pkill -f \"node.*server.js\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code} GET /login.html\\\\n\" http://localhost:3000/login.html)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code} GET / \\(ohne Session → Redirect\\)\\\\n\" -L http://localhost:3000/)",
+      "Bash(curl -s -c /tmp/test-cookies.txt -o /dev/null -w '%{http_code} POST /register\\\\n' -X POST http://localhost:3000/register -d 'username=testuser&password=test123')",
+      "Bash(curl -s -b /tmp/test-cookies.txt -c /tmp/test-cookies.txt -o /dev/null -w '%{http_code} POST /login\\\\n' -X POST http://localhost:3000/register -d 'username=admin&password=geheim')",
+      "Bash(pkill -f \"node.*server\")",
+      "Bash(curl *)"
     ]
   }
 }

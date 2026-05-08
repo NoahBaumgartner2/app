@@ -288,7 +288,13 @@
       <div class="logo-dot"></div>
       Dashboard
     </div>
-    <span class="header-badge" id="appCount">– Apps</span>
+    <div style="display:flex;align-items:center;gap:10px">
+      <span class="header-badge" id="appCount">– Apps</span>
+      <span class="header-badge" id="userBadge" style="display:none"></span>
+      <form method="POST" action="/logout" style="margin:0">
+        <button type="submit" style="font-family:'JetBrains Mono',monospace;font-size:11px;padding:3px 10px;border-radius:20px;background:transparent;border:1px solid var(--border);color:var(--muted);cursor:pointer">Abmelden</button>
+      </form>
+    </div>
   </div>
   <p class="header-subtitle">Alle lokalen Tools auf einen Blick</p>
 </header>
@@ -310,6 +316,13 @@
 if (window.location.hash.includes('access_token=')) {
   window.location.replace('/apps/podcast-compressor/' + window.location.hash);
 }
+
+// ── Eingeloggten User anzeigen ─────────────────────────────────────────────
+fetch('/api/me').then(r => r.json()).then(data => {
+  const el = document.getElementById('userBadge');
+  el.textContent = data.username;
+  el.style.display = 'inline';
+}).catch(() => {});
 
 // ── App-Registrierung ──────────────────────────────────────────────────────
 // Neue App hinzufügen: Eintrag in dieses Array ergänzen.
