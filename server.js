@@ -71,6 +71,15 @@ app.use(session({
   }
 }));
 
+// PWA-Dateien öffentlich (kein Login nötig, damit iOS sie laden kann)
+app.get('/manifest.json', (req, res) =>
+  res.sendFile(path.join(__dirname, 'public', 'manifest.json'))
+);
+app.use('/icons', express.static(path.join(__dirname, 'public', 'icons')));
+app.get('/sw.js', (req, res) =>
+  res.sendFile(path.join(__dirname, 'public', 'sw.js'))
+);
+
 // ── Auth-Middleware ────────────────────────────────────────────────────────
 function checkAuth(req, res, next) {
   if (req.session.userId) return next();
