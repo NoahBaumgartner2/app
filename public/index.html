@@ -417,6 +417,20 @@
 
     <div class="secrets-divider"></div>
 
+    <!-- Home Assistant Token -->
+    <div class="secret-row">
+      <div class="secret-label">HA Access Token</div>
+      <div class="secret-meta">Smart Home</div>
+      <div class="secret-input-wrap">
+        <input type="password" id="s-ha-token" placeholder="eyJhbGci…" autocomplete="off" spellcheck="false" />
+        <button class="secret-eye" onclick="toggleEye('s-ha-token', this)" title="Anzeigen">👁</button>
+      </div>
+      <span class="saved-indicator" id="ind-ha-token">✓ gespeichert</span>
+    </div>
+
+
+    <div class="secrets-divider"></div>
+
     <!-- Google Drive Client-ID -->
     <div class="secret-row">
       <div class="secret-label">Google Client-ID</div>
@@ -496,6 +510,16 @@ const apps = [
     path: '/apps/pet-meds',
   },
   {
+    id:   'smart-home',
+    name: 'Smart Home',
+    desc: 'Geräte steuern via Home Assistant: IKEA Steckdosen, SwitchBot Lichter & Dimmer, Sensoren.',
+    icon: '🏠',
+    color: '#e0f2fe',
+    colorDark: '#082f49',
+    tags: ['Home Assistant', 'IKEA', 'SwitchBot'],
+    path: '/apps/smart-home',
+  },
+  {
     id:   'admin',
     name: 'Admin-Panel',
     desc: 'Benutzer verwalten, App-Zugriff steuern und Online-Status einsehen.',
@@ -555,12 +579,14 @@ function renderApps(isAdmin, allowedSlugs) {
 
 // ── Secrets ────────────────────────────────────────────────────────────────
 const SECRET_MAP = {
-  'gemini_api_key': 's-gemini',
+  'gemini_api_key':  's-gemini',
+  'ha_token':        's-ha-token',
   'google_client_id': 's-google',
 };
 const IND_MAP = {
-  's-gemini': 'ind-gemini',
-  's-google':  'ind-google',
+  's-gemini':   'ind-gemini',
+  's-ha-token': 'ind-ha-token',
+  's-google':   'ind-google',
 };
 
 async function loadSecrets() {

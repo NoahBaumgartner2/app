@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Home · Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #f8f8f7;
+      --surface:   #ffffff;
+      --border:    rgba(0,0,0,.08);
+      --border-hv: rgba(0,0,0,.18);
+      --text:      #111;
+      --muted:     #666;
+      --accent:    #111;
+      --radius:    14px;
+      --shadow:    0 1px 4px rgba(0,0,0,.06), 0 4px 20px rgba(0,0,0,.05);
+      --shadow-hv: 0 2px 8px rgba(0,0,0,.09), 0 8px 32px rgba(0,0,0,.08);
+      --on:        #22c55e;
+      --on-bg:     rgba(34,197,94,.10);
+      --on-border: rgba(34,197,94,.25);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg:        #111;
+        --surface:   #1a1a1a;
+        --border:    rgba(255,255,255,.08);
+        --border-hv: rgba(255,255,255,.18);
+        --text:      #f0f0ee;
+        --muted:     #888;
+        --accent:    #f0f0ee;
+        --shadow:    0 1px 4px rgba(0,0,0,.3), 0 4px 20px rgba(0,0,0,.25);
+        --shadow-hv: 0 2px 8px rgba(0,0,0,.4), 0 8px 32px rgba(0,0,0,.3);
+      }
+    }
+
+    body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+    /* ── Header ── */
+    .app-header {
+      padding: 0 2rem; background: var(--surface); border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 1rem; height: 56px;
+      position: sticky; top: 0; z-index: 10;
+    }
+    .back-link { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--muted); text-decoration: none; flex-shrink: 0; transition: color .15s; }
+    .back-link:hover { color: var(--text); }
+    .header-title { font-size: 16px; font-weight: 600; letter-spacing: -0.3px; flex: 1; }
+    .header-right { display: flex; align-items: center; gap: 8px; }
+    .last-updated { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--muted); }
+    .conn-badge { font-family: 'JetBrains Mono', monospace; font-size: 11px; padding: 3px 10px; border-radius: 20px; white-space: nowrap; }
+    .conn-badge.loading      { background: var(--border); color: var(--muted); border: 1px solid var(--border); }
+    .conn-badge.connected    { background: var(--on-bg); color: #16a34a; border: 1px solid var(--on-border); }
+    .conn-badge.disconnected { background: rgba(239,68,68,.08); color: #dc2626; border: 1px solid rgba(239,68,68,.2); }
+    .refresh-btn {
+      background: none; border: 1px solid var(--border); border-radius: 8px;
+      width: 32px; height: 32px; font-size: 15px; cursor: pointer; color: var(--muted);
+      transition: all .15s; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .refresh-btn:hover { border-color: var(--border-hv); color: var(--text); }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spin { animation: spin .7s linear infinite; display: inline-block; }
+
+    /* ── Main ── */
+    .main { max-width: 1100px; margin: 0 auto; padding: 2rem; }
+    @media (max-width: 600px) { .app-header { padding: 0 1rem; } .main { padding: 1rem; } .last-updated { display: none; } }
+
+    /* ── State views ── */
+    .state-view { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 60vh; gap: 1rem; text-align: center; }
+    .state-icon  { font-size: 48px; }
+    .state-title { font-size: 18px; font-weight: 600; letter-spacing: -0.3px; }
+    .state-desc  { font-size: 14px; color: var(--muted); max-width: 420px; line-height: 1.7; }
+    .state-btn {
+      display: inline-block; padding: 9px 20px; border-radius: 8px;
+      font-size: 13px; font-weight: 500; background: var(--accent); color: var(--bg);
+      border: none; cursor: pointer; text-decoration: none; font-family: 'Inter', sans-serif;
+      transition: opacity .15s; margin-top: .25rem;
+    }
+    .state-btn:hover { opacity: .78; }
+    .spinner { width: 36px; height: 36px; border: 3px solid var(--border); border-top-color: var(--text); border-radius: 50%; animation: spin .8s linear infinite; }
+
+    /* ── Section labels ── */
+    .section-label { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted); letter-spacing: .08em; text-transform: uppercase; margin-bottom: 1rem; }
+    .ha-section    { margin-top: 2rem; }
+
+    /* ── HA Rooms grid ── */
+    .rooms-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(310px, 1fr)); gap: 16px; }
+    @media (max-width: 640px) { .rooms-grid { grid-template-columns: 1fr; } }
+
+    /* ── Room card ── */
+    .room-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+    .room-header { display: flex; align-items: center; gap: 8px; padding: .8rem 1.2rem; border-bottom: 1px solid var(--border); }
+    .room-icon { font-size: 17px; flex-shrink: 0; }
+    .room-name { font-size: 13px; font-weight: 600; letter-spacing: -0.2px; flex: 1; }
+    .device-count { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--muted); background: var(--bg); padding: 2px 7px; border-radius: 10px; border: 1px solid var(--border); }
+
+    /* ── Device list ── */
+    .device-list { display: flex; flex-direction: column; }
+    .device-item { display: flex; align-items: center; gap: 10px; padding: .7rem 1.2rem; border-bottom: 1px solid var(--border); transition: background .1s; min-height: 54px; }
+    .device-item:last-child { border-bottom: none; }
+    .device-item:hover { background: var(--bg); }
+    .device-item.unavailable { opacity: .45; }
+    .device-icon { font-size: 19px; flex-shrink: 0; width: 26px; text-align: center; }
+    .device-info { flex: 1; min-width: 0; }
+    .device-name { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .device-hint { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--muted); margin-top: 2px; }
+
+    /* ── Toggle ── */
+    .toggle { position: relative; display: inline-block; width: 44px; height: 24px; flex-shrink: 0; cursor: pointer; }
+    .toggle input { opacity: 0; width: 0; height: 0; position: absolute; }
+    .toggle-track { position: absolute; inset: 0; border-radius: 24px; background: rgba(0,0,0,.15); transition: background .2s; }
+    @media (prefers-color-scheme: dark) { .toggle-track { background: rgba(255,255,255,.18); } }
+    .toggle-track::before { content: ''; position: absolute; width: 18px; height: 18px; border-radius: 50%; background: white; top: 3px; left: 3px; transition: transform .2s; box-shadow: 0 1px 3px rgba(0,0,0,.25); }
+    .toggle input:checked + .toggle-track { background: var(--on); }
+    .toggle input:checked + .toggle-track::before { transform: translateX(20px); }
+    .toggle input:disabled + .toggle-track { opacity: .4; cursor: not-allowed; }
+
+    /* ── Brightness slider ── */
+    .brightness-wrap { margin-top: 5px; }
+    .brightness-slider { -webkit-appearance: none; appearance: none; width: 100%; height: 3px; border-radius: 2px; background: var(--border-hv); outline: none; cursor: pointer; }
+    .brightness-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%; background: var(--text); cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,.25); }
+    .brightness-slider::-moz-range-thumb { width: 14px; height: 14px; border: none; border-radius: 50%; background: var(--text); cursor: pointer; }
+
+    /* ── Sensor value ── */
+    .sensor-value { font-family: 'JetBrains Mono', monospace; font-size: 17px; font-weight: 600; letter-spacing: -0.5px; white-space: nowrap; flex-shrink: 0; }
+    .sensor-unit  { font-size: 11px; color: var(--muted); margin-left: 1px; font-weight: 400; }
+
+    /* ── HA Lock badge (passive, via HA) ── */
+    .lock-badge { font-family: 'JetBrains Mono', monospace; font-size: 11px; padding: 3px 9px; border-radius: 6px; white-space: nowrap; flex-shrink: 0; }
+    .lock-badge.locked        { background: var(--on-bg); color: #16a34a; border: 1px solid var(--on-border); }
+    .lock-badge.unlocked      { background: rgba(239,68,68,.08); color: #dc2626; border: 1px solid rgba(239,68,68,.2); }
+    .lock-badge.transitioning { background: rgba(245,158,11,.1); color: #d97706; border: 1px solid rgba(245,158,11,.3); }
+    .lock-badge.unknown       { background: var(--bg); color: var(--muted); border: 1px solid var(--border); }
+
+    /* ── Scenes ── */
+    .scenes-section { margin-bottom: 2rem; }
+    .scenes-header { display: flex; align-items: center; gap: 10px; margin-bottom: .9rem; }
+    .scenes-header .section-label { margin-bottom: 0; flex: 1; }
+    .manage-toggle-btn {
+      background: none; border: 1px solid var(--border); border-radius: 7px;
+      color: var(--muted); font-size: 12px; font-family: 'Inter', sans-serif;
+      padding: 3px 10px; cursor: pointer; transition: color .15s, border-color .15s;
+    }
+    .manage-toggle-btn:hover { color: var(--text); border-color: var(--border-hv); }
+    .manage-toggle-btn.active { color: var(--text); border-color: var(--border-hv); background: var(--bg); }
+
+    .scenes-row { display: flex; flex-wrap: wrap; gap: 10px; }
+    .scene-btn {
+      display: flex; align-items: center; gap: 7px;
+      padding: 10px 18px; border-radius: 10px;
+      border: 1px solid var(--border); background: var(--surface);
+      color: var(--text); font-family: 'Inter', sans-serif;
+      font-size: 14px; font-weight: 500; cursor: pointer;
+      transition: box-shadow .15s, border-color .15s, opacity .15s;
+      box-shadow: var(--shadow);
+    }
+    .scene-btn:hover { border-color: var(--border-hv); box-shadow: var(--shadow-hv); }
+    .scene-btn:active { opacity: .7; }
+    .scene-btn:disabled { opacity: .4; cursor: not-allowed; box-shadow: none; }
+    .scene-btn.running { border-color: var(--accent); }
+    .scene-emoji { font-size: 18px; line-height: 1; }
+    .scenes-empty { font-size: 13px; color: var(--muted); font-style: italic; }
+
+    .scenes-manage {
+      margin-top: 1rem; padding: 1.2rem; background: var(--surface);
+      border: 1px solid var(--border); border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+    .scene-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 1rem; }
+    .scene-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 7px 10px; border-radius: 8px; background: var(--bg);
+      border: 1px solid var(--border); font-size: 13px;
+    }
+    .scene-item-emoji { font-size: 16px; flex-shrink: 0; }
+    .scene-item-name  { font-weight: 500; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .scene-item-id    { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--muted); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .scene-del-btn {
+      background: none; border: none; cursor: pointer; color: var(--muted);
+      font-size: 15px; padding: 2px 4px; border-radius: 4px; flex-shrink: 0;
+      transition: color .15s;
+    }
+    .scene-del-btn:hover { color: #dc2626; }
+
+    .add-scene-form { display: flex; gap: 8px; flex-wrap: wrap; }
+    .add-scene-form input {
+      flex: 1; min-width: 80px; padding: 7px 10px;
+      border: 1px solid var(--border); border-radius: 8px;
+      background: var(--bg); color: var(--text);
+      font-family: 'Inter', sans-serif; font-size: 13px; outline: none;
+    }
+    .add-scene-form input:focus { border-color: var(--accent); }
+    .add-scene-form .emoji-input { max-width: 60px; text-align: center; }
+    .add-scene-form .id-input { flex: 2; }
+    .add-btn {
+      padding: 7px 16px; border-radius: 8px; border: none;
+      background: var(--accent); color: var(--bg);
+      font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 600;
+      cursor: pointer; white-space: nowrap; transition: opacity .15s;
+    }
+    .add-btn:hover { opacity: .8; }
+    .add-btn:disabled { opacity: .4; cursor: not-allowed; }
+
+    /* ── Rename ── */
+    .device-name-row { display: flex; align-items: center; gap: 3px; min-width: 0; }
+    .rename-btn { background: none; border: none; cursor: pointer; color: var(--muted); font-size: 12px; padding: 1px 3px; border-radius: 4px; opacity: 0; transition: opacity .15s, color .15s; flex-shrink: 0; line-height: 1; }
+    .device-item:hover .rename-btn { opacity: 1; }
+    .rename-btn:hover { color: var(--text); }
+    .rename-input { font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 500; background: var(--bg); border: 1px solid var(--border-hv); border-radius: 5px; color: var(--text); padding: 1px 6px; width: 100%; outline: none; min-width: 0; }
+    .rename-input:focus { border-color: var(--accent); }
+
+    /* ── Drag & Drop ── */
+    .drag-handle { cursor: grab; color: var(--muted); font-size: 13px; opacity: 0; transition: opacity .15s; flex-shrink: 0; margin-right: 2px; user-select: none; }
+    .room-header:hover .drag-handle { opacity: .55; }
+    .drag-handle:hover { opacity: 1 !important; }
+    .room-card.dragging { opacity: .35; }
+    .room-card.drag-over { border-color: var(--accent); box-shadow: var(--shadow-hv); }
+
+    /* ── Bot press button ── */
+    .press-btn {
+      flex-shrink: 0;
+      padding: 5px 12px;
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      background: var(--surface);
+      color: var(--text);
+      font-family: 'Inter', system-ui, sans-serif;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background .15s, opacity .15s;
+      white-space: nowrap;
+    }
+    .press-btn:hover  { background: var(--bg); }
+    .press-btn:active { opacity: .6; }
+    .press-btn:disabled { opacity: .35; cursor: not-allowed; }
+
+  </style>
+</head>
+<body>
+
+<header class="app-header">
+  <a href="/" class="back-link">← Dashboard</a>
+  <div class="header-title">🏠 Smart Home</div>
+  <div class="header-right">
+    <span class="last-updated" id="lastUpdated"></span>
+    <span class="conn-badge loading" id="connBadge">Verbinde…</span>
+    <button class="refresh-btn" id="refreshBtn" onclick="loadAll(false)" title="Aktualisieren">
+      <span id="refreshIcon">↻</span>
+    </button>
+  </div>
+</header>
+
+<div class="main">
+
+  <!-- Loading -->
+  <div class="state-view" id="loadingState">
+    <div class="spinner"></div>
+    <div class="state-desc">Verbinde mit Home Assistant…</div>
+  </div>
+
+  <!-- No HA token -->
+  <div class="state-view" id="noTokenState" style="display:none">
+    <div class="state-icon">🔑</div>
+    <div class="state-title">Token nicht konfiguriert</div>
+    <div class="state-desc">
+      Bitte den Home Assistant Long-Lived Access Token im Dashboard speichern.<br><br>
+      <strong>Token erstellen:</strong> HA öffnen → Profil (unten links) → ganz unten →
+      „Langlebige Zugriffstoken" → Token erstellen (Name: <em>dashboard</em>)
+    </div>
+    <a href="/" class="state-btn">Zum Dashboard → API-Schlüssel</a>
+  </div>
+
+  <!-- Error -->
+  <div class="state-view" id="errorState" style="display:none">
+    <div class="state-icon">⚠️</div>
+    <div class="state-title">Verbindungsfehler</div>
+    <div class="state-desc" id="errorMsg"></div>
+    <button class="state-btn" onclick="loadAll(false)">Erneut versuchen</button>
+  </div>
+
+  <!-- Content -->
+  <div id="contentState" style="display:none">
+
+    <!-- ── Szenen ── -->
+    <div class="scenes-section">
+      <div class="scenes-header">
+        <span class="section-label">Szenen</span>
+        <button class="manage-toggle-btn" id="manageToggleBtn" onclick="toggleManage()">⚙ Verwalten</button>
+      </div>
+      <div class="scenes-row" id="scenesRow"></div>
+      <div class="scenes-manage" id="scenesManage" style="display:none">
+        <div class="scene-list" id="sceneList"></div>
+        <div class="add-scene-form">
+          <input class="emoji-input" id="newEmoji"    type="text"  placeholder="🎬" maxlength="4" />
+          <input                     id="newName"     type="text"  placeholder="Name…" maxlength="60" />
+          <input class="id-input"    id="newEntityId" type="text"  placeholder="automation.meine_automation" />
+          <button class="add-btn" id="addBtn" onclick="addScene()">+ Hinzufügen</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Home Assistant Geräte ── -->
+    <div class="ha-section">
+      <div class="section-label" id="sectionLabel">Geräte</div>
+      <div class="rooms-grid" id="roomsGrid"></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  let allEntities    = [];
+  let allAreas       = {};
+  let allScenes      = [];
+  let customNames    = {};
+  let groupOrder     = [];
+  let renderedGroups = [];
+  let _dragSrc       = null;
+  let autoTimer      = null;
+
+  /* ── Icons ── */
+  const SENSOR_ICONS = { temperature: '🌡️', humidity: '💧', battery: '🔋' };
+  const DOMAIN_LABELS = { switch: 'Schalter & Steckdosen', light: 'Lichter', lock: 'Schlösser', sensor: 'Sensoren' };
+
+  /* ── State UI ── */
+  function showState(id) {
+    ['loadingState','noTokenState','errorState','contentState'].forEach(s => {
+      document.getElementById(s).style.display = s === id ? (id === 'contentState' ? 'block' : 'flex') : 'none';
+    });
+  }
+  function setConn(state) {
+    const el = document.getElementById('connBadge');
+    const map = { loading: ['Verbinde…','loading'], connected: ['🟢 Verbunden','connected'], disconnected: ['🔴 Getrennt','disconnected'] };
+    const [text, cls] = map[state] || map.loading;
+    el.textContent = text; el.className = 'conn-badge ' + cls;
+  }
+  function setRefreshing(on) {
+    document.getElementById('refreshIcon').className = on ? 'spin' : '';
+  }
+
+  /* ══════════════════════════════════════════
+     LOAD
+  ══════════════════════════════════════════ */
+  async function loadAll(silent = false) {
+    if (!silent) showState('loadingState');
+    setConn('loading');
+    setRefreshing(true);
+
+    try {
+      const fetches = [
+        fetch('/apps/smart-home/api/entities')
+          .then(async r => ({ ok: r.ok, status: r.status, ...(await r.json()) }))
+          .catch(e => ({ ok: false, status: 0, error: e.message })),
+      ];
+      if (!silent) {
+        fetches.push(
+          fetch('/apps/smart-home/api/device-names').then(r => r.ok ? r.json() : {}).catch(() => ({})),
+          fetch('/apps/smart-home/api/group-order').then(r => r.ok ? r.json() : []).catch(() => []),
+          fetch('/apps/smart-home/api/scenes').then(r => r.ok ? r.json() : []).catch(() => []),
+        );
+      }
+      const [res, namesData, orderData, scenesData] = await Promise.all(fetches);
+      if (!silent) {
+        customNames = namesData || {};
+        groupOrder  = orderData  || [];
+        allScenes   = scenesData || [];
+        renderScenes();
+      }
+
+      if (res.status === 400) { showState('noTokenState'); setConn('disconnected'); return; }
+      if (res.status === 401) { showState('errorState'); document.getElementById('errorMsg').textContent = res.error || 'HA-Token ungültig'; setConn('disconnected'); return; }
+      if (!res.ok) { showState('errorState'); document.getElementById('errorMsg').textContent = res.error || 'Verbindungsfehler'; setConn('disconnected'); return; }
+
+      allEntities = res.entities || [];
+      allAreas    = res.areas    || {};
+      renderRooms();
+
+      showState('contentState');
+      setConn('connected');
+      document.getElementById('lastUpdated').textContent =
+        new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+
+    } catch (err) {
+      if (!silent || document.getElementById('contentState').style.display === 'none') {
+        showState('errorState');
+        document.getElementById('errorMsg').textContent = err.message;
+      }
+      setConn('disconnected');
+    } finally {
+      setRefreshing(false);
+    }
+  }
+
+  /* ══════════════════════════════════════════
+     HA ROOMS RENDER
+  ══════════════════════════════════════════ */
+  function renderRooms() {
+    const groups = {};
+    for (const entity of allEntities) {
+      const area = allAreas[entity.entity_id] || '';
+      const key  = area || DOMAIN_LABELS[entity.domain] || entity.domain;
+      if (!groups[key]) groups[key] = { named: !!area, list: [] };
+      groups[key].list.push(entity);
+    }
+    const keys = Object.keys(groups).sort((a, b) => {
+      const ia = groupOrder.indexOf(a), ib = groupOrder.indexOf(b);
+      if (ia !== -1 && ib !== -1) return ia - ib;
+      if (ia !== -1) return -1;
+      if (ib !== -1) return 1;
+      if (groups[a].named && !groups[b].named) return -1;
+      if (!groups[a].named && groups[b].named) return 1;
+      return a.localeCompare(b, 'de');
+    });
+    renderedGroups = keys;
+    const total = allEntities.length;
+    document.getElementById('sectionLabel').textContent =
+      `${total} ${total === 1 ? 'Gerät' : 'Geräte'} · ${keys.length} ${keys.length === 1 ? 'Gruppe' : 'Gruppen'}`;
+    document.getElementById('roomsGrid').innerHTML = keys.map(k => roomCard(k, groups[k].list)).join('');
+    initDragDrop();
+  }
+
+  function roomIcon(name) {
+    const n = name.toLowerCase();
+    if (/wohnzimmer|living/.test(n))             return '🛋️';
+    if (/schlafzimmer|bedroom/.test(n))          return '🛏️';
+    if (/küche|kitchen/.test(n))                 return '🍳';
+    if (/bad|bath|wc|toilet/.test(n))            return '🚿';
+    if (/flur|hallway|eingang|diele/.test(n))    return '🚪';
+    if (/büro|office|arbeit/.test(n))            return '💼';
+    if (/kinder|child|baby/.test(n))             return '🧸';
+    if (/garten|terrasse|balkon|garden/.test(n)) return '🌿';
+    if (/keller|cellar/.test(n))                 return '🏚️';
+    if (/steckdose|schalter/.test(n))            return '🔌';
+    if (/licht/.test(n))                         return '💡';
+    if (/schloss|lock/.test(n))                  return '🔒';
+    if (/sensor/.test(n))                        return '📊';
+    return '🏠';
+  }
+
+  function roomCard(name, entities) {
+    const cnt = entities.length;
+    return `
+      <div class="room-card" draggable="true" data-group="${esc(name)}">
+        <div class="room-header">
+          <span class="drag-handle" title="Ziehen zum Neuanordnen">⠿</span>
+          <span class="room-icon">${roomIcon(name)}</span>
+          <span class="room-name">${esc(name)}</span>
+          <span class="device-count">${cnt} ${cnt === 1 ? 'Gerät' : 'Geräte'}</span>
+        </div>
+        <div class="device-list">${entities.map(deviceRow).join('')}</div>
+      </div>`;
+  }
+
+  function renameBtn(entityId) {
+    return `<button class="rename-btn" onclick="startRename('${entityId}',event)" title="Umbenennen">✎</button>`;
+  }
+
+  function deviceRow(e) {
+    const { entity_id, domain, state, attributes: a } = e;
+    const name = esc(customNames[entity_id] || a.friendly_name || entity_id);
+    const sid  = 'd_' + entity_id.replace(/[^a-zA-Z0-9]/g, '_');
+    if (domain === 'sensor') return sensorRow(e, sid, name);
+    if (domain === 'lock')   return haLockRow(e, sid, name);
+    const isOn = state === 'on', isUna = state === 'unavailable';
+    const isBot = a.switchbot_subdevice_type === 'bot';
+    const icon = domain === 'light' ? '💡' : (isBot ? '🤖' : '🔌');
+    const bri  = a.brightness ?? 128;
+    const control = isBot
+      ? `<button class="press-btn" id="${sid}_btn" ${isUna ? 'disabled' : ''}
+           onclick="pressBot('${entity_id}')">Drücken</button>`
+      : `<label class="toggle">
+          <input type="checkbox" ${isOn ? 'checked' : ''} ${isUna ? 'disabled' : ''}
+            onchange="toggleDevice('${entity_id}',this.checked)">
+          <span class="toggle-track"></span>
+        </label>`;
+    return `
+      <div class="device-item${isUna ? ' unavailable' : ''}" id="${sid}">
+        <span class="device-icon">${icon}</span>
+        <div class="device-info">
+          <div class="device-name-row">
+            <div class="device-name">${name}</div>
+            ${renameBtn(entity_id)}
+          </div>
+          ${domain === 'light' ? `
+            <div class="brightness-wrap" style="display:${isOn ? 'block' : 'none'}">
+              <input type="range" class="brightness-slider" min="1" max="255" value="${bri}"
+                title="${Math.round(bri/2.55)}%"
+                oninput="this.title=Math.round(this.value/2.55)+'%'"
+                onchange="setBrightness('${entity_id}',this.value)">
+            </div>` : ''}
+        </div>
+        ${control}
+      </div>`;
+  }
+
+  function sensorRow(e, sid, name) {
+    const dc   = e.attributes.device_class || '';
+    const unit = esc(e.attributes.unit_of_measurement || '');
+    const icon = SENSOR_ICONS[dc] || '📊';
+    const num  = parseFloat(e.state);
+    const disp = isNaN(num) ? e.state : num.toFixed(dc === 'battery' ? 0 : 1);
+    return `
+      <div class="device-item" id="${sid}">
+        <span class="device-icon">${icon}</span>
+        <div class="device-info">
+          <div class="device-name-row">
+            <div class="device-name">${name}</div>
+            ${renameBtn(e.entity_id)}
+          </div>
+        </div>
+        <div class="sensor-value">${disp}<span class="sensor-unit">${unit}</span></div>
+      </div>`;
+  }
+
+  function haLockRow(e, sid, name) {
+    const s = e.state;
+    const [cls, lbl] =
+      s === 'locked'   ? ['locked','🔒 Gesperrt'] :
+      s === 'unlocked' ? ['unlocked','🔓 Offen']  :
+      (s === 'locking' || s === 'unlocking') ? ['transitioning','⏳ …'] :
+      ['unknown', esc(s)];
+    return `
+      <div class="device-item" id="${sid}">
+        <span class="device-icon">🔒</span>
+        <div class="device-info">
+          <div class="device-name-row">
+            <div class="device-name">${name}</div>
+            ${renameBtn(e.entity_id)}
+          </div>
+          <div class="device-hint">Via Home Assistant</div>
+        </div>
+        <span class="lock-badge ${cls}">${lbl}</span>
+      </div>`;
+  }
+
+  /* ── HA Controls ── */
+  async function toggleDevice(entityId, turnOn) {
+    const domain = entityId.split('.')[0];
+    const sid    = 'd_' + entityId.replace(/[^a-zA-Z0-9]/g, '_');
+    const el     = document.getElementById(sid);
+    if (el) {
+      const cb = el.querySelector('input[type="checkbox"]'); if (cb) cb.checked = turnOn;
+      const bw = el.querySelector('.brightness-wrap');       if (bw) bw.style.display = turnOn ? 'block' : 'none';
+    }
+    try {
+      const res = await fetch('/apps/smart-home/api/call-service', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ domain, service: turnOn ? 'turn_on' : 'turn_off', entity_id: entityId })
+      });
+      if (!res.ok && el) {
+        const cb = el.querySelector('input[type="checkbox"]'); if (cb) cb.checked = !turnOn;
+        const bw = el.querySelector('.brightness-wrap');       if (bw) bw.style.display = !turnOn ? 'block' : 'none';
+      }
+    } catch (_) {
+      if (el) { const cb = el.querySelector('input[type="checkbox"]'); if (cb) cb.checked = !turnOn; }
+    }
+  }
+
+  async function pressBot(entityId) {
+    const sid = 'd_' + entityId.replace(/[^a-zA-Z0-9]/g, '_');
+    const btn = document.getElementById(sid + '_btn');
+    if (btn) { btn.disabled = true; btn.textContent = '…'; }
+    try {
+      await fetch('/apps/smart-home/api/call-service', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ domain: 'switch', service: 'turn_on', entity_id: entityId })
+      });
+    } finally {
+      setTimeout(() => {
+        if (btn) { btn.disabled = false; btn.textContent = 'Drücken'; }
+      }, 1500);
+    }
+  }
+
+  const _briTimers = {};
+  function setBrightness(entityId, value) {
+    clearTimeout(_briTimers[entityId]);
+    _briTimers[entityId] = setTimeout(async () => {
+      try {
+        await fetch('/apps/smart-home/api/call-service', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ domain: 'light', service: 'turn_on', entity_id: entityId, service_data: { brightness: parseInt(value) } })
+        });
+      } catch (_) {}
+    }, 300);
+  }
+
+  /* ══════════════════════════════════════════
+     SZENEN
+  ══════════════════════════════════════════ */
+  function renderScenes() {
+    const row = document.getElementById('scenesRow');
+    if (!allScenes.length) {
+      row.innerHTML = '<span class="scenes-empty">Keine Szenen – über „Verwalten" hinzufügen.</span>';
+    } else {
+      row.innerHTML = allScenes.map(s => `
+        <button class="scene-btn" id="sb-${s.id}" onclick="triggerScene(${s.id},'${esc(s.entity_id)}')">
+          <span class="scene-emoji">${esc(s.emoji)}</span>
+          <span>${esc(s.name)}</span>
+        </button>`).join('');
+    }
+    renderSceneList();
+  }
+
+  function renderSceneList() {
+    const list = document.getElementById('sceneList');
+    if (!list) return;
+    if (!allScenes.length) {
+      list.innerHTML = '<div style="font-size:13px;color:var(--muted);margin-bottom:.5rem">Noch keine Szenen vorhanden.</div>';
+      return;
+    }
+    list.innerHTML = allScenes.map(s => `
+      <div class="scene-item">
+        <span class="scene-item-emoji">${esc(s.emoji)}</span>
+        <span class="scene-item-name">${esc(s.name)}</span>
+        <span class="scene-item-id">${esc(s.entity_id)}</span>
+        <button class="scene-del-btn" onclick="deleteScene(${s.id})" title="Entfernen">✕</button>
+      </div>`).join('');
+  }
+
+  async function triggerScene(id, entityId) {
+    const btn = document.getElementById('sb-' + id);
+    if (!btn || btn.disabled) return;
+    btn.disabled = true;
+    btn.classList.add('running');
+    try {
+      const res = await fetch('/apps/smart-home/api/scenes/trigger', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ entity_id: entityId })
+      });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        console.warn('Scene trigger failed:', d.error);
+      }
+    } catch (_) {}
+    setTimeout(() => {
+      if (btn) { btn.disabled = false; btn.classList.remove('running'); }
+    }, 1500);
+  }
+
+  function toggleManage() {
+    const panel = document.getElementById('scenesManage');
+    const btn   = document.getElementById('manageToggleBtn');
+    const open  = panel.style.display === 'none';
+    panel.style.display = open ? 'block' : 'none';
+    btn.classList.toggle('active', open);
+  }
+
+  async function addScene() {
+    const emoji    = document.getElementById('newEmoji').value.trim()    || '🎬';
+    const name     = document.getElementById('newName').value.trim();
+    const entityId = document.getElementById('newEntityId').value.trim();
+    if (!name || !entityId) return;
+    if (!entityId.startsWith('automation.')) {
+      document.getElementById('newEntityId').focus();
+      return;
+    }
+    const btn = document.getElementById('addBtn');
+    btn.disabled = true;
+    try {
+      const res = await fetch('/apps/smart-home/api/scenes', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ emoji, name, entity_id: entityId })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        allScenes.push({ id: data.id, emoji, name, entity_id: entityId });
+        document.getElementById('newEmoji').value    = '';
+        document.getElementById('newName').value     = '';
+        document.getElementById('newEntityId').value = '';
+        renderScenes();
+      }
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  async function deleteScene(id) {
+    const res = await fetch(`/apps/smart-home/api/scenes/${id}`, { method: 'DELETE' });
+    if (res.ok) {
+      allScenes = allScenes.filter(s => s.id !== id);
+      renderScenes();
+    }
+  }
+
+  /* ── Rename ── */
+  function startRename(entityId, ev) {
+    ev.stopPropagation();
+    const sid     = 'd_' + entityId.replace(/[^a-zA-Z0-9]/g, '_');
+    const el      = document.getElementById(sid);
+    const nameDiv = el?.querySelector('.device-name');
+    if (!nameDiv || nameDiv.querySelector('input')) return;
+
+    const entity  = allEntities.find(e => e.entity_id === entityId);
+    const haName  = entity?.attributes.friendly_name || entityId;
+    const current = customNames[entityId] || haName;
+
+    const input = document.createElement('input');
+    input.className   = 'rename-input';
+    input.value       = current;
+    input.placeholder = haName;
+    nameDiv.textContent = '';
+    nameDiv.appendChild(input);
+    input.focus();
+    input.select();
+
+    let done = false;
+    const commit = () => { if (!done) { done = true; saveRename(entityId, input.value.trim(), nameDiv, haName); } };
+    const cancel = () => { if (!done) { done = true; nameDiv.textContent = customNames[entityId] || haName; } };
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter')  { e.preventDefault(); commit(); }
+      if (e.key === 'Escape') cancel();
+    });
+    input.addEventListener('blur', commit);
+  }
+
+  async function saveRename(entityId, newName, nameDiv, haName) {
+    const effective = (newName && newName !== haName) ? newName : haName;
+    nameDiv.textContent = effective;
+    if (newName && newName !== haName) {
+      customNames[entityId] = newName;
+    } else {
+      delete customNames[entityId];
+      newName = '';
+    }
+    try {
+      await fetch('/apps/smart-home/api/device-names', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ entity_id: entityId, custom_name: newName })
+      });
+    } catch (_) {}
+  }
+
+  /* ── Drag & Drop (group reorder) ── */
+  function initDragDrop() {
+    document.querySelectorAll('#roomsGrid .room-card').forEach(card => {
+      card.addEventListener('dragstart', e => {
+        _dragSrc = card.dataset.group;
+        e.dataTransfer.effectAllowed = 'move';
+        setTimeout(() => card.classList.add('dragging'), 0);
+      });
+      card.addEventListener('dragover', e => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        if (card.dataset.group !== _dragSrc) card.classList.add('drag-over');
+      });
+      card.addEventListener('dragleave', e => {
+        if (!card.contains(e.relatedTarget)) card.classList.remove('drag-over');
+      });
+      card.addEventListener('drop', e => {
+        e.preventDefault();
+        card.classList.remove('drag-over');
+        const target = card.dataset.group;
+        if (!_dragSrc || target === _dragSrc) return;
+
+        const arr  = [...renderedGroups];
+        const from = arr.indexOf(_dragSrc);
+        const to   = arr.indexOf(target);
+        arr.splice(from, 1);
+        arr.splice(to, 0, _dragSrc);
+        groupOrder = arr;
+        renderRooms();
+
+        fetch('/apps/smart-home/api/group-order', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ order: arr })
+        }).catch(() => {});
+      });
+      card.addEventListener('dragend', () => {
+        card.classList.remove('dragging');
+        _dragSrc = null;
+        document.querySelectorAll('.room-card.drag-over').forEach(c => c.classList.remove('drag-over'));
+      });
+    });
+  }
+
+  /* ── Helpers ── */
+  function esc(str) {
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  /* ── Auto-refresh ── */
+  function startAutoRefresh() {
+    clearInterval(autoTimer);
+    autoTimer = setInterval(() => loadAll(true), 30_000);
+  }
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') loadAll(true);
+  });
+
+  /* ── Init ── */
+  loadAll().then(startAutoRefresh);
+</script>
+</body>
+</html>

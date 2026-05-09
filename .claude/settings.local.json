@@ -36,7 +36,12 @@
       "Bash(kill 228315)",
       "Bash(pm2 list *)",
       "Bash(pm2 restart *)",
-      "Bash(pm2 show *)"
+      "Bash(pm2 show *)",
+      "Bash(ffmpeg -version)",
+      "Bash(apt-cache show *)",
+      "Bash(snap list *)",
+      "Bash(sudo apt-get install -y ffmpeg)",
+      "Bash(apt-get install *)"
     ]
   }
 }
