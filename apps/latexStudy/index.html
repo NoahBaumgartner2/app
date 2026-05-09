@@ -1,838 +1,654 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>StudyLaTeX – Vorlesungs­zusammenfassung</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Source+Sans+3:ital,wght@0,300;0,400;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
-  <style>
-    /* ── Reset & Variablen ─────────────────────────────────────────────── */
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Folien → Zusammenfassung → PDF</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
 
+  :root {
+    --bg-primary: #ffffff;
+    --bg-secondary: #f6f5f0;
+    --bg-tertiary: #efede6;
+    --bg-info: #e6f1fb;
+    --bg-success: #eaf3de;
+    --bg-warning: #faeeda;
+    --text-primary: #1a1a18;
+    --text-secondary: #5f5e5a;
+    --text-tertiary: #888780;
+    --text-info: #185fa5;
+    --text-success: #3b6d11;
+    --text-warning: #854f0b;
+    --border-light: rgba(26,26,24,0.12);
+    --border-medium: rgba(26,26,24,0.25);
+    --radius-md: 8px;
+    --radius-lg: 12px;
+  }
+
+  @media (prefers-color-scheme: dark) {
     :root {
-      --ink:       #1a1a2e;
-      --navy:      #162447;
-      --azure:     #1f4e79;
-      --sky:       #2980b9;
-      --cream:     #faf8f3;
-      --paper:     #f4f1ea;
-      --gold:      #c9a84c;
-      --gold-lt:   #f0e0aa;
-      --red:       #c0392b;
-      --green:     #27ae60;
-      --muted:     #6b7280;
-      --border:    #ddd8cc;
-      --shadow:    0 4px 24px rgba(26,36,71,.10);
-      --shadow-lg: 0 12px 48px rgba(26,36,71,.15);
-      --r:         8px;
-      --transition: .22s cubic-bezier(.4,0,.2,1);
+      --bg-primary: #1e1e1c;
+      --bg-secondary: #2a2a27;
+      --bg-tertiary: #242422;
+      --bg-info: #0c2a4a;
+      --bg-success: #122b06;
+      --bg-warning: #3a200a;
+      --text-primary: #f0ede4;
+      --text-secondary: #a8a69e;
+      --text-tertiary: #6e6c66;
+      --text-info: #85b7eb;
+      --text-success: #97c459;
+      --text-warning: #ef9f27;
+      --border-light: rgba(240,237,228,0.12);
+      --border-medium: rgba(240,237,228,0.25);
     }
+  }
 
-    html { scroll-behavior: smooth; }
+  body {
+    font-family: 'EB Garamond', Georgia, serif;
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
 
-    body {
-      font-family: 'Source Sans 3', sans-serif;
-      background: var(--cream);
-      color: var(--ink);
-      min-height: 100vh;
-      font-size: 16px;
-      line-height: 1.65;
-    }
+  /* ─── HEADER ─── */
+  .app-header {
+    padding: 1.5rem 2rem;
+    border-bottom: 0.5px solid var(--border-light);
+    background: var(--bg-primary);
+  }
 
-    /* ── Hintergrund-Textur ────────────────────────────────────────────── */
-    body::before {
-      content: '';
-      position: fixed; inset: 0;
-      background-image:
-        radial-gradient(circle at 15% 20%, rgba(41,128,185,.06) 0%, transparent 50%),
-        radial-gradient(circle at 85% 75%, rgba(26,54,93,.05) 0%, transparent 50%);
-      pointer-events: none; z-index: 0;
-    }
+  .header-top {
+    display: flex;
+    align-items: baseline;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
 
-    /* ── Header ────────────────────────────────────────────────────────── */
-    header {
-      background: var(--navy);
-      color: white;
-      padding: 0 2rem;
-      position: sticky; top: 0; z-index: 100;
-      box-shadow: 0 2px 20px rgba(0,0,0,.25);
-    }
-    .header-inner {
-      max-width: 1100px; margin: 0 auto;
-      display: flex; align-items: center; gap: 1rem;
-      height: 60px;
-    }
-    .logo-mark {
-      width: 36px; height: 36px;
-      background: var(--gold);
-      border-radius: 6px;
-      display: flex; align-items: center; justify-content: center;
-      font-family: 'Playfair Display', serif;
-      font-weight: 700; font-size: 1.1rem; color: var(--navy);
-      flex-shrink: 0;
-    }
-    .logo-text {
-      font-family: 'Playfair Display', serif;
-      font-size: 1.15rem; font-weight: 600;
-      letter-spacing: .02em;
-    }
-    .logo-text span { color: var(--gold); }
-    .header-badge {
-      margin-left: auto;
-      font-size: .72rem; font-weight: 600; letter-spacing: .1em;
-      text-transform: uppercase;
-      background: rgba(201,168,76,.15);
-      color: var(--gold-lt);
-      border: 1px solid rgba(201,168,76,.3);
-      padding: .25rem .75rem; border-radius: 20px;
-    }
+  .app-title {
+    font-size: 22px;
+    font-weight: 500;
+    letter-spacing: -0.3px;
+  }
 
-    /* ── Hero ──────────────────────────────────────────────────────────── */
-    .hero {
-      text-align: center;
-      padding: 3.5rem 2rem 2rem;
-      position: relative; z-index: 1;
-    }
-    .hero h1 {
-      font-family: 'Playfair Display', serif;
-      font-size: clamp(2rem, 5vw, 3rem);
-      color: var(--navy);
-      line-height: 1.2;
-    }
-    .hero h1 em { color: var(--sky); font-style: normal; }
-    .hero p {
-      color: var(--muted); max-width: 540px; margin: .8rem auto 0;
-      font-size: 1.05rem; font-weight: 300;
-    }
+  .app-subtitle {
+    font-size: 15px;
+    color: var(--text-secondary);
+    font-style: italic;
+  }
 
-    /* ── Layout ────────────────────────────────────────────────────────── */
-    .container {
-      max-width: 1100px; margin: 0 auto;
-      padding: 0 1.5rem 4rem;
-      position: relative; z-index: 1;
-    }
-    .grid-main {
-      display: grid;
-      grid-template-columns: 380px 1fr;
-      gap: 2rem; align-items: start;
-      margin-top: 2rem;
-    }
-    @media (max-width: 860px) {
-      .grid-main { grid-template-columns: 1fr; }
-    }
+  .api-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 14px;
+    background: var(--bg-secondary);
+    border-radius: var(--radius-md);
+    border: 0.5px solid var(--border-light);
+  }
 
-    /* ── Cards ─────────────────────────────────────────────────────────── */
-    .card {
-      background: white;
-      border: 1px solid var(--border);
-      border-radius: var(--r);
-      box-shadow: var(--shadow);
-      overflow: hidden;
-    }
-    .card-header {
-      background: var(--navy);
-      color: white;
-      padding: .9rem 1.4rem;
-      display: flex; align-items: center; gap: .6rem;
-      font-family: 'Playfair Display', serif;
-      font-size: 1rem; font-weight: 600;
-    }
-    .card-header .icon { font-size: 1.1rem; }
-    .card-body { padding: 1.5rem; }
+  .api-bar label {
+    font-size: 12px;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 0.5px;
+  }
 
-    /* ── Formular ──────────────────────────────────────────────────────── */
-    .field { margin-bottom: 1.2rem; }
-    label {
-      display: block;
-      font-size: .8rem; font-weight: 600; letter-spacing: .08em;
-      text-transform: uppercase; color: var(--muted);
-      margin-bottom: .4rem;
-    }
-    input[type="text"],
-    input[type="password"],
-    select {
-      width: 100%;
-      padding: .6rem .9rem;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      font-family: inherit; font-size: .95rem;
-      background: var(--cream);
-      color: var(--ink);
-      transition: border-color var(--transition), box-shadow var(--transition);
-      outline: none;
-    }
-    input:focus, select:focus {
-      border-color: var(--sky);
-      box-shadow: 0 0 0 3px rgba(41,128,185,.12);
-      background: white;
-    }
-    .input-hint {
-      font-size: .78rem; color: var(--muted); margin-top: .3rem;
-    }
+  .api-bar input {
+    flex: 1;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--text-primary);
+    min-width: 0;
+  }
 
-    /* ── Drop-Zone ─────────────────────────────────────────────────────── */
-    .drop-zone {
-      border: 2px dashed var(--border);
-      border-radius: var(--r);
-      padding: 2rem 1rem;
-      text-align: center;
-      cursor: pointer;
-      transition: all var(--transition);
-      background: var(--cream);
-      position: relative;
-    }
-    .drop-zone:hover, .drop-zone.drag-over {
-      border-color: var(--sky);
-      background: rgba(41,128,185,.04);
-    }
-    .drop-zone input[type="file"] {
-      position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
-    }
-    .drop-icon { font-size: 2.5rem; margin-bottom: .5rem; }
-    .drop-label { font-size: .9rem; color: var(--muted); font-weight: 400; }
-    .drop-label strong { color: var(--sky); }
-    .file-chosen {
-      display: none;
-      align-items: center; gap: .5rem;
-      background: rgba(39,174,96,.08);
-      border: 1px solid rgba(39,174,96,.3);
-      border-radius: 6px; padding: .5rem .8rem;
-      font-size: .85rem; color: var(--green);
-      margin-top: .8rem;
-      font-weight: 600;
-    }
+  .api-status {
+    font-size: 11px;
+    font-family: 'JetBrains Mono', monospace;
+    padding: 3px 10px;
+    border-radius: 20px;
+    white-space: nowrap;
+  }
+  .api-status.empty { background: var(--bg-warning); color: var(--text-warning); }
+  .api-status.set   { background: var(--bg-success); color: var(--text-success); }
 
-    /* ── Buttons ───────────────────────────────────────────────────────── */
-    .btn {
-      display: inline-flex; align-items: center; justify-content: center;
-      gap: .5rem;
-      padding: .7rem 1.4rem;
-      border: none; border-radius: 6px;
-      font-family: inherit; font-size: .95rem; font-weight: 600;
-      cursor: pointer;
-      transition: all var(--transition);
-      text-decoration: none;
-    }
-    .btn-primary {
-      background: var(--navy); color: white; width: 100%;
-      font-size: 1rem; padding: .85rem;
-      letter-spacing: .02em;
-    }
-    .btn-primary:hover:not(:disabled) { background: var(--azure); transform: translateY(-1px); box-shadow: var(--shadow); }
-    .btn-primary:disabled { opacity: .5; cursor: not-allowed; transform: none; }
-    .btn-gold { background: var(--gold); color: var(--navy); }
-    .btn-gold:hover { background: #b8973d; }
-    .btn-outline {
-      background: transparent;
-      border: 1.5px solid var(--border);
-      color: var(--ink);
-    }
-    .btn-outline:hover { border-color: var(--sky); color: var(--sky); }
-    .btn-sm { padding: .4rem .9rem; font-size: .85rem; }
+  /* ─── MAIN GRID ─── */
+  .main-content {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    flex: 1;
+  }
 
-    /* ── Progress ──────────────────────────────────────────────────────── */
-    .progress-wrap {
-      display: none;
-      margin-top: 1rem;
-    }
-    .progress-bar-bg {
-      height: 6px; background: var(--paper); border-radius: 3px; overflow: hidden;
-    }
-    .progress-bar-fill {
-      height: 100%; background: linear-gradient(90deg, var(--sky), var(--gold));
-      border-radius: 3px; width: 0%;
-      transition: width .4s ease;
-      animation: progress-anim 2s ease-in-out infinite;
-    }
-    @keyframes progress-anim {
-      0%   { background-position: 0% 50%; }
-      100% { background-position: 100% 50%; }
-    }
-    .progress-label {
-      font-size: .8rem; color: var(--muted); margin-top: .4rem; text-align: center;
-    }
+  .panel {
+    padding: 1.5rem 2rem;
+    background: var(--bg-primary);
+    border-right: 0.5px solid var(--border-light);
+  }
+  .panel:last-child { border-right: none; }
 
-    /* ── Status / Alerts ───────────────────────────────────────────────── */
-    .alert {
-      padding: .8rem 1.1rem;
-      border-radius: 6px;
-      font-size: .9rem;
-      display: none;
-      margin-top: 1rem;
-    }
-    .alert-error   { background: rgba(192,57,43,.08); border: 1px solid rgba(192,57,43,.3); color: #922b21; }
-    .alert-success { background: rgba(39,174,96,.08); border: 1px solid rgba(39,174,96,.3); color: #1e8449; }
-    .alert-info    { background: rgba(41,128,185,.08); border: 1px solid rgba(41,128,185,.3); color: #1a5276; }
+  .panel-title {
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-secondary);
+    margin-bottom: 1rem;
+    font-family: 'JetBrains Mono', monospace;
+  }
 
-    /* ── Result Panel ──────────────────────────────────────────────────── */
-    #result-panel { display: none; }
+  /* ─── UPLOAD ─── */
+  .upload-zone {
+    border: 1.5px dashed var(--border-medium);
+    border-radius: var(--radius-lg);
+    padding: 2.5rem 2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: var(--bg-secondary);
+    position: relative;
+    margin-bottom: 1rem;
+  }
+  .upload-zone:hover, .upload-zone.dragover {
+    border-color: var(--text-info);
+    background: var(--bg-info);
+  }
+  .upload-zone input[type=file] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+    width: 100%;
+    height: 100%;
+  }
+  .upload-icon { font-size: 36px; color: var(--text-tertiary); margin-bottom: 10px; display: block; }
+  .upload-text { font-size: 16px; color: var(--text-secondary); margin-bottom: 4px; }
+  .upload-hint { font-size: 12px; color: var(--text-tertiary); font-family: 'JetBrains Mono', monospace; }
 
-    .result-actions {
-      display: flex; flex-wrap: wrap; gap: .7rem;
-      margin-bottom: 1rem;
-    }
+  .file-info {
+    font-size: 12px;
+    color: var(--text-secondary);
+    font-family: 'JetBrains Mono', monospace;
+    margin-bottom: 12px;
+    display: none;
+  }
 
-    /* ── LaTeX Preview ─────────────────────────────────────────────────── */
-    .latex-preview-wrap {
-      position: relative;
-    }
-    .latex-toolbar {
-      display: flex; align-items: center; justify-content: space-between;
-      background: var(--navy); color: white;
-      padding: .5rem 1rem;
-      border-radius: 6px 6px 0 0;
-      font-size: .78rem;
-    }
-    .latex-toolbar-left { display: flex; align-items: center; gap: .5rem; }
-    .dot { width: 10px; height: 10px; border-radius: 50%; }
-    .dot-r { background: #e74c3c; }
-    .dot-y { background: #f39c12; }
-    .dot-g { background: #2ecc71; }
-    #latex-output {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: .78rem;
-      background: #0d1117;
-      color: #e6edf3;
-      padding: 1.2rem;
-      border-radius: 0 0 6px 6px;
-      border: 1px solid #30363d;
-      border-top: none;
-      min-height: 300px;
-      max-height: 520px;
-      overflow-y: auto;
-      white-space: pre;
-      line-height: 1.5;
-      tab-size: 2;
-    }
+  /* ─── FORM FIELDS ─── */
+  .field { margin-bottom: 1rem; }
 
-    /* ── Summary History ───────────────────────────────────────────────── */
-    .history-list { display: flex; flex-direction: column; gap: .6rem; }
-    .history-item {
-      display: flex; align-items: center; gap: .8rem;
-      padding: .65rem 1rem;
-      background: var(--cream);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      cursor: pointer;
-      transition: all var(--transition);
-      font-size: .88rem;
-    }
-    .history-item:hover { border-color: var(--sky); background: rgba(41,128,185,.04); }
-    .history-item .hi-icon { font-size: 1.2rem; flex-shrink: 0; }
-    .history-item .hi-name { font-weight: 600; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .history-item .hi-meta { color: var(--muted); font-size: .78rem; }
-    .history-empty { text-align: center; color: var(--muted); font-size: .88rem; padding: 1.5rem; }
+  .field-label {
+    display: block;
+    font-size: 11px;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--text-tertiary);
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    margin-bottom: 5px;
+  }
 
-    /* ── Stats ─────────────────────────────────────────────────────────── */
-    .stats-row {
-      display: grid; grid-template-columns: repeat(3, 1fr);
-      gap: 1rem; margin-bottom: 1.5rem;
-    }
-    .stat-card {
-      text-align: center; padding: 1rem;
-      background: var(--paper); border-radius: var(--r);
-      border: 1px solid var(--border);
-    }
-    .stat-num {
-      font-family: 'Playfair Display', serif;
-      font-size: 1.6rem; font-weight: 700; color: var(--navy);
-    }
-    .stat-lbl { font-size: .75rem; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); }
+  select, input[type="text"].field-input {
+    width: 100%;
+    padding: 8px 10px;
+    font-family: 'EB Garamond', serif;
+    font-size: 15px;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    border: 0.5px solid var(--border-light);
+    border-radius: var(--radius-md);
+    outline: none;
+    transition: border-color 0.15s;
+    appearance: none;
+    -webkit-appearance: none;
+  }
+  select:focus, input[type="text"].field-input:focus {
+    border-color: var(--border-medium);
+  }
 
-    /* ── Tips ──────────────────────────────────────────────────────────── */
-    .tip-box {
-      background: linear-gradient(135deg, var(--navy) 0%, var(--azure) 100%);
-      color: white; border-radius: var(--r);
-      padding: 1.2rem 1.5rem; margin-top: 1.5rem;
-    }
-    .tip-box h4 {
-      font-family: 'Playfair Display', serif;
-      font-size: .95rem; margin-bottom: .5rem;
-      color: var(--gold-lt);
-    }
-    .tip-box ul { padding-left: 1.2rem; }
-    .tip-box li { font-size: .84rem; margin-bottom: .3rem; opacity: .9; }
+  /* ─── BUTTONS ─── */
+  .convert-btn {
+    width: 100%;
+    padding: 11px;
+    font-family: 'EB Garamond', serif;
+    font-size: 17px;
+    background: var(--text-primary);
+    color: var(--bg-primary);
+    border: none;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: opacity 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 0.5rem;
+  }
+  .convert-btn:hover { opacity: 0.82; }
+  .convert-btn:disabled { opacity: 0.38; cursor: not-allowed; }
 
-    /* ── LaTeX Copy Feedback ──────────────────────────────────────────── */
-    .copy-success { display: none; color: var(--green); font-size: .82rem; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spin { animation: spin 0.7s linear infinite; display: inline-block; }
 
-    /* ── Spinner ──────────────────────────────────────────────────────── */
-    .spinner {
-      display: inline-block; width: 16px; height: 16px;
-      border: 2px solid rgba(255,255,255,.3);
-      border-top-color: white;
-      border-radius: 50%;
-      animation: spin .7s linear infinite;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
+  .editor-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+  }
 
-    /* ── Responsive tweaks ─────────────────────────────────────────────── */
-    @media (max-width: 600px) {
-      .stats-row { grid-template-columns: 1fr 1fr; }
-      .result-actions { flex-direction: column; }
-    }
-  </style>
+  .action-btn {
+    flex: 1;
+    padding: 9px 12px;
+    font-family: 'EB Garamond', serif;
+    font-size: 15px;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    border: 0.5px solid var(--border-medium);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: background 0.15s;
+  }
+  .action-btn:hover { background: var(--bg-secondary); }
+  .action-btn:disabled { opacity: 0.38; cursor: not-allowed; }
+  .action-btn.primary {
+    background: var(--text-primary);
+    color: var(--bg-primary);
+    border-color: transparent;
+  }
+  .action-btn.primary:hover { opacity: 0.82; }
+
+  /* ─── LATEX EDITOR ─── */
+  .latex-editor {
+    width: 100%;
+    min-height: 380px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    line-height: 1.7;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    border: 0.5px solid var(--border-light);
+    border-radius: var(--radius-md);
+    padding: 1rem;
+    resize: vertical;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .latex-editor:focus { border-color: var(--border-medium); }
+
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 380px;
+    color: var(--text-tertiary);
+    gap: 10px;
+    font-style: italic;
+    background: var(--bg-secondary);
+    border-radius: var(--radius-md);
+    border: 0.5px solid var(--border-light);
+  }
+  .empty-state i { font-size: 32px; }
+
+  /* ─── STATUS BAR ─── */
+  .status-bar {
+    padding: 9px 2rem;
+    background: var(--bg-primary);
+    border-top: 0.5px solid var(--border-light);
+    font-size: 12px;
+    color: var(--text-secondary);
+    font-family: 'JetBrains Mono', monospace;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .status-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--border-medium);
+    flex-shrink: 0;
+  }
+  .status-dot.active  { background: #3b6d11; }
+  .status-dot.error   { background: #a32d2d; }
+  .status-dot.loading { background: #185fa5; animation: pulse 1s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  /* ─── PDF PROGRESS ─── */
+  .pdf-progress {
+    margin-top: 10px;
+    padding: 10px 14px;
+    background: var(--bg-info);
+    border-radius: var(--radius-md);
+    border: 0.5px solid var(--border-light);
+    font-size: 13px;
+    color: var(--text-info);
+    font-family: 'JetBrains Mono', monospace;
+    display: none;
+  }
+
+  /* ─── RESPONSIVE ─── */
+  @media (max-width: 720px) {
+    .main-content { grid-template-columns: 1fr; }
+    .panel { border-right: none; border-bottom: 0.5px solid var(--border-light); }
+    .header-top { flex-direction: column; gap: 4px; }
+  }
+</style>
 </head>
 <body>
 
-<!-- ── Header ────────────────────────────────────────────────────────────── -->
-<header>
-  <div class="header-inner">
-    <a href="/" style="font-size:12px;color:rgba(255,255,255,.6);text-decoration:none;font-family:'JetBrains Mono',monospace;margin-right:8px;flex-shrink:0">← Dashboard</a>
-    <div class="logo-mark">S</div>
-    <div class="logo-text">Study<span>LaTeX</span></div>
-    <div class="header-badge">KI-Prüfungsvorbereitung</div>
+<!-- HEADER -->
+<header class="app-header">
+  <div class="header-top">
+    <a href="/" style="font-size:12px;color:var(--text-secondary);text-decoration:none;font-family:'JetBrains Mono',monospace;margin-right:12px">← Dashboard</a>
+    <h1 class="app-title"><i class="ti ti-file-text" style="font-size:20px;vertical-align:-2px;margin-right:8px"></i>Folien → Zusammenfassung → PDF</h1>
+    <span class="app-subtitle">BWL &amp; Wirtschaft</span>
+  </div>
+  <div class="api-bar">
+    <label>GEMINI API KEY</label>
+    <input type="password" id="apiKey" placeholder="AIza..." oninput="updateApiStatus()" autocomplete="off" />
+    <span class="api-status empty" id="apiStatus">nicht gesetzt</span>
   </div>
 </header>
 
-<!-- ── Hero ──────────────────────────────────────────────────────────────── -->
-<div class="hero">
-  <h1>Vorlesungsfolien zu <em>LaTeX-Zusammenfassungen</em></h1>
-  <p>Lade deine BWL-Folien hoch und erhalte eine ausführliche, druckfertige Zusammenfassung als PDF.</p>
-</div>
+<!-- MAIN -->
+<main class="main-content">
 
-<!-- ── Hauptinhalt ────────────────────────────────────────────────────────── -->
-<div class="container">
-  <div class="grid-main">
+  <!-- LEFT: Upload & Settings -->
+  <section class="panel">
+    <div class="panel-title"><i class="ti ti-upload"></i>&nbsp; PDF hochladen</div>
 
-    <!-- ── Linke Spalte: Formular ── -->
-    <div style="display:flex; flex-direction:column; gap:1.5rem;">
-
-      <!-- Einstellungen -->
-      <div class="card">
-        <div class="card-header"><span class="icon">⚙️</span> Einstellungen</div>
-        <div class="card-body">
-
-          <div class="field">
-            <label>Gemini API-Key</label>
-            <input type="password" id="api-key" placeholder="AIza..." />
-            <div class="input-hint">
-              Erhalte deinen Key auf
-              <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:var(--sky)">Google AI Studio</a>
-            </div>
-          </div>
-
-          <div class="field">
-            <label>Fach</label>
-            <select id="subject">
-              <option value="Wirtschaftsinformatik">Wirtschaftsinformatik</option>
-              <option value="Marketing">Marketing</option>
-              <option value="Controlling">Controlling</option>
-              <option value="Rechnungswesen">Rechnungswesen / Buchhaltung</option>
-              <option value="Management">Management & Organisation</option>
-              <option value="Finanzierung">Finanzierung & Investition</option>
-              <option value="Mikroökonomie">Mikroökonomie</option>
-              <option value="Makroökonomie">Makroökonomie</option>
-              <option value="Statistik">Statistik & Methoden</option>
-              <option value="Recht">Wirtschaftsrecht</option>
-              <option value="Logistik">Logistik & Supply Chain</option>
-              <option value="Entrepreneurship">Entrepreneurship</option>
-              <option value="Sonstiges">Sonstiges BWL-Fach</option>
-            </select>
-          </div>
-
-          <div class="field">
-            <label>Titel der Zusammenfassung <span style="font-weight:300;text-transform:none">(optional)</span></label>
-            <input type="text" id="doc-title" placeholder="z.B. Vorlesung 3 – CRM-Systeme" />
-          </div>
-
-        </div>
-      </div>
-
-      <!-- Upload -->
-      <div class="card">
-        <div class="card-header"><span class="icon">📄</span> PDF hochladen</div>
-        <div class="card-body">
-          <div class="drop-zone" id="drop-zone">
-            <input type="file" id="pdf-input" accept=".pdf" />
-            <div class="drop-icon">📂</div>
-            <div class="drop-label"><strong>Klicken oder Datei hineinziehen</strong><br>PDF-Vorlesungsfolien (max. 50 MB)</div>
-          </div>
-          <div class="file-chosen" id="file-chosen">
-            <span>✅</span> <span id="file-name-label">–</span>
-          </div>
-
-          <div id="alert-error" class="alert alert-error"></div>
-          <div id="alert-success" class="alert alert-success"></div>
-
-          <div class="progress-wrap" id="progress-wrap">
-            <div class="progress-bar-bg"><div class="progress-bar-fill" id="progress-fill"></div></div>
-            <div class="progress-label" id="progress-label">KI analysiert Folien…</div>
-          </div>
-
-          <button class="btn btn-primary" id="submit-btn" style="margin-top:1.2rem" onclick="submitForm()">
-            <span>✨</span> Zusammenfassung erstellen
-          </button>
-        </div>
-      </div>
-
-      <!-- Tipps -->
-      <div class="tip-box">
-        <h4>💡 Tipps für beste Ergebnisse</h4>
-        <ul>
-          <li>Textbasierte PDFs funktionieren besser als gescannte</li>
-          <li>Wähle das passende Fach für spezifischere Erklärungen</li>
-          <li>Gib einen Titel an, damit das PDF schön beschriftet ist</li>
-          <li>Kompiliere den LaTeX-Code mit <code style="font-size:.78rem">pdflatex</code> oder Overleaf</li>
-        </ul>
-      </div>
-
+    <div class="upload-zone" id="uploadZone">
+      <input type="file" id="fileInput" accept=".pdf,application/pdf" onchange="handleFile(event)" />
+      <i class="ti ti-file-type-pdf upload-icon"></i>
+      <div class="upload-text">Vorlesungsfolien ablegen oder klicken</div>
+      <div class="upload-hint">PDF &nbsp;·&nbsp; max 50 MB</div>
     </div>
 
-    <!-- ── Rechte Spalte: Ergebnis & Historie ── -->
-    <div style="display:flex; flex-direction:column; gap:1.5rem;">
+    <div class="file-info" id="fileInfo"></div>
 
-      <!-- Statistiken -->
-      <div class="stats-row">
-        <div class="stat-card">
-          <div class="stat-num" id="stat-count">0</div>
-          <div class="stat-lbl">Erstellt</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-num" id="stat-chars">–</div>
-          <div class="stat-lbl">Zeichen</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-num" id="stat-pages">–</div>
-          <div class="stat-lbl">Seiten est.</div>
-        </div>
-      </div>
-
-      <!-- Ergebnis -->
-      <div class="card" id="result-panel">
-        <div class="card-header"><span class="icon">📋</span> LaTeX-Zusammenfassung</div>
-        <div class="card-body">
-
-          <div class="result-actions">
-            <button class="btn btn-gold btn-sm" id="download-pdf-btn" onclick="downloadPDF()" style="display:none">
-              ⬇️ PDF herunterladen
-            </button>
-            <button class="btn btn-outline btn-sm" onclick="copyLatex()">
-              📋 LaTeX kopieren
-            </button>
-            <button class="btn btn-outline btn-sm" onclick="downloadLatex()">
-              💾 .tex herunterladen
-            </button>
-            <button class="btn btn-outline btn-sm" onclick="openOverleaf()">
-              🔗 In Overleaf öffnen
-            </button>
-          </div>
-          <span class="copy-success" id="copy-success">✓ In Zwischenablage kopiert!</span>
-
-          <button class="btn btn-outline btn-sm" id="compile-server-btn" onclick="compileAndDownloadPdf()" style="display:none">
-            🖨️ PDF auf Server kompilieren
-          </button>
-          <div id="compile-status" class="alert alert-info" style="display:none"></div>
-
-          <div class="latex-preview-wrap">
-            <div class="latex-toolbar">
-              <div class="latex-toolbar-left">
-                <div class="dot dot-r"></div>
-                <div class="dot dot-y"></div>
-                <div class="dot dot-g"></div>
-                <span style="margin-left:.5rem; opacity:.7">LaTeX-Vorschau</span>
-              </div>
-              <span id="latex-file-label" style="opacity:.6; font-size:.72rem"></span>
-            </div>
-            <pre id="latex-output">Hier erscheint dein LaTeX-Code…</pre>
-          </div>
-        </div>
-      </div>
-
-      <!-- Verlauf -->
-      <div class="card">
-        <div class="card-header"><span class="icon">🕒</span> Verlauf dieser Sitzung</div>
-        <div class="card-body" style="padding:1rem">
-          <div class="history-list" id="history-list">
-            <div class="history-empty">Noch keine Zusammenfassungen erstellt.</div>
-          </div>
-        </div>
-      </div>
-
+    <div class="field">
+      <label class="field-label">Fach</label>
+      <select id="subject">
+        <option value="Wirtschaftsinformatik">Wirtschaftsinformatik</option>
+        <option value="Marketing">Marketing</option>
+        <option value="Controlling">Controlling</option>
+        <option value="Rechnungswesen">Rechnungswesen / Buchhaltung</option>
+        <option value="Management">Management &amp; Organisation</option>
+        <option value="Finanzierung">Finanzierung &amp; Investition</option>
+        <option value="Mikroökonomie">Mikroökonomie</option>
+        <option value="Makroökonomie">Makroökonomie</option>
+        <option value="Statistik">Statistik &amp; Methoden</option>
+        <option value="Recht">Wirtschaftsrecht</option>
+        <option value="Logistik">Logistik &amp; Supply Chain</option>
+        <option value="Entrepreneurship">Entrepreneurship</option>
+        <option value="Sonstiges">Sonstiges BWL-Fach</option>
+      </select>
     </div>
-  </div>
-</div>
 
-<!-- ── Script ────────────────────────────────────────────────────────────── -->
+    <div class="field">
+      <label class="field-label">Titel <span style="text-transform:none;font-weight:400">(optional)</span></label>
+      <input type="text" class="field-input" id="docTitle" placeholder="z.B. Vorlesung 3 – CRM-Systeme" />
+    </div>
+
+    <button class="convert-btn" id="convertBtn" onclick="summarize()" disabled>
+      <i class="ti ti-sparkles" id="convertIcon"></i>
+      <span id="convertLabel">Zusammenfassung erstellen</span>
+    </button>
+  </section>
+
+  <!-- RIGHT: Output -->
+  <section class="panel">
+    <div class="panel-title"><i class="ti ti-code"></i>&nbsp; LaTeX-Zusammenfassung</div>
+
+    <div id="emptyState" class="empty-state">
+      <i class="ti ti-file-description"></i>
+      <span>Noch keine Zusammenfassung generiert</span>
+    </div>
+
+    <textarea class="latex-editor" id="latexEditor" style="display:none" spellcheck="false"
+      placeholder="LaTeX-Code erscheint hier..."></textarea>
+
+    <div class="pdf-progress" id="pdfProgress">
+      <i class="ti ti-loader spin"></i>&nbsp; Kompiliere LaTeX zu PDF über Server...
+    </div>
+
+    <div class="editor-actions">
+      <button class="action-btn" onclick="copyLatex()" id="copyBtn" disabled>
+        <i class="ti ti-copy"></i> Kopieren
+      </button>
+      <button class="action-btn" onclick="downloadTex()" id="texBtn" disabled>
+        <i class="ti ti-file-code"></i> .tex
+      </button>
+      <button class="action-btn primary" onclick="downloadPdf()" id="pdfBtn" disabled>
+        <i class="ti ti-file-type-pdf"></i> PDF herunterladen
+      </button>
+    </div>
+  </section>
+
+</main>
+
+<!-- STATUS BAR -->
+<footer class="status-bar">
+  <div class="status-dot" id="statusDot"></div>
+  <span id="statusMsg">Bereit &nbsp;·&nbsp; API-Key eingeben und PDF hochladen</span>
+</footer>
+
 <script>
-  // ── State ──────────────────────────────────────────────────────────────────
-  let currentLatex = '';
-  let currentPdfBase64 = '';
-  let currentFileName = '';
-  let summaryCount = 0;
-  const history = [];
+  let selectedFile = null;
+  let currentFileName = 'zusammenfassung';
 
-  // ── Drag & Drop ────────────────────────────────────────────────────────────
-  const dropZone = document.getElementById('drop-zone');
-  const pdfInput = document.getElementById('pdf-input');
-
-  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
-  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
-  dropZone.addEventListener('drop', e => {
-    e.preventDefault();
-    dropZone.classList.remove('drag-over');
-    const file = e.dataTransfer.files[0];
-    if (file && file.type === 'application/pdf') setFile(file);
-  });
-  pdfInput.addEventListener('change', () => {
-    if (pdfInput.files[0]) setFile(pdfInput.files[0]);
-  });
-
-  function setFile(file) {
-    const dt = new DataTransfer();
-    dt.items.add(file);
-    pdfInput.files = dt.files;
-    const fc = document.getElementById('file-chosen');
-    document.getElementById('file-name-label').textContent = `${file.name} (${(file.size/1024/1024).toFixed(1)} MB)`;
-    fc.style.display = 'flex';
-    clearAlerts();
-    // Auto-Titel setzen wenn leer
-    if (!document.getElementById('doc-title').value) {
-      document.getElementById('doc-title').value = file.name.replace('.pdf','').replace(/[-_]/g,' ');
+  /* ── API KEY ── */
+  function updateApiStatus() {
+    const key = document.getElementById('apiKey').value.trim();
+    const el  = document.getElementById('apiStatus');
+    if (key.length > 10) {
+      el.textContent = 'gesetzt';
+      el.className   = 'api-status set';
+    } else {
+      el.textContent = 'nicht gesetzt';
+      el.className   = 'api-status empty';
     }
+    checkReady();
   }
 
-  // ── Formular absenden ──────────────────────────────────────────────────────
-  async function submitForm() {
-    clearAlerts();
-    const apiKey = document.getElementById('api-key').value.trim();
+  function checkReady() {
+    const key = document.getElementById('apiKey').value.trim();
+    document.getElementById('convertBtn').disabled = !(key.length > 10 && selectedFile);
+  }
+
+  /* ── FILE UPLOAD ── */
+  function handleFile(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    if (file.size > 50 * 1024 * 1024) {
+      setStatus('Datei zu gross · Maximum 50 MB', 'error');
+      return;
+    }
+
+    selectedFile = file;
+    currentFileName = file.name.replace(/\.pdf$/i, '');
+
+    const info       = document.getElementById('fileInfo');
+    info.textContent = file.name + ' · ' + (file.size / 1024 / 1024).toFixed(1) + ' MB';
+    info.style.display = 'block';
+
+    document.getElementById('uploadZone').style.borderStyle = 'solid';
+
+    if (!document.getElementById('docTitle').value) {
+      document.getElementById('docTitle').value = currentFileName.replace(/[-_]/g, ' ');
+    }
+
+    setStatus('PDF geladen: ' + file.name, '');
+    checkReady();
+  }
+
+  /* Drag & Drop */
+  const zone = document.getElementById('uploadZone');
+  zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+  zone.addEventListener('drop', e => {
+    e.preventDefault();
+    zone.classList.remove('dragover');
+    const file = e.dataTransfer.files[0];
+    if (file) handleFile({ target: { files: [file] } });
+  });
+
+  /* ── STATUS ── */
+  function setStatus(msg, mode) {
+    document.getElementById('statusMsg').textContent = msg;
+    const dot = document.getElementById('statusDot');
+    dot.className = 'status-dot' + (mode ? ' ' + mode : '');
+  }
+
+  /* ── SUMMARIZE ── */
+  async function summarize() {
+    const key     = document.getElementById('apiKey').value.trim();
     const subject = document.getElementById('subject').value;
-    const title   = document.getElementById('doc-title').value.trim();
-    const file    = pdfInput.files[0];
+    const title   = document.getElementById('docTitle').value.trim() || currentFileName;
+    if (!key || !selectedFile) return;
 
-    if (!apiKey)  return showError('Bitte Gemini API-Key eingeben.');
-    if (!file)    return showError('Bitte eine PDF-Datei auswählen.');
+    const btn   = document.getElementById('convertBtn');
+    const icon  = document.getElementById('convertIcon');
+    const label = document.getElementById('convertLabel');
 
-    const btn = document.getElementById('submit-btn');
-    btn.disabled = true;
-    btn.innerHTML = '<span class="spinner"></span> KI analysiert Folien…';
-
-    showProgress('Vorlesungsfolien werden an Gemini übermittelt…', 20);
+    btn.disabled      = true;
+    icon.className    = 'ti ti-loader spin';
+    label.textContent = 'Gemini erstellt Zusammenfassung...';
+    setStatus('Sende PDF an Gemini API...', 'loading');
 
     const formData = new FormData();
-    formData.append('pdf', file);
-    formData.append('apiKey', apiKey);
+    formData.append('pdf',     selectedFile);
+    formData.append('apiKey',  key);
     formData.append('subject', subject);
-    formData.append('title', title);
+    formData.append('title',   title);
 
     try {
-      setProgress(50, 'Gemini erstellt ausführliche Zusammenfassung…');
+      const response = await fetch('/apps/latex-study/api/summarize', {
+        method: 'POST',
+        body: formData
+      });
 
-      const res = await fetch('/apps/latex-study/api/summarize', { method: 'POST', body: formData });
-      const data = await res.json();
+      const data = await response.json();
+      if (!response.ok || !data.success) throw new Error(data.error || 'Unbekannter Fehler');
 
-      if (!res.ok || !data.success) throw new Error(data.error || 'Unbekannter Fehler');
+      currentFileName = data.fileName || title;
+      showEditor(data.latex);
 
-      setProgress(90, 'LaTeX-Dokument wird aufgebaut…');
-      await sleep(400);
-      setProgress(100, 'Fertig!');
-      await sleep(300);
-      hideProgress();
-
-      // Ergebnis anzeigen
-      currentLatex       = data.latex;
-      currentPdfBase64   = data.pdf || '';
-      currentFileName    = data.fileName || title || 'Zusammenfassung';
-
-      document.getElementById('latex-output').textContent = data.latex;
-      document.getElementById('latex-file-label').textContent = `${currentFileName}.tex`;
-      document.getElementById('result-panel').style.display = 'block';
-      document.getElementById('result-panel').scrollIntoView({ behavior: 'smooth', block: 'start' });
-
-      // PDF-Button
-      const pdfBtn = document.getElementById('download-pdf-btn');
-      if (currentPdfBase64) {
-        pdfBtn.style.display = 'inline-flex';
-        document.getElementById('compile-server-btn').style.display = 'none';
-      } else {
-        pdfBtn.style.display = 'none';
-        document.getElementById('compile-server-btn').style.display = 'inline-flex';
-      }
-
-      // Stats
-      summaryCount++;
-      const chars = data.charCount || data.latex.length;
-      const pagesEst = Math.ceil(chars / 3000);
-      document.getElementById('stat-count').textContent = summaryCount;
-      document.getElementById('stat-chars').textContent = chars > 1000 ? `${(chars/1000).toFixed(1)}k` : chars;
-      document.getElementById('stat-pages').textContent = `~${pagesEst}`;
-
-      // Verlauf
-      addToHistory(currentFileName, subject, chars);
-      showSuccess(`✅ Zusammenfassung für "${currentFileName}" erstellt!`);
+      const charCount = data.charCount || data.latex.length;
+      setStatus(
+        'Zusammenfassung erstellt · ' + data.latex.split('\n').length + ' Zeilen · ' +
+        (charCount > 1000 ? (charCount / 1000).toFixed(1) + 'k' : charCount) + ' Zeichen',
+        'active'
+      );
 
     } catch (err) {
-      hideProgress();
-      showError(err.message);
+      setStatus('Fehler: ' + err.message, 'error');
+      console.error(err);
     } finally {
-      btn.disabled = false;
-      btn.innerHTML = '<span>✨</span> Zusammenfassung erstellen';
+      btn.disabled      = false;
+      icon.className    = 'ti ti-sparkles';
+      label.textContent = 'Zusammenfassung erstellen';
+      checkReady();
     }
   }
 
-  // ── Download-Funktionen ────────────────────────────────────────────────────
-  function downloadPDF() {
-    if (!currentPdfBase64) return;
-    const bytes = atob(currentPdfBase64);
-    const arr   = new Uint8Array(bytes.length);
-    for (let i = 0; i < bytes.length; i++) arr[i] = bytes.charCodeAt(i);
-    const blob = new Blob([arr], { type: 'application/pdf' });
-    triggerDownload(URL.createObjectURL(blob), `${currentFileName}.pdf`);
+  function showEditor(latex) {
+    document.getElementById('emptyState').style.display = 'none';
+    const editor = document.getElementById('latexEditor');
+    editor.style.display = 'block';
+    editor.value = latex;
+    document.getElementById('copyBtn').disabled = false;
+    document.getElementById('texBtn').disabled  = false;
+    document.getElementById('pdfBtn').disabled  = false;
   }
 
-  function downloadLatex() {
-    if (!currentLatex) return;
-    const blob = new Blob([currentLatex], { type: 'text/plain;charset=utf-8' });
-    triggerDownload(URL.createObjectURL(blob), `${currentFileName}.tex`);
+  /* ── COPY ── */
+  function copyLatex() {
+    const code = document.getElementById('latexEditor').value;
+    navigator.clipboard.writeText(code).then(() => {
+      setStatus('LaTeX-Code in Zwischenablage kopiert', 'active');
+    });
   }
 
-  function triggerDownload(url, name) {
-    const a = document.createElement('a');
-    a.href = url; a.download = name;
-    document.body.appendChild(a); a.click();
-    document.body.removeChild(a);
+  /* ── DOWNLOAD .tex ── */
+  function downloadTex() {
+    const latex = document.getElementById('latexEditor').value;
+    if (!latex) return;
+    const blob = new Blob([latex], { type: 'text/plain;charset=utf-8' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = currentFileName + '.tex';
+    a.click();
     URL.revokeObjectURL(url);
+    setStatus('.tex-Datei heruntergeladen', 'active');
   }
 
-  async function copyLatex() {
-    if (!currentLatex) return;
-    await navigator.clipboard.writeText(currentLatex);
-    const el = document.getElementById('copy-success');
-    el.style.display = 'inline';
-    setTimeout(() => el.style.display = 'none', 2500);
-  }
+  /* ── PDF via lokaler Server ── */
+  async function downloadPdf() {
+    const latex = document.getElementById('latexEditor').value;
+    if (!latex) return;
 
-  function openOverleaf() {
-    if (!currentLatex) return;
-    const form = document.createElement('form');
-    form.method = 'POST';
-    form.action = 'https://www.overleaf.com/docs';
-    form.target = '_blank';
-    const snap = document.createElement('input');
-    snap.type = 'hidden'; snap.name = 'snip'; snap.value = currentLatex;
-    const type = document.createElement('input');
-    type.type = 'hidden'; type.name = 'snip_type'; type.value = 'main.tex';
-    form.appendChild(snap); form.appendChild(type);
-    document.body.appendChild(form); form.submit();
-    document.body.removeChild(form);
-  }
+    const btn      = document.getElementById('pdfBtn');
+    const progress = document.getElementById('pdfProgress');
 
-  // ── PDF auf Server kompilieren ────────────────────────────────────────────
-  async function compileAndDownloadPdf() {
-    if (!currentLatex) return;
-    const btn    = document.getElementById('compile-server-btn');
-    const status = document.getElementById('compile-status');
-    btn.disabled = true;
-    btn.innerHTML = '<span class="spinner" style="border-color:rgba(0,0,0,.2);border-top-color:#333"></span> Wird kompiliert…';
-    status.style.display = 'none';
+    btn.disabled           = true;
+    progress.style.display = 'block';
+    setStatus('Kompiliere LaTeX zu PDF...', 'loading');
+
     try {
-      const res = await fetch('/apps/latex-study/api/compile-pdf', {
+      const response = await fetch('/apps/latex-study/api/compile-pdf', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ latex: currentLatex, fileName: currentFileName })
+        body: JSON.stringify({ latex, fileName: currentFileName })
       });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || `HTTP ${res.status}`);
+
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.error || 'Kompilierungsfehler');
       }
-      const blob = await res.blob();
+
+      const blob = await response.blob();
       const url  = URL.createObjectURL(blob);
       const a    = document.createElement('a');
-      a.href = url; a.download = `${currentFileName}.pdf`;
-      document.body.appendChild(a); a.click();
-      document.body.removeChild(a);
+      a.href     = url;
+      a.download = currentFileName + '.pdf';
+      a.click();
       URL.revokeObjectURL(url);
-      // Swap to direct download button for next time
-      currentPdfBase64 = '';
-      document.getElementById('download-pdf-btn').style.display = 'none';
-      btn.style.display = 'inline-flex';
+      setStatus('PDF erfolgreich heruntergeladen', 'active');
+
     } catch (err) {
-      status.textContent = '❌ ' + err.message;
-      status.style.display = 'block';
+      setStatus('PDF-Fehler: ' + err.message + ' · Lade stattdessen .tex herunter', 'error');
+      downloadTex();
     } finally {
-      btn.disabled = false;
-      btn.innerHTML = '🖨️ PDF auf Server kompilieren';
+      btn.disabled           = false;
+      progress.style.display = 'none';
     }
   }
-
-  // ── Verlauf ────────────────────────────────────────────────────────────────
-  function addToHistory(name, subject, chars) {
-    const item = { name, subject, chars, latex: currentLatex, pdf: currentPdfBase64 };
-    history.unshift(item);
-
-    const list = document.getElementById('history-list');
-    if (list.querySelector('.history-empty')) list.innerHTML = '';
-
-    const el = document.createElement('div');
-    el.className = 'history-item';
-    el.innerHTML = `
-      <span class="hi-icon">📄</span>
-      <div style="flex:1;overflow:hidden">
-        <div class="hi-name">${name}</div>
-        <div class="hi-meta">${subject} · ${(chars/1000).toFixed(1)}k Zeichen</div>
-      </div>
-      <button class="btn btn-outline btn-sm" style="flex-shrink:0" onclick="restoreHistory(${history.length-1})">
-        Laden
-      </button>
-    `;
-    list.prepend(el);
-  }
-
-  function restoreHistory(idx) {
-    const item = history[idx];
-    if (!item) return;
-    currentLatex     = item.latex;
-    currentPdfBase64 = item.pdf;
-    currentFileName  = item.name;
-    document.getElementById('latex-output').textContent = item.latex;
-    document.getElementById('latex-file-label').textContent = `${item.name}.tex`;
-    document.getElementById('result-panel').style.display = 'block';
-    const pdfBtn = document.getElementById('download-pdf-btn');
-    if (item.pdf) { pdfBtn.style.display = 'inline-flex'; document.getElementById('compile-server-btn').style.display = 'none'; }
-    else          { pdfBtn.style.display = 'none';         document.getElementById('compile-server-btn').style.display = 'inline-flex'; }
-    document.getElementById('result-panel').scrollIntoView({ behavior: 'smooth' });
-  }
-
-  // ── Hilfsfunktionen ────────────────────────────────────────────────────────
-  function showError(msg) {
-    const el = document.getElementById('alert-error');
-    el.textContent = '❌ ' + msg; el.style.display = 'block';
-  }
-  function showSuccess(msg) {
-    const el = document.getElementById('alert-success');
-    el.textContent = msg; el.style.display = 'block';
-    setTimeout(() => el.style.display = 'none', 4000);
-  }
-  function clearAlerts() {
-    document.getElementById('alert-error').style.display = 'none';
-    document.getElementById('alert-success').style.display = 'none';
-  }
-  function showProgress(label, pct) {
-    document.getElementById('progress-wrap').style.display = 'block';
-    setProgress(pct, label);
-  }
-  function setProgress(pct, label) {
-    document.getElementById('progress-fill').style.width = pct + '%';
-    if (label) document.getElementById('progress-label').textContent = label;
-  }
-  function hideProgress() {
-    document.getElementById('progress-wrap').style.display = 'none';
-  }
-  function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 </script>
 <script>
 // ── Secret auto-load / auto-save ───────────────────────────────────────────
 (async () => {
   const s = await fetch('/api/secrets').then(r => r.ok ? r.json() : {}).catch(() => ({}));
   if (s.gemini_api_key) {
-    document.getElementById('api-key').value = s.gemini_api_key;
+    document.getElementById('apiKey').value = s.gemini_api_key;
+    updateApiStatus();
   }
 })();
 
 let _secretTimer;
-document.getElementById('api-key').addEventListener('input', function() {
+document.getElementById('apiKey').addEventListener('input', function() {
   clearTimeout(_secretTimer);
   _secretTimer = setTimeout(() => {
     fetch('/api/secrets', {
