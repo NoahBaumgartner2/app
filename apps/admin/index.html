@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin-Panel · Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #f8f8f7;
+      --surface:   #ffffff;
+      --surface2:  #f2f2f0;
+      --border:    rgba(0,0,0,.09);
+      --border-hv: rgba(0,0,0,.18);
+      --text:      #111;
+      --muted:     #666;
+      --accent:    #111;
+      --green:     #16a34a;
+      --green-bg:  #dcfce7;
+      --red:       #dc2626;
+      --red-bg:    #fee2e2;
+      --blue:      #2563eb;
+      --blue-bg:   #dbeafe;
+      --radius:    12px;
+      --shadow:    0 1px 4px rgba(0,0,0,.06), 0 4px 20px rgba(0,0,0,.05);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg:        #111;
+        --surface:   #1a1a1a;
+        --surface2:  #242424;
+        --border:    rgba(255,255,255,.09);
+        --border-hv: rgba(255,255,255,.18);
+        --text:      #f0f0ee;
+        --muted:     #888;
+        --accent:    #f0f0ee;
+        --green:     #22c55e;
+        --green-bg:  #052e16;
+        --red:       #ef4444;
+        --red-bg:    #2d0a0a;
+        --blue:      #60a5fa;
+        --blue-bg:   #0c1f4a;
+        --shadow:    0 1px 4px rgba(0,0,0,.3), 0 4px 20px rgba(0,0,0,.25);
+      }
+    }
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    header {
+      padding: 2rem 2.5rem 1.5rem;
+      max-width: 900px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .back-btn {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      padding: 5px 12px;
+      border-radius: 20px;
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      cursor: pointer;
+      text-decoration: none;
+      white-space: nowrap;
+      transition: border-color .15s, color .15s;
+    }
+    .back-btn:hover { border-color: var(--border-hv); color: var(--text); }
+
+    .header-title { font-size: 20px; font-weight: 600; letter-spacing: -.3px; }
+    .header-sub   { font-size: 13px; color: var(--muted); margin-top: 2px; }
+
+    main {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 0 2.5rem 4rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .section-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      color: var(--muted);
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      margin-bottom: .5rem;
+    }
+
+    /* ── Stats row ── */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 12px;
+    }
+
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem 1.25rem;
+      box-shadow: var(--shadow);
+    }
+
+    .stat-value {
+      font-size: 26px;
+      font-weight: 600;
+      letter-spacing: -.5px;
+    }
+
+    .stat-label {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    /* ── User table / cards ── */
+    .user-list { display: flex; flex-direction: column; gap: 12px; }
+
+    .user-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      box-shadow: var(--shadow);
+    }
+
+    .user-header {
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .online-dot {
+      width: 9px; height: 9px;
+      border-radius: 50%;
+      background: var(--border);
+      flex-shrink: 0;
+    }
+    .online-dot.online { background: var(--green); box-shadow: 0 0 0 3px rgba(34,197,94,.2); }
+
+    .username {
+      font-size: 15px;
+      font-weight: 600;
+      flex: 1;
+    }
+
+    .role-badge {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-weight: 500;
+    }
+    .role-badge.admin { background: var(--blue-bg); color: var(--blue); border: 1px solid var(--blue); }
+    .role-badge.user  { background: var(--surface2); color: var(--muted); border: 1px solid var(--border); }
+
+    .last-seen {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    /* ── App permissions ── */
+    .app-section-label {
+      font-size: 11px;
+      color: var(--muted);
+      font-weight: 500;
+      margin-bottom: .5rem;
+    }
+
+    .app-toggles {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 1rem;
+    }
+
+    .app-toggle {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 500;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      cursor: pointer;
+      transition: all .15s;
+      user-select: none;
+    }
+
+    .app-toggle.granted {
+      background: var(--green-bg);
+      border-color: var(--green);
+      color: var(--green);
+    }
+
+    .app-toggle:hover { opacity: .8; }
+
+    .app-toggle .dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: currentColor;
+      opacity: .6;
+    }
+
+    /* ── User actions ── */
+    .user-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      padding-top: 1rem;
+      border-top: 1px solid var(--border);
+      margin-top: .5rem;
+    }
+
+    .btn-sm {
+      font-size: 12px;
+      font-weight: 500;
+      font-family: 'Inter', sans-serif;
+      padding: 5px 12px;
+      border-radius: 7px;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      color: var(--text);
+      cursor: pointer;
+      transition: all .15s;
+    }
+    .btn-sm:hover { border-color: var(--border-hv); }
+    .btn-sm.danger { color: var(--red); }
+    .btn-sm.danger:hover { background: var(--red-bg); border-color: var(--red); }
+
+    /* ── Toast ── */
+    #toast {
+      position: fixed;
+      bottom: 1.5rem;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: .6rem 1.2rem;
+      font-size: 13px;
+      box-shadow: 0 4px 20px rgba(0,0,0,.15);
+      opacity: 0;
+      transition: opacity .2s, transform .2s;
+      pointer-events: none;
+      z-index: 100;
+      white-space: nowrap;
+    }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    .empty-state {
+      text-align: center;
+      padding: 3rem;
+      color: var(--muted);
+      font-size: 14px;
+      background: var(--surface);
+      border: 1.5px dashed var(--border);
+      border-radius: var(--radius);
+    }
+
+    @media (max-width: 600px) {
+      header, main { padding-left: 1.25rem; padding-right: 1.25rem; }
+      header { flex-direction: column; align-items: flex-start; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <a class="back-btn" href="/">← Dashboard</a>
+  <div>
+    <div class="header-title">⚙️ Admin-Panel</div>
+    <div class="header-sub">Benutzerverwaltung &amp; App-Berechtigungen</div>
+  </div>
+</header>
+
+<main>
+  <!-- Stats -->
+  <div>
+    <div class="section-label">Übersicht</div>
+    <div class="stats-row" id="statsRow">
+      <div class="stat-card"><div class="stat-value" id="statTotal">–</div><div class="stat-label">Benutzer gesamt</div></div>
+      <div class="stat-card"><div class="stat-value" id="statOnline">–</div><div class="stat-label">Gerade online</div></div>
+      <div class="stat-card"><div class="stat-value" id="statAdmins">–</div><div class="stat-label">Admins</div></div>
+    </div>
+  </div>
+
+  <!-- User list -->
+  <div>
+    <div class="section-label">Benutzer &amp; Berechtigungen</div>
+    <div class="user-list" id="userList">
+      <div class="empty-state">Lädt…</div>
+    </div>
+  </div>
+</main>
+
+<div id="toast"></div>
+
+<script>
+const APP_LABELS = {
+  'latex-converter':    '📝 LaTeX Konverter',
+  'latex-study':        '📚 StudyLaTeX',
+  'podcast-compressor': '🎬 Kompressor',
+  'pet-meds':           '🐾 MediTracker',
+};
+const APP_SLUGS = Object.keys(APP_LABELS);
+
+let users = [];
+let myId   = null;
+
+async function init() {
+  const me = await fetch('/api/me').then(r => r.json()).catch(() => ({}));
+  myId = me.id;
+  await loadUsers();
+}
+
+async function loadUsers() {
+  try {
+    users = await fetch('/api/admin/users').then(r => r.json());
+    renderStats();
+    renderUsers();
+  } catch { showToast('Fehler beim Laden.'); }
+}
+
+function isOnline(last_seen) {
+  if (!last_seen) return false;
+  return (Date.now() - new Date(last_seen).getTime()) < 5 * 60 * 1000; // 5 min
+}
+
+function formatLastSeen(last_seen) {
+  if (!last_seen) return 'noch nie';
+  const diff = Math.floor((Date.now() - new Date(last_seen).getTime()) / 1000);
+  if (diff < 60)  return 'gerade eben';
+  if (diff < 3600) return `vor ${Math.floor(diff/60)} Min.`;
+  if (diff < 86400) return `vor ${Math.floor(diff/3600)} Std.`;
+  return new Date(last_seen).toLocaleDateString('de-DE', { day:'numeric', month:'short' });
+}
+
+function renderStats() {
+  document.getElementById('statTotal').textContent  = users.length;
+  document.getElementById('statOnline').textContent = users.filter(u => isOnline(u.last_seen)).length;
+  document.getElementById('statAdmins').textContent = users.filter(u => u.role === 'admin').length;
+}
+
+function renderUsers() {
+  const list = document.getElementById('userList');
+  if (!users.length) {
+    list.innerHTML = '<div class="empty-state">Keine Benutzer gefunden.</div>';
+    return;
+  }
+  list.innerHTML = users.map(u => renderUserCard(u)).join('');
+}
+
+function renderUserCard(u) {
+  const online    = isOnline(u.last_seen);
+  const isAdmin   = u.role === 'admin';
+  const isSelf    = u.id === myId;
+
+  const appToggles = APP_SLUGS.map(slug => {
+    const granted = isAdmin || u.apps.includes(slug);
+    const disabled = isAdmin ? 'style="pointer-events:none;opacity:.5"' : '';
+    return `<div class="app-toggle ${granted ? 'granted' : ''}"
+                 ${disabled}
+                 onclick="toggleApp(${u.id}, '${slug}', ${granted})"
+                 title="${granted ? 'Zugriff entziehen' : 'Zugriff gewähren'}">
+              <div class="dot"></div>
+              ${APP_LABELS[slug]}
+            </div>`;
+  }).join('');
+
+  return `
+    <div class="user-card" id="user-${u.id}">
+      <div class="user-header">
+        <div class="online-dot ${online ? 'online' : ''}" title="${online ? 'Online' : 'Offline'}"></div>
+        <div class="username">${esc(u.username)} ${isSelf ? '<span style="font-size:11px;color:var(--muted)">(du)</span>' : ''}</div>
+        <span class="role-badge ${u.role}">${u.role === 'admin' ? 'Admin' : 'Nutzer'}</span>
+        <span class="last-seen" title="Zuletzt aktiv">${online ? '🟢 online' : formatLastSeen(u.last_seen)}</span>
+      </div>
+
+      <div class="app-section-label">App-Zugriff ${isAdmin ? '(Admin hat automatisch Vollzugriff)' : ''}</div>
+      <div class="app-toggles">${appToggles}</div>
+
+      <div class="user-actions">
+        ${!isSelf ? `
+          <button class="btn-sm" onclick="toggleRole(${u.id}, '${u.role}')">
+            ${isAdmin ? 'Zu Nutzer degradieren' : 'Zum Admin befördern'}
+          </button>
+          <button class="btn-sm danger" onclick="deleteUser(${u.id}, '${esc(u.username)}')">Löschen</button>
+        ` : '<span style="font-size:12px;color:var(--muted)">Eigenes Konto kann nicht bearbeitet werden.</span>'}
+      </div>
+    </div>`;
+}
+
+async function toggleApp(userId, slug, currentlyGranted) {
+  const method = currentlyGranted ? 'DELETE' : 'POST';
+  const res = await fetch(`/api/admin/users/${userId}/apps/${slug}`, { method });
+  if (!res.ok) { showToast('Fehler beim Speichern.'); return; }
+  const user = users.find(u => u.id === userId);
+  if (currentlyGranted) {
+    user.apps = user.apps.filter(a => a !== slug);
+  } else {
+    user.apps.push(slug);
+  }
+  document.getElementById(`user-${userId}`).outerHTML = renderUserCard(user);
+  showToast(currentlyGranted ? `Zugriff auf ${APP_LABELS[slug]} entzogen.` : `Zugriff auf ${APP_LABELS[slug]} gewährt.`);
+}
+
+async function toggleRole(userId, currentRole) {
+  const newRole = currentRole === 'admin' ? 'user' : 'admin';
+  const res = await fetch(`/api/admin/users/${userId}/role`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ role: newRole })
+  });
+  if (!res.ok) {
+    const d = await res.json();
+    showToast(d.error || 'Fehler.');
+    return;
+  }
+  const user = users.find(u => u.id === userId);
+  user.role = newRole;
+  document.getElementById(`user-${userId}`).outerHTML = renderUserCard(user);
+  renderStats();
+  showToast(`${esc(user.username)} ist jetzt ${newRole === 'admin' ? 'Admin' : 'Nutzer'}.`);
+}
+
+async function deleteUser(userId, username) {
+  if (!confirm(`Benutzer "${username}" wirklich löschen?\nDies kann nicht rückgängig gemacht werden.`)) return;
+  const res = await fetch(`/api/admin/users/${userId}`, { method: 'DELETE' });
+  if (!res.ok) { showToast('Fehler beim Löschen.'); return; }
+  users = users.filter(u => u.id !== userId);
+  renderStats();
+  renderUsers();
+  showToast(`${username} wurde gelöscht.`);
+}
+
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+let toastTimer;
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 3000);
+}
+
+// Alle 30s aktualisieren (für Online-Status)
+setInterval(loadUsers, 30_000);
+init();
+</script>
+</body>
+</html>

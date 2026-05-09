@@ -13,7 +13,10 @@ const bcrypt     = require('bcrypt');
 
 const app      = express();
 const PORT     = process.env.PORT || 3000;
-const TECTONIC = path.join(os.homedir(), '.local', 'bin', 'tectonic');
+const TECTONIC  = path.join(os.homedir(), '.local', 'bin', 'tectonic');
+const APP_SLUGS = ['latex-converter', 'latex-study', 'podcast-compressor', 'pet-meds'];
+
+const FORBIDDEN_HTML = `<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Kein Zugriff</title><style>body{font-family:system-ui,sans-serif;background:#111;color:#f0f0ee;display:flex;align-items:center;justify-content:center;height:100vh;margin:0}.box{text-align:center}.icon{font-size:48px;margin-bottom:1rem}h2{margin:.5rem 0}p{color:#888;font-size:.875rem;margin:.25rem 0 1.5rem}a{display:inline-block;padding:8px 20px;border-radius:8px;background:#f0f0ee;color:#111;text-decoration:none;font-size:.875rem;font-weight:500}</style></head><body><div class="box"><div class="icon">🔒</div><h2>Kein Zugriff</h2><p>Du hast keine Berechtigung für diese App.</p><a href="/">← Zurück zum Dashboard</a></div></body></html>`;
 
 // ══════════════════════════════════════════════════════════════════════════════
 //  DATENBANK
@@ -51,6 +54,30 @@ db.serialize(() => {
     UNIQUE(schedule_id, log_date),
     FOREIGN KEY(schedule_id) REFERENCES medication_schedules(id) ON DELETE CASCADE
   )`);
+
+  // Rollen-System: role-Spalte nachrüsten (Fehler ignorieren falls schon vorhanden)
+  db.run(`ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'user'`, () => {
+    // Ersten registrierten User automatisch zum Admin machen, falls noch keiner existiert
+    db.get(`SELECT COUNT(*) AS n FROM users WHERE role = 'admin'`, (_, row) => {
+      if (row && row.n === 0) {
+        db.run(`UPDATE users SET role = 'admin' WHERE id = (SELECT MIN(id) FROM users)`);
+      }
+    });
+  });
+
+  db.run(`CREATE TABLE IF NOT EXISTS app_permissions (
+    id       INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id  INTEGER NOT NULL,
+    app_slug TEXT    NOT NULL,
+    UNIQUE(user_id, app_slug),
+    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+  )`);
+
+  db.run(`CREATE TABLE IF NOT EXISTS user_activity (
+    user_id   INTEGER PRIMARY KEY,
+    last_seen TEXT    NOT NULL,
+    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+  )`);
 });
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -82,10 +109,40 @@ app.get('/sw.js', (req, res) =>
 
 // ── Auth-Middleware ────────────────────────────────────────────────────────
 function checkAuth(req, res, next) {
-  if (req.session.userId) return next();
+  if (req.session.userId) {
+    // Last-Seen für API-Calls und HTML-Seiten tracken (nicht für Assets)
+    const p = req.path;
+    if (req.originalUrl.includes('/api/') || p === '/' || p.endsWith('.html')) {
+      db.run('INSERT OR REPLACE INTO user_activity (user_id, last_seen) VALUES (?, ?)',
+        [req.session.userId, new Date().toISOString()]);
+    }
+    return next();
+  }
   const isApi = req.originalUrl.includes('/api/') || req.originalUrl.includes('/compile');
   if (isApi) return res.status(401).json({ error: 'Nicht angemeldet.' });
   res.redirect('/login.html');
+}
+
+function checkAdmin(req, res, next) {
+  if (req.session.role === 'admin') return next();
+  if (req.originalUrl.includes('/api/'))
+    return res.status(403).json({ error: 'Nur für Administratoren.' });
+  res.status(403).send(FORBIDDEN_HTML);
+}
+
+function checkAppAccess(slug) {
+  return (req, res, next) => {
+    if (req.session.role === 'admin') return next();
+    db.get('SELECT id FROM app_permissions WHERE user_id = ? AND app_slug = ?',
+      [req.session.userId, slug],
+      (err, row) => {
+        if (row) return next();
+        if (req.originalUrl.includes('/api/') || req.originalUrl.includes('/compile'))
+          return res.status(403).json({ error: 'Kein Zugriff auf diese App.' });
+        res.status(403).send(FORBIDDEN_HTML);
+      }
+    );
+  };
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -126,6 +183,7 @@ app.post('/login', (req, res) => {
     if (!match)  return res.status(401).send('Ungültige Anmeldedaten.');
     req.session.userId   = user.id;
     req.session.username = user.username;
+    req.session.role     = user.role || 'user';
     req.session.save(() => res.redirect('/'));
   });
 });
@@ -134,9 +192,21 @@ app.post('/logout', (req, res) => {
   req.session.destroy(() => res.redirect('/login.html'));
 });
 
-// Gibt den eingeloggten Usernamen zurück (für das Dashboard-Frontend)
+// Gibt Username, Rolle und erlaubte Apps zurück
 app.get('/api/me', checkAuth, (req, res) => {
-  res.json({ username: req.session.username });
+  if (req.session.role === 'admin') {
+    return res.json({ username: req.session.username, role: 'admin', apps: APP_SLUGS });
+  }
+  db.all('SELECT app_slug FROM app_permissions WHERE user_id = ?',
+    [req.session.userId],
+    (err, rows) => {
+      res.json({
+        username: req.session.username,
+        role: req.session.role || 'user',
+        apps: rows ? rows.map(r => r.app_slug) : []
+      });
+    }
+  );
 });
 
 // ── Secrets ────────────────────────────────────────────────────────────────
@@ -173,10 +243,80 @@ app.use(checkAuth, express.static(path.join(__dirname, 'public')));
 
 
 // ══════════════════════════════════════════════════════════════════════════════
+//  APP: ADMIN-PANEL  →  /apps/admin
+// ══════════════════════════════════════════════════════════════════════════════
+app.use('/apps/admin', checkAuth, checkAdmin, express.static(path.join(__dirname, 'apps/admin')));
+
+app.get('/api/admin/users', checkAuth, checkAdmin, (_req, res) => {
+  db.all(`
+    SELECT u.id, u.username, u.role, a.last_seen,
+           GROUP_CONCAT(p.app_slug) AS app_slugs
+    FROM users u
+    LEFT JOIN user_activity   a ON a.user_id = u.id
+    LEFT JOIN app_permissions p ON p.user_id = u.id
+    GROUP BY u.id ORDER BY u.id
+  `, (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(rows.map(r => ({
+      id:        r.id,
+      username:  r.username,
+      role:      r.role,
+      last_seen: r.last_seen || null,
+      apps:      r.app_slugs ? r.app_slugs.split(',') : []
+    })));
+  });
+});
+
+app.patch('/api/admin/users/:id/role', checkAuth, checkAdmin, (req, res) => {
+  const { role } = req.body;
+  if (!['admin', 'user'].includes(role))
+    return res.status(400).json({ error: 'Ungültige Rolle.' });
+  if (parseInt(req.params.id) === req.session.userId && role !== 'admin')
+    return res.status(400).json({ error: 'Eigene Admin-Rolle kann nicht entzogen werden.' });
+  db.run('UPDATE users SET role = ? WHERE id = ?', [role, req.params.id], function(err) {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ ok: true });
+  });
+});
+
+app.post('/api/admin/users/:id/apps/:slug', checkAuth, checkAdmin, (req, res) => {
+  if (!APP_SLUGS.includes(req.params.slug))
+    return res.status(400).json({ error: 'Unbekannte App.' });
+  db.run('INSERT OR IGNORE INTO app_permissions (user_id, app_slug) VALUES (?, ?)',
+    [req.params.id, req.params.slug],
+    (err) => {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json({ ok: true });
+    }
+  );
+});
+
+app.delete('/api/admin/users/:id/apps/:slug', checkAuth, checkAdmin, (req, res) => {
+  db.run('DELETE FROM app_permissions WHERE user_id = ? AND app_slug = ?',
+    [req.params.id, req.params.slug],
+    (err) => {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json({ ok: true });
+    }
+  );
+});
+
+app.delete('/api/admin/users/:id', checkAuth, checkAdmin, (req, res) => {
+  if (parseInt(req.params.id) === req.session.userId)
+    return res.status(400).json({ error: 'Du kannst dich nicht selbst löschen.' });
+  db.run('DELETE FROM users WHERE id = ?', [req.params.id], function(err) {
+    if (err) return res.status(500).json({ error: err.message });
+    if (this.changes === 0) return res.status(404).json({ error: 'Nicht gefunden.' });
+    res.json({ ok: true });
+  });
+});
+
+
+// ══════════════════════════════════════════════════════════════════════════════
 //  APP: PODCAST COMPRESSOR  →  /apps/podcast-compressor
 //  (COOP/COEP headers sind für SharedArrayBuffer / FFmpeg WASM nötig)
 // ══════════════════════════════════════════════════════════════════════════════
-app.use('/apps/podcast-compressor', checkAuth, (req, res, next) => {
+app.use('/apps/podcast-compressor', checkAuth, checkAppAccess('podcast-compressor'), (req, res, next) => {
   res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
   res.setHeader('Cross-Origin-Embedder-Policy', 'credentialless');
   next();
@@ -187,7 +327,7 @@ app.use('/apps/podcast-compressor', checkAuth, (req, res, next) => {
 //  APP: LATEX KONVERTER  →  /apps/latex-converter
 //  Bild hochladen → Gemini Vision → LaTeX → PDF (pdflatex)
 // ══════════════════════════════════════════════════════════════════════════════
-app.use('/apps/latex-converter', checkAuth, express.static(path.join(__dirname, 'apps/latexConverter')));
+app.use('/apps/latex-converter', checkAuth, checkAppAccess('latex-converter'), express.static(path.join(__dirname, 'apps/latexConverter')));
 
 async function findLatexCompiler() {
   const hasPdflatex = await new Promise(r => execFile('pdflatex', ['--version'], err => r(!err)));
@@ -209,7 +349,7 @@ function runLatexCompiler(compiler, texFile, cwd) {
   });
 }
 
-app.post('/apps/latex-converter/compile', checkAuth, async (req, res) => {
+app.post('/apps/latex-converter/compile', checkAuth, checkAppAccess('latex-converter'), async (req, res) => {
   const { latex } = req.body;
   if (!latex || typeof latex !== 'string')
     return res.status(400).json({ error: 'Kein LaTeX-Code übermittelt.' });
@@ -250,7 +390,7 @@ app.post('/apps/latex-converter/compile', checkAuth, async (req, res) => {
 //  APP: LATEX STUDY  →  /apps/latex-study
 //  PDF-Folien hochladen → Gemini → LaTeX-Zusammenfassung → PDF
 // ══════════════════════════════════════════════════════════════════════════════
-app.use('/apps/latex-study', checkAuth, express.static(path.join(__dirname, 'apps/latexStudy')));
+app.use('/apps/latex-study', checkAuth, checkAppAccess('latex-study'), express.static(path.join(__dirname, 'apps/latexStudy')));
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -404,7 +544,7 @@ async function compileLaTeX(latexContent) {
   }
 }
 
-app.post('/apps/latex-study/api/summarize', checkAuth, upload.single('pdf'), async (req, res) => {
+app.post('/apps/latex-study/api/summarize', checkAuth, checkAppAccess('latex-study'), upload.single('pdf'), async (req, res) => {
   try {
     const { apiKey, subject, title } = req.body;
     if (!req.file) return res.status(400).json({ error: 'Keine PDF-Datei hochgeladen.' });
@@ -432,7 +572,7 @@ app.post('/apps/latex-study/api/summarize', checkAuth, upload.single('pdf'), asy
   }
 });
 
-app.post('/apps/latex-study/api/latex-only', checkAuth, upload.single('pdf'), async (req, res) => {
+app.post('/apps/latex-study/api/latex-only', checkAuth, checkAppAccess('latex-study'), upload.single('pdf'), async (req, res) => {
   try {
     const { apiKey, subject, title } = req.body;
     if (!req.file) return res.status(400).json({ error: 'Keine PDF-Datei hochgeladen.' });
@@ -452,7 +592,7 @@ app.post('/apps/latex-study/api/latex-only', checkAuth, upload.single('pdf'), as
   }
 });
 
-app.post('/apps/latex-study/api/compile-pdf', checkAuth, async (req, res) => {
+app.post('/apps/latex-study/api/compile-pdf', checkAuth, checkAppAccess('latex-study'), async (req, res) => {
   try {
     const { latex, fileName } = req.body;
     if (!latex) return res.status(400).json({ error: 'Kein LaTeX-Code angegeben.' });
@@ -471,7 +611,7 @@ app.post('/apps/latex-study/api/compile-pdf', checkAuth, async (req, res) => {
 // ══════════════════════════════════════════════════════════════════════════════
 //  APP: HAUSTIER-MEDIKAMENTEN-TRACKER  →  /apps/pet-meds
 // ══════════════════════════════════════════════════════════════════════════════
-app.use('/apps/pet-meds', checkAuth, express.static(path.join(__dirname, 'apps/petMeds')));
+app.use('/apps/pet-meds', checkAuth, checkAppAccess('pet-meds'), express.static(path.join(__dirname, 'apps/petMeds')));
 
 function localDate() {
   const d = new Date();
@@ -479,7 +619,7 @@ function localDate() {
 }
 
 // Alle Medikamente des Tages (inkl. heutigem Log-Status)
-app.get('/apps/pet-meds/api/today', checkAuth, (req, res) => {
+app.get('/apps/pet-meds/api/today', checkAuth, checkAppAccess('pet-meds'), (req, res) => {
   const today = localDate();
   db.all(
     `SELECT s.id, s.pet_name, s.med_name, s.dose, s.time_of_day,

@@ -444,12 +444,13 @@ if (window.location.hash.includes('access_token=')) {
   window.location.replace('/apps/podcast-compressor/' + window.location.hash);
 }
 
-// ── Eingeloggten User anzeigen ─────────────────────────────────────────────
+// ── Eingeloggten User anzeigen + Berechtigungen laden ─────────────────────
 fetch('/api/me').then(r => r.json()).then(data => {
   const el = document.getElementById('userBadge');
-  el.textContent = data.username;
+  el.textContent = data.username + (data.role === 'admin' ? ' ⚙' : '');
   el.style.display = 'inline';
-}).catch(() => {});
+  renderApps(data.role === 'admin', data.apps || []);
+}).catch(() => renderApps(false, []));
 
 // ── App-Registrierung ──────────────────────────────────────────────────────
 // Neue App hinzufügen: Eintrag in dieses Array ergänzen.
@@ -494,16 +495,30 @@ const apps = [
     tags: ['Haustiere', 'Medikamente', 'Daily Tracker', 'SQLite'],
     path: '/apps/pet-meds',
   },
+  {
+    id:   'admin',
+    name: 'Admin-Panel',
+    desc: 'Benutzer verwalten, App-Zugriff steuern und Online-Status einsehen.',
+    icon: '⚙️',
+    color: '#ede9fe',
+    colorDark: '#1a0a2e',
+    tags: ['Admin', 'Benutzer', 'Berechtigungen'],
+    path: '/apps/admin',
+    adminOnly: true,
+  },
 ];
 
 // ── Render ─────────────────────────────────────────────────────────────────
 const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
 
-function renderApps() {
+function renderApps(isAdmin, allowedSlugs) {
+  const visible = apps.filter(a =>
+    a.adminOnly ? isAdmin : (isAdmin || allowedSlugs.includes(a.id))
+  );
   const grid = document.getElementById('appsGrid');
-  document.getElementById('appCount').textContent = apps.length + ' App' + (apps.length !== 1 ? 's' : '');
+  document.getElementById('appCount').textContent = visible.filter(a => !a.adminOnly).length + ' App' + (visible.length !== 1 ? 's' : '');
 
-  grid.innerHTML = apps.map(app => `
+  grid.innerHTML = visible.map(app => `
     <a class="app-card" href="${app.path}" title="${app.name} öffnen">
       <div class="card-top">
         <div class="app-icon" style="background:${isDark ? app.colorDark : app.color}">${app.icon}</div>
@@ -536,7 +551,7 @@ function renderApps() {
   `);
 }
 
-renderApps();
+// renderApps wird nach /api/me aufgerufen (mit Rolle und App-Liste)
 
 // ── Secrets ────────────────────────────────────────────────────────────────
 const SECRET_MAP = {
