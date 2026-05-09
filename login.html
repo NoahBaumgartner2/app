@@ -225,7 +225,7 @@
     <div id="login-error"   class="alert alert-error"></div>
     <div id="login-success" class="alert alert-success"></div>
 
-    <form method="POST" action="/login" onsubmit="return onSubmit('login')">
+    <form method="POST" action="/login" onsubmit="return onSubmit('login', this)">
       <div class="field">
         <label>Benutzername</label>
         <input type="text" name="username" id="login-username"
@@ -247,7 +247,7 @@
     <div id="register-error"   class="alert alert-error"></div>
     <div id="register-success" class="alert alert-success"></div>
 
-    <form method="POST" action="/register" onsubmit="return onSubmit('register')">
+    <form method="POST" action="/register" onsubmit="return onSubmit('register', this)">
       <div class="field">
         <label>Benutzername</label>
         <input type="text" name="username" id="reg-username"
@@ -276,24 +276,25 @@
   }
 
   // ── Fehler via AJAX statt Seiten-Reload ───────────────────────────────────
-  function onSubmit(type) {
-    const form   = event.target;
-    const errEl  = document.getElementById(type + '-error');
-    const okEl   = document.getElementById(type + '-success');
+  function onSubmit(type, form) {
+    const errEl = document.getElementById(type + '-error');
+    const okEl  = document.getElementById(type + '-success');
     errEl.style.display = 'none';
     okEl.style.display  = 'none';
 
+    // redirect:'follow' (default) — kein 'manual', funktioniert zuverlässig in iOS PWA
     fetch(form.action, {
       method: 'POST',
       body: new URLSearchParams(new FormData(form)),
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      redirect: 'manual'
+      credentials: 'same-origin'
     }).then(async res => {
-      if (res.type === 'opaqueredirect' || res.status === 302 || res.redirected) {
-        window.location.href = res.url || '/';
+      // Erfolg: Browser ist einem Redirect gefolgt und landete nicht auf der Login-Seite
+      if (res.redirected && !res.url.includes('login')) {
+        window.location.href = '/';
         return;
       }
-      if (res.ok || res.status < 400) {
+      if (res.ok) {
         if (type === 'register') {
           okEl.textContent = '✓ Konto erstellt. Bitte jetzt anmelden.';
           okEl.style.display = 'block';
@@ -302,11 +303,11 @@
         } else {
           window.location.href = '/';
         }
-      } else {
-        const text = await res.text();
-        errEl.textContent = text || 'Fehler beim Anmelden.';
-        errEl.style.display = 'block';
+        return;
       }
+      const text = await res.text();
+      errEl.textContent = text || 'Fehler beim Anmelden.';
+      errEl.style.display = 'block';
     }).catch(() => form.submit());
 
     return false;

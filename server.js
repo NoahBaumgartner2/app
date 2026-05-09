@@ -95,6 +95,7 @@ function checkAuth(req, res, next) {
 app.get('/login.html', (req, res) => {
   res.sendFile(path.join(__dirname, 'login.html'));
 });
+app.get('/login', (req, res) => res.redirect('/login.html'));
 
 app.post('/register', async (req, res) => {
   const { username, password } = req.body;
@@ -125,7 +126,7 @@ app.post('/login', (req, res) => {
     if (!match)  return res.status(401).send('Ungültige Anmeldedaten.');
     req.session.userId   = user.id;
     req.session.username = user.username;
-    res.redirect('/');
+    req.session.save(() => res.redirect('/'));
   });
 });
 
