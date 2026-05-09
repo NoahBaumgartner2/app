@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Medikamenten-Tracker</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #f8f8f7;
+      --surface:   #ffffff;
+      --surface2:  #f2f2f0;
+      --border:    rgba(0,0,0,.09);
+      --border-hv: rgba(0,0,0,.18);
+      --text:      #111;
+      --muted:     #666;
+      --accent:    #111;
+      --green:     #19a34a;
+      --green-bg:  #edfaf3;
+      --red:       #dc2626;
+      --red-bg:    #fef2f2;
+      --orange:    #d97706;
+      --orange-bg: #fffbeb;
+      --radius:    12px;
+      --shadow:    0 1px 4px rgba(0,0,0,.06), 0 4px 20px rgba(0,0,0,.05);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg:        #111;
+        --surface:   #1a1a1a;
+        --surface2:  #242424;
+        --border:    rgba(255,255,255,.09);
+        --border-hv: rgba(255,255,255,.18);
+        --text:      #f0f0ee;
+        --muted:     #888;
+        --accent:    #f0f0ee;
+        --green:     #22c55e;
+        --green-bg:  #0a2e18;
+        --red:       #ef4444;
+        --red-bg:    #2d0a0a;
+        --orange:    #f59e0b;
+        --orange-bg: #2d1a00;
+        --shadow:    0 1px 4px rgba(0,0,0,.3), 0 4px 20px rgba(0,0,0,.25);
+      }
+    }
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    header {
+      padding: 2rem 2.5rem 1.5rem;
+      max-width: 800px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .back-btn {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      padding: 5px 12px;
+      border-radius: 20px;
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      cursor: pointer;
+      text-decoration: none;
+      transition: border-color .15s, color .15s;
+      white-space: nowrap;
+    }
+    .back-btn:hover { border-color: var(--border-hv); color: var(--text); }
+
+    .header-content { flex: 1; }
+
+    .header-title {
+      font-size: 20px;
+      font-weight: 600;
+      letter-spacing: -0.3px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .header-sub {
+      font-size: 13px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    /* ── Main layout ── */
+    main {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 0 2.5rem 4rem;
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
+    }
+
+    .section-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      color: var(--muted);
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      margin-bottom: .75rem;
+    }
+
+    /* ── Today's date banner ── */
+    .date-banner {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem 1.25rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: var(--shadow);
+    }
+
+    .date-today {
+      font-size: 15px;
+      font-weight: 600;
+    }
+
+    .date-sub {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    .progress-pill {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      padding: 4px 12px;
+      border-radius: 20px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      white-space: nowrap;
+    }
+    .progress-pill.all-done {
+      background: var(--green-bg);
+      border-color: var(--green);
+      color: var(--green);
+    }
+
+    /* ── Med card ── */
+    .med-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .med-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      box-shadow: var(--shadow);
+      transition: border-color .15s, opacity .2s;
+    }
+
+    .med-card.done {
+      border-color: var(--green);
+      background: var(--green-bg);
+    }
+
+    .med-card.skipped {
+      opacity: .55;
+      border-style: dashed;
+    }
+
+    .med-card.skipped .med-info { text-decoration: line-through; }
+
+    /* Checkbox */
+    .med-check {
+      width: 22px;
+      height: 22px;
+      border-radius: 6px;
+      border: 2px solid var(--border-hv);
+      background: var(--bg);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: background .15s, border-color .15s;
+      font-size: 13px;
+    }
+    .med-card.done .med-check {
+      background: var(--green);
+      border-color: var(--green);
+      color: #fff;
+    }
+
+    .med-body { flex: 1; min-width: 0; }
+
+    .med-title {
+      font-size: 14px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .med-pet {
+      font-size: 11px;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--muted);
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      padding: 1px 7px;
+      border-radius: 4px;
+      font-weight: 400;
+    }
+
+    .med-meta {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 3px;
+      display: flex;
+      gap: 10px;
+    }
+
+    .med-actions {
+      display: flex;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    .icon-btn {
+      width: 30px;
+      height: 30px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      transition: background .12s, border-color .12s;
+      color: var(--muted);
+    }
+    .icon-btn:hover { border-color: var(--border-hv); color: var(--text); background: var(--surface2); }
+    .icon-btn.danger:hover { background: var(--red-bg); border-color: var(--red); color: var(--red); }
+    .icon-btn.undo:hover { background: var(--orange-bg); border-color: var(--orange); color: var(--orange); }
+
+    .status-badge {
+      font-size: 11px;
+      font-family: 'JetBrains Mono', monospace;
+      padding: 2px 8px;
+      border-radius: 4px;
+      background: var(--orange-bg);
+      color: var(--orange);
+      border: 1px solid var(--orange);
+      white-space: nowrap;
+    }
+
+    /* ── Empty state ── */
+    .empty-state {
+      text-align: center;
+      padding: 3rem 1rem;
+      color: var(--muted);
+      font-size: 14px;
+      background: var(--surface);
+      border: 1.5px dashed var(--border);
+      border-radius: var(--radius);
+    }
+    .empty-state .empty-icon { font-size: 36px; margin-bottom: .75rem; }
+
+    /* ── Add-Form ── */
+    .add-section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+
+    .add-toggle {
+      width: 100%;
+      padding: 1rem 1.25rem;
+      background: none;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 14px;
+      font-weight: 600;
+      font-family: 'Inter', sans-serif;
+      color: var(--text);
+      text-align: left;
+    }
+
+    .add-toggle:hover { background: var(--surface2); }
+
+    .toggle-icon {
+      font-size: 18px;
+      transition: transform .2s;
+      color: var(--muted);
+    }
+    .add-toggle.open .toggle-icon { transform: rotate(45deg); }
+
+    .add-form {
+      display: none;
+      padding: 0 1.25rem 1.25rem;
+      border-top: 1px solid var(--border);
+      flex-direction: column;
+      gap: 1rem;
+    }
+    .add-form.visible { display: flex; padding-top: 1.25rem; }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    @media (max-width: 500px) {
+      .form-grid { grid-template-columns: 1fr; }
+    }
+
+    .form-group { display: flex; flex-direction: column; gap: 5px; }
+
+    label {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--muted);
+    }
+
+    input[type="text"], input[type="time"] {
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 14px;
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      outline: none;
+      transition: border-color .15s;
+      width: 100%;
+    }
+    input:focus { border-color: var(--accent); }
+
+    .btn-primary {
+      padding: 9px 20px;
+      border-radius: 8px;
+      background: var(--accent);
+      color: var(--bg);
+      border: none;
+      font-size: 14px;
+      font-weight: 600;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+      transition: opacity .15s;
+      align-self: flex-start;
+    }
+    .btn-primary:hover { opacity: .8; }
+    .btn-primary:disabled { opacity: .45; cursor: default; }
+
+    /* ── Schedules list ── */
+    .schedule-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .schedule-row {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: .75rem 1rem;
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+    }
+
+    .schedule-body { flex: 1; min-width: 0; font-size: 13px; }
+
+    .schedule-title {
+      font-weight: 600;
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .schedule-meta {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 2px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* ── Toast ── */
+    #toast {
+      position: fixed;
+      bottom: 1.5rem;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: .6rem 1.2rem;
+      font-size: 13px;
+      box-shadow: 0 4px 20px rgba(0,0,0,.15);
+      opacity: 0;
+      transition: opacity .2s, transform .2s;
+      pointer-events: none;
+      white-space: nowrap;
+      z-index: 100;
+    }
+    #toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    @media (max-width: 600px) {
+      header, main { padding-left: 1.25rem; padding-right: 1.25rem; }
+      header { flex-direction: column; align-items: flex-start; gap: .5rem; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <a class="back-btn" href="/">← Dashboard</a>
+  <div class="header-content">
+    <div class="header-title">🐾 Medikamenten-Tracker</div>
+    <div class="header-sub">Tagesübersicht für Haustiere</div>
+  </div>
+</header>
+
+<main>
+
+  <!-- Date banner -->
+  <div class="date-banner">
+    <div>
+      <div class="date-today" id="dateToday"></div>
+      <div class="date-sub">Tagesübersicht</div>
+    </div>
+    <div class="progress-pill" id="progressPill">lädt…</div>
+  </div>
+
+  <!-- Today's medications -->
+  <div>
+    <div class="section-label">Heute fällig</div>
+    <div class="med-list" id="todayList">
+      <div class="empty-state">
+        <div class="empty-icon">⏳</div>
+        Wird geladen…
+      </div>
+    </div>
+  </div>
+
+  <!-- Add new medication -->
+  <div>
+    <div class="section-label">Neuer Medikamentenplan</div>
+    <div class="add-section">
+      <button class="add-toggle" id="addToggle" onclick="toggleAddForm()">
+        <span>Medikament hinzufügen</span>
+        <span class="toggle-icon">+</span>
+      </button>
+      <form class="add-form" id="addForm" onsubmit="submitNewMed(event)">
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="f-pet">Tier *</label>
+            <input type="text" id="f-pet" placeholder="z. B. Bello" required />
+          </div>
+          <div class="form-group">
+            <label for="f-med">Medikament *</label>
+            <input type="text" id="f-med" placeholder="z. B. Prednisolon" required />
+          </div>
+          <div class="form-group">
+            <label for="f-dose">Dosis *</label>
+            <input type="text" id="f-dose" placeholder="z. B. 5 mg" required />
+          </div>
+          <div class="form-group">
+            <label for="f-time">Uhrzeit *</label>
+            <input type="time" id="f-time" required />
+          </div>
+        </div>
+        <button class="btn-primary" type="submit" id="submitBtn">Speichern</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- All schedules -->
+  <div>
+    <div class="section-label">Alle Medikamentenpläne</div>
+    <div class="schedule-list" id="scheduleList">
+      <div class="empty-state">
+        <div class="empty-icon">📋</div>
+        Noch keine Pläne angelegt.
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<div id="toast"></div>
+
+<script>
+// ── State ─────────────────────────────────────────────────────────────────────
+let todayMeds = [];
+let allSchedules = [];
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+const now = new Date();
+document.getElementById('dateToday').textContent = now.toLocaleDateString('de-DE', {
+  weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+});
+
+async function init() {
+  await Promise.all([loadToday(), loadSchedules()]);
+}
+
+// ── API calls ─────────────────────────────────────────────────────────────────
+async function loadToday() {
+  try {
+    const res = await fetch('/apps/pet-meds/api/today');
+    todayMeds = await res.json();
+    renderToday();
+  } catch { showToast('Fehler beim Laden.'); }
+}
+
+async function loadSchedules() {
+  try {
+    const res = await fetch('/apps/pet-meds/api/schedules');
+    allSchedules = await res.json();
+    renderSchedules();
+  } catch {}
+}
+
+// ── Render Today ──────────────────────────────────────────────────────────────
+function renderToday() {
+  const list = document.getElementById('todayList');
+
+  if (todayMeds.length === 0) {
+    list.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">🐾</div>
+        Noch keine Medikamente geplant.<br>Füge unten einen Plan hinzu.
+      </div>`;
+    document.getElementById('progressPill').textContent = '–';
+    return;
+  }
+
+  const active  = todayMeds.filter(m => m.status !== 'skipped');
+  const done    = active.filter(m => m.status === 'done').length;
+  const total   = active.length;
+  const pill    = document.getElementById('progressPill');
+  pill.textContent = total === 0 ? 'alle übersprungen' : `${done} / ${total} erledigt`;
+  pill.classList.toggle('all-done', done === total && total > 0);
+
+  list.innerHTML = todayMeds.map(m => {
+    const isDone    = m.status === 'done';
+    const isSkipped = m.status === 'skipped';
+
+    return `
+      <div class="med-card ${isDone ? 'done' : ''} ${isSkipped ? 'skipped' : ''}" id="card-${m.id}">
+        <div class="med-check" onclick="toggleDone(${m.id})" title="${isDone ? 'Als unerledigt markieren' : 'Als erledigt markieren'}">
+          ${isDone ? '✓' : ''}
+        </div>
+        <div class="med-body">
+          <div class="med-title">
+            ${esc(m.med_name)}
+            <span class="med-pet">${esc(m.pet_name)}</span>
+          </div>
+          <div class="med-meta">
+            <span>💊 ${esc(m.dose)}</span>
+            <span>⏰ ${m.time_of_day}</span>
+          </div>
+        </div>
+        <div class="med-actions">
+          ${isSkipped
+            ? `<span class="status-badge">heute übersprungen</span>
+               <button class="icon-btn undo" onclick="undoSkip(${m.id})" title="Wiederherstellen">↩</button>`
+            : `<button class="icon-btn danger" onclick="skipToday(${m.id})" title="Heute überspringen">✕</button>`
+          }
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ── Render Schedules ──────────────────────────────────────────────────────────
+function renderSchedules() {
+  const list = document.getElementById('scheduleList');
+
+  if (allSchedules.length === 0) {
+    list.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">📋</div>
+        Noch keine Pläne angelegt.
+      </div>`;
+    return;
+  }
+
+  list.innerHTML = allSchedules.map(s => `
+    <div class="schedule-row" id="sched-${s.id}">
+      <div class="schedule-body">
+        <div class="schedule-title">
+          ${esc(s.med_name)}
+          <span class="med-pet">${esc(s.pet_name)}</span>
+        </div>
+        <div class="schedule-meta">💊 ${esc(s.dose)} · ⏰ ${s.time_of_day} · täglich</div>
+      </div>
+      <button class="icon-btn danger" onclick="deleteSchedule(${s.id})" title="Plan dauerhaft löschen">🗑</button>
+    </div>
+  `).join('');
+}
+
+// ── Actions ───────────────────────────────────────────────────────────────────
+async function toggleDone(id) {
+  const med = todayMeds.find(m => m.id === id);
+  if (!med || med.status === 'skipped') return;
+  const newStatus = med.status === 'done' ? null : 'done';
+  await patchToday(id, newStatus);
+  med.status = newStatus;
+  renderToday();
+}
+
+async function skipToday(id) {
+  await patchToday(id, 'skipped');
+  const med = todayMeds.find(m => m.id === id);
+  if (med) med.status = 'skipped';
+  renderToday();
+  showToast('Heute übersprungen. Morgen erscheint es wieder.');
+}
+
+async function undoSkip(id) {
+  await patchToday(id, null);
+  const med = todayMeds.find(m => m.id === id);
+  if (med) med.status = null;
+  renderToday();
+}
+
+async function patchToday(id, status) {
+  await fetch(`/apps/pet-meds/api/today/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status })
+  });
+}
+
+async function deleteSchedule(id) {
+  if (!confirm('Plan dauerhaft löschen? Das betrifft alle künftigen Tage.')) return;
+  const res = await fetch(`/apps/pet-meds/api/schedules/${id}`, { method: 'DELETE' });
+  if (res.ok) {
+    allSchedules = allSchedules.filter(s => s.id !== id);
+    todayMeds    = todayMeds.filter(m => m.id !== id);
+    renderSchedules();
+    renderToday();
+    showToast('Plan gelöscht.');
+  }
+}
+
+// ── Add form ──────────────────────────────────────────────────────────────────
+function toggleAddForm() {
+  const btn  = document.getElementById('addToggle');
+  const form = document.getElementById('addForm');
+  btn.classList.toggle('open');
+  form.classList.toggle('visible');
+}
+
+async function submitNewMed(e) {
+  e.preventDefault();
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true;
+  btn.textContent = 'Speichern…';
+
+  const body = {
+    pet_name:    document.getElementById('f-pet').value.trim(),
+    med_name:    document.getElementById('f-med').value.trim(),
+    dose:        document.getElementById('f-dose').value.trim(),
+    time_of_day: document.getElementById('f-time').value,
+  };
+
+  try {
+    const res  = await fetch('/apps/pet-meds/api/schedules', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+
+    allSchedules.push(data);
+    allSchedules.sort((a, b) => a.time_of_day.localeCompare(b.time_of_day) || a.pet_name.localeCompare(b.pet_name));
+
+    todayMeds.push({ ...data, status: null });
+    todayMeds.sort((a, b) => a.time_of_day.localeCompare(b.time_of_day));
+
+    renderSchedules();
+    renderToday();
+    e.target.reset();
+    toggleAddForm();
+    showToast('Medikament gespeichert ✓');
+  } catch (err) {
+    showToast('Fehler: ' + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Speichern';
+  }
+}
+
+// ── Utilities ─────────────────────────────────────────────────────────────────
+function esc(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+let toastTimer;
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 3000);
+}
+
+init();
+</script>
+</body>
+</html>

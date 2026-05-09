@@ -33,6 +33,24 @@ db.serialize(() => {
     UNIQUE(user_id, key_name),
     FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
   )`);
+  db.run(`CREATE TABLE IF NOT EXISTS medication_schedules (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id     INTEGER NOT NULL,
+    pet_name    TEXT    NOT NULL,
+    med_name    TEXT    NOT NULL,
+    dose        TEXT    NOT NULL,
+    time_of_day TEXT    NOT NULL,
+    created_at  TEXT    NOT NULL DEFAULT (date('now')),
+    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+  )`);
+  db.run(`CREATE TABLE IF NOT EXISTS medication_daily_logs (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    schedule_id INTEGER NOT NULL,
+    log_date    TEXT    NOT NULL,
+    status      TEXT    NOT NULL CHECK(status IN ('done','skipped')),
+    UNIQUE(schedule_id, log_date),
+    FOREIGN KEY(schedule_id) REFERENCES medication_schedules(id) ON DELETE CASCADE
+  )`);
 });
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -437,6 +455,102 @@ app.post('/apps/latex-study/api/compile-pdf', checkAuth, async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
+});
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  APP: HAUSTIER-MEDIKAMENTEN-TRACKER  →  /apps/pet-meds
+// ══════════════════════════════════════════════════════════════════════════════
+app.use('/apps/pet-meds', checkAuth, express.static(path.join(__dirname, 'apps/petMeds')));
+
+function localDate() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+// Alle Medikamente des Tages (inkl. heutigem Log-Status)
+app.get('/apps/pet-meds/api/today', checkAuth, (req, res) => {
+  const today = localDate();
+  db.all(
+    `SELECT s.id, s.pet_name, s.med_name, s.dose, s.time_of_day,
+            l.status
+     FROM medication_schedules s
+     LEFT JOIN medication_daily_logs l ON l.schedule_id = s.id AND l.log_date = ?
+     WHERE s.user_id = ?
+     ORDER BY s.time_of_day, s.pet_name`,
+    [today, req.session.userId],
+    (err, rows) => {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json(rows);
+    }
+  );
+});
+
+// Alle Basis-Pläne (für die Verwaltungsansicht)
+app.get('/apps/pet-meds/api/schedules', checkAuth, (req, res) => {
+  db.all(
+    'SELECT id, pet_name, med_name, dose, time_of_day, created_at FROM medication_schedules WHERE user_id = ? ORDER BY time_of_day, pet_name',
+    [req.session.userId],
+    (err, rows) => {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json(rows);
+    }
+  );
+});
+
+// Neuen Medikamentenplan anlegen
+app.post('/apps/pet-meds/api/schedules', checkAuth, (req, res) => {
+  const { pet_name, med_name, dose, time_of_day } = req.body;
+  if (!pet_name || !med_name || !dose || !time_of_day)
+    return res.status(400).json({ error: 'Alle Felder sind erforderlich.' });
+  db.run(
+    'INSERT INTO medication_schedules (user_id, pet_name, med_name, dose, time_of_day) VALUES (?, ?, ?, ?, ?)',
+    [req.session.userId, pet_name.trim(), med_name.trim(), dose.trim(), time_of_day],
+    function(err) {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json({ id: this.lastID, pet_name: pet_name.trim(), med_name: med_name.trim(), dose: dose.trim(), time_of_day });
+    }
+  );
+});
+
+// Medikamentenplan dauerhaft löschen
+app.delete('/apps/pet-meds/api/schedules/:id', checkAuth, (req, res) => {
+  db.run(
+    'DELETE FROM medication_schedules WHERE id = ? AND user_id = ?',
+    [req.params.id, req.session.userId],
+    function(err) {
+      if (err) return res.status(500).json({ error: err.message });
+      if (this.changes === 0) return res.status(404).json({ error: 'Nicht gefunden.' });
+      res.json({ ok: true });
+    }
+  );
+});
+
+// Tages-Log setzen (done / skipped) oder entfernen (status: null)
+app.patch('/apps/pet-meds/api/today/:id', checkAuth, (req, res) => {
+  const { status } = req.body;
+  const today = localDate();
+  db.get(
+    'SELECT id FROM medication_schedules WHERE id = ? AND user_id = ?',
+    [req.params.id, req.session.userId],
+    (err, row) => {
+      if (err) return res.status(500).json({ error: err.message });
+      if (!row) return res.status(404).json({ error: 'Nicht gefunden.' });
+      if (!status) {
+        db.run(
+          'DELETE FROM medication_daily_logs WHERE schedule_id = ? AND log_date = ?',
+          [req.params.id, today],
+          (e) => { if (e) return res.status(500).json({ error: e.message }); res.json({ ok: true }); }
+        );
+      } else {
+        db.run(
+          'INSERT OR REPLACE INTO medication_daily_logs (schedule_id, log_date, status) VALUES (?, ?, ?)',
+          [req.params.id, today, status],
+          (e) => { if (e) return res.status(500).json({ error: e.message }); res.json({ ok: true }); }
+        );
+      }
+    }
+  );
 });
 
 

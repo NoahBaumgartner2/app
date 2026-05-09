@@ -33,7 +33,10 @@
       "Bash(pkill -f \"nodemon\")",
       "Bash(lsof *)",
       "Bash(kill 227936)",
-      "Bash(kill 228315)"
+      "Bash(kill 228315)",
+      "Bash(pm2 list *)",
+      "Bash(pm2 restart *)",
+      "Bash(pm2 show *)"
     ]
   }
 }
