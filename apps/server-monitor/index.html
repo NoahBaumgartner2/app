@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Server Monitor · Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #f8f8f7;
+      --surface:   #ffffff;
+      --border:    rgba(0,0,0,.08);
+      --border-hv: rgba(0,0,0,.18);
+      --text:      #111;
+      --muted:     #666;
+      --accent:    #111;
+      --radius:    14px;
+      --shadow:    0 1px 4px rgba(0,0,0,.06), 0 4px 20px rgba(0,0,0,.05);
+      --shadow-hv: 0 2px 8px rgba(0,0,0,.09), 0 8px 32px rgba(0,0,0,.08);
+      --ok:        #22c55e;
+      --ok-bg:     rgba(34,197,94,.10);
+      --ok-border: rgba(34,197,94,.25);
+      --warn:      #f59e0b;
+      --crit:      #ef4444;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg:        #111;
+        --surface:   #1a1a1a;
+        --border:    rgba(255,255,255,.08);
+        --border-hv: rgba(255,255,255,.18);
+        --text:      #f0f0ee;
+        --muted:     #888;
+        --accent:    #f0f0ee;
+        --shadow:    0 1px 4px rgba(0,0,0,.3), 0 4px 20px rgba(0,0,0,.25);
+        --shadow-hv: 0 2px 8px rgba(0,0,0,.4), 0 8px 32px rgba(0,0,0,.3);
+      }
+    }
+
+    body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+    /* ── Header ── */
+    .app-header {
+      padding: 0 2rem; background: var(--surface); border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 1rem; height: 56px;
+      position: sticky; top: 0; z-index: 10;
+    }
+    .back-link { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--muted); text-decoration: none; flex-shrink: 0; transition: color .15s; }
+    .back-link:hover { color: var(--text); }
+    .header-title { font-size: 16px; font-weight: 600; letter-spacing: -0.3px; flex: 1; }
+    .header-right { display: flex; align-items: center; gap: 8px; }
+    .last-updated { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--muted); }
+    .status-badge { font-family: 'JetBrains Mono', monospace; font-size: 11px; padding: 3px 10px; border-radius: 20px; white-space: nowrap; }
+    .status-badge.loading { background: var(--border); color: var(--muted); border: 1px solid var(--border); }
+    .status-badge.ok      { background: var(--ok-bg); color: #16a34a; border: 1px solid var(--ok-border); }
+    .status-badge.error   { background: rgba(239,68,68,.08); color: #dc2626; border: 1px solid rgba(239,68,68,.2); }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spin { animation: spin .7s linear infinite; display: inline-block; }
+    .refresh-btn {
+      background: none; border: 1px solid var(--border); border-radius: 8px;
+      width: 32px; height: 32px; font-size: 15px; cursor: pointer; color: var(--muted);
+      transition: all .15s; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .refresh-btn:hover { border-color: var(--border-hv); color: var(--text); }
+
+    /* ── Main ── */
+    .main { max-width: 1100px; margin: 0 auto; padding: 2rem; display: flex; flex-direction: column; gap: 2rem; }
+    @media (max-width: 600px) { .app-header { padding: 0 1rem; } .main { padding: 1rem; } .last-updated { display: none; } }
+
+    /* ── States ── */
+    .state-view { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 60vh; gap: 1rem; text-align: center; }
+    .state-icon  { font-size: 48px; }
+    .state-title { font-size: 18px; font-weight: 600; letter-spacing: -0.3px; }
+    .state-desc  { font-size: 14px; color: var(--muted); max-width: 420px; line-height: 1.7; }
+    .state-btn {
+      display: inline-block; padding: 9px 20px; border-radius: 8px; font-size: 13px;
+      font-weight: 500; background: var(--accent); color: var(--bg); border: none;
+      cursor: pointer; font-family: 'Inter', sans-serif; transition: opacity .15s; margin-top: .25rem;
+    }
+    .state-btn:hover { opacity: .78; }
+    .spinner { width: 36px; height: 36px; border: 3px solid var(--border); border-top-color: var(--text); border-radius: 50%; animation: spin .8s linear infinite; }
+
+    /* ── Section ── */
+    .section-label { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted); letter-spacing: .08em; text-transform: uppercase; margin-bottom: 1rem; }
+
+    /* ── Grid ── */
+    .cards-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .cards-grid .full { grid-column: 1 / -1; }
+    @media (max-width: 640px) { .cards-grid { grid-template-columns: 1fr; } .cards-grid .full { grid-column: 1; } }
+
+    /* ── Card ── */
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); padding: 1.2rem; }
+    .card-title { font-size: 11px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); margin-bottom: 1rem; font-family: 'JetBrains Mono', monospace; }
+
+    /* ── Progress bar ── */
+    .bar-wrap { background: var(--border); border-radius: 6px; height: 8px; overflow: hidden; margin: 6px 0 2px; }
+    .bar-fill  { height: 100%; border-radius: 6px; transition: width .4s ease, background-color .4s ease; }
+
+    /* ── CPU ── */
+    .cpu-big  { display: flex; align-items: baseline; gap: 4px; margin-bottom: .5rem; }
+    .cpu-pct  { font-family: 'JetBrains Mono', monospace; font-size: 40px; font-weight: 500; letter-spacing: -2px; line-height: 1; }
+    .cpu-unit { font-family: 'JetBrains Mono', monospace; font-size: 16px; color: var(--muted); }
+
+    .cores-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); gap: 8px; margin-top: 1rem; }
+    .core-item  { display: flex; flex-direction: column; gap: 3px; }
+    .core-head  { display: flex; justify-content: space-between; align-items: baseline; }
+    .core-label { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--muted); }
+    .core-val   { font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 500; }
+    .core-bar   { background: var(--border); border-radius: 3px; height: 4px; overflow: hidden; }
+    .core-bar-f { height: 100%; border-radius: 3px; transition: width .4s ease, background-color .4s ease; }
+
+    /* ── Memory / Disk ── */
+    .mem-stats { display: flex; gap: 1.2rem; margin-bottom: .4rem; flex-wrap: wrap; }
+    .mem-stat  { display: flex; flex-direction: column; gap: 2px; }
+    .mem-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+    .mem-val   { font-family: 'JetBrains Mono', monospace; font-size: 16px; font-weight: 500; letter-spacing: -0.5px; }
+    .mem-sub   { font-size: 10px; color: var(--muted); font-family: 'JetBrains Mono', monospace; }
+
+    /* ── Uptime / Load ── */
+    .info-grid  { display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem; }
+    @media (max-width: 400px) { .info-grid { grid-template-columns: 1fr; } }
+    .info-item  { display: flex; flex-direction: column; gap: 4px; }
+    .info-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+    .info-value { font-family: 'JetBrains Mono', monospace; font-size: 20px; font-weight: 500; letter-spacing: -0.5px; }
+    .info-sub   { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted); }
+
+    /* ── Tailscale ── */
+    .ts-ip    { font-family: 'JetBrains Mono', monospace; font-size: 20px; font-weight: 500; letter-spacing: -0.5px; margin-bottom: .6rem; }
+    .ts-badge { display: inline-block; font-family: 'JetBrains Mono', monospace; font-size: 11px; padding: 3px 10px; border-radius: 20px; }
+    .ts-online  { background: var(--ok-bg); color: #16a34a; border: 1px solid var(--ok-border); }
+    .ts-offline { background: rgba(239,68,68,.08); color: #dc2626; border: 1px solid rgba(239,68,68,.2); }
+    .ts-unknown { background: var(--border); color: var(--muted); border: 1px solid var(--border); }
+
+    /* ── Network ── */
+    .iface-list { display: flex; flex-direction: column; gap: .7rem; }
+    .iface-item { display: flex; flex-direction: column; gap: 4px; }
+    .iface-name { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 500; }
+    .iface-io   { display: flex; gap: 1.2rem; }
+    .iface-rx   { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--ok); }
+    .iface-tx   { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--warn); }
+
+    /* ── Processes ── */
+    .proc-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
+    .proc-list   { display: flex; flex-direction: column; gap: 5px; }
+    .proc-item   {
+      display: flex; align-items: center; gap: 10px;
+      padding: .5rem .8rem; border-radius: 8px;
+      background: var(--bg); border: 1px solid var(--border);
+    }
+    .proc-rank { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--muted); width: 16px; flex-shrink: 0; text-align: right; }
+    .proc-cmd  { font-family: 'JetBrains Mono', monospace; font-size: 11px; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .proc-cpu  { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 500; flex-shrink: 0; width: 48px; text-align: right; }
+    .proc-mem  { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted); flex-shrink: 0; width: 40px; text-align: right; }
+
+    /* ── Dashboard status dot ── */
+    .dash-status { display: flex; align-items: center; gap: 7px; }
+    .dash-dot    { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+    .dash-dot.running { background: var(--ok); box-shadow: 0 0 0 3px rgba(34,197,94,.2); }
+    .dash-dot.stopped { background: var(--crit); }
+    .dash-text   { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted); }
+  </style>
+</head>
+<body>
+
+<header class="app-header">
+  <a href="/" class="back-link">← Dashboard</a>
+  <div class="header-title">🖥️ Server Monitor</div>
+  <div class="header-right">
+    <span class="last-updated" id="lastUpdated"></span>
+    <span class="status-badge loading" id="statusBadge">Lade…</span>
+    <button class="refresh-btn" id="refreshBtn" onclick="loadStats(false)" title="Aktualisieren">
+      <span id="refreshIcon">↻</span>
+    </button>
+  </div>
+</header>
+
+<div class="main">
+
+  <div class="state-view" id="loadingState">
+    <div class="spinner"></div>
+    <div class="state-desc">Lade Systemdaten…</div>
+  </div>
+
+  <div class="state-view" id="errorState" style="display:none">
+    <div class="state-icon">⚠️</div>
+    <div class="state-title">Fehler</div>
+    <div class="state-desc" id="errorMsg"></div>
+    <button class="state-btn" onclick="loadStats(false)">Erneut versuchen</button>
+  </div>
+
+  <div id="contentState" style="display:none">
+
+    <!-- System -->
+    <div>
+      <div class="section-label">System</div>
+      <div class="cards-grid">
+
+        <div class="card full">
+          <div class="card-title">CPU-Auslastung</div>
+          <div id="cpuContent"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Arbeitsspeicher</div>
+          <div id="ramContent"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Festplatte (/)</div>
+          <div id="diskContent"></div>
+        </div>
+
+        <div class="card full">
+          <div class="info-grid" id="sysInfo"></div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Network -->
+    <div>
+      <div class="section-label">Netzwerk</div>
+      <div class="cards-grid">
+
+        <div class="card">
+          <div class="card-title">Tailscale</div>
+          <div id="tailscaleContent"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Traffic (kumulativ seit Boot)</div>
+          <div id="netContent"></div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Processes -->
+    <div>
+      <div class="section-label">Prozesse</div>
+      <div class="cards-grid">
+
+        <div class="card full">
+          <div class="proc-header">
+            <span class="card-title" style="margin-bottom:0">Top 5 nach CPU</span>
+            <div class="dash-status" id="dashStatus"></div>
+          </div>
+          <div class="proc-list" id="procsContent"></div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  let autoTimer = null;
+
+  /* ── Helpers ── */
+  function fmtBytes(b) {
+    if (b >= 1099511627776) return (b / 1099511627776).toFixed(2) + ' TB';
+    if (b >= 1073741824)   return (b / 1073741824).toFixed(1) + ' GB';
+    if (b >= 1048576)      return (b / 1048576).toFixed(0) + ' MB';
+    if (b >= 1024)         return (b / 1024).toFixed(0) + ' KB';
+    return b + ' B';
+  }
+
+  function barColor(pct) {
+    if (pct < 60) return '#22c55e';
+    if (pct < 85) return '#f59e0b';
+    return '#ef4444';
+  }
+
+  function bar(pct) {
+    const c = barColor(pct);
+    const w = Math.min(100, Math.max(0, pct));
+    return `<div class="bar-wrap"><div class="bar-fill" style="width:${w}%;background:${c}"></div></div>`;
+  }
+
+  function fmtUptime(secs) {
+    const d = Math.floor(secs / 86400);
+    const h = Math.floor((secs % 86400) / 3600);
+    const m = Math.floor((secs % 3600) / 60);
+    const parts = [];
+    if (d > 0) parts.push(`${d}d`);
+    if (h > 0) parts.push(`${h}h`);
+    parts.push(`${m}m`);
+    return parts.join(' ');
+  }
+
+  function esc(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  /* ── State UI ── */
+  function showState(id) {
+    ['loadingState','errorState','contentState'].forEach(s => {
+      document.getElementById(s).style.display = s === id ? (id === 'contentState' ? 'block' : 'flex') : 'none';
+    });
+  }
+
+  function setBadge(state) {
+    const el = document.getElementById('statusBadge');
+    if (state === 'ok')    { el.textContent = '🟢 Live';   el.className = 'status-badge ok'; }
+    else if (state === 'error') { el.textContent = '🔴 Fehler'; el.className = 'status-badge error'; }
+    else                   { el.textContent = 'Lade…';     el.className = 'status-badge loading'; }
+  }
+
+  function setRefreshing(on) {
+    document.getElementById('refreshIcon').className = on ? 'spin' : '';
+  }
+
+  /* ── Render functions ── */
+  function renderCPU(cpu) {
+    const total = cpu.total.usage;
+    const c = barColor(total);
+    let html = `
+      <div class="cpu-big">
+        <span class="cpu-pct" style="color:${c}">${total.toFixed(1)}</span>
+        <span class="cpu-unit">%</span>
+      </div>
+      ${bar(total)}`;
+
+    if (cpu.cores.length > 0) {
+      html += `<div class="cores-grid">`;
+      for (const core of cpu.cores) {
+        const cc = barColor(core.usage);
+        html += `
+          <div class="core-item">
+            <div class="core-head">
+              <span class="core-label">${esc(core.name)}</span>
+              <span class="core-val" style="color:${cc}">${core.usage.toFixed(0)}%</span>
+            </div>
+            <div class="core-bar"><div class="core-bar-f" style="width:${Math.min(100,core.usage)}%;background:${cc}"></div></div>
+          </div>`;
+      }
+      html += `</div>`;
+    }
+    document.getElementById('cpuContent').innerHTML = html;
+  }
+
+  function renderMem(id, data) {
+    const pct   = Math.round(data.used / data.total * 100);
+    const color = barColor(pct);
+    document.getElementById(id).innerHTML = `
+      <div class="mem-stats">
+        <div class="mem-stat">
+          <span class="mem-label">Gesamt</span>
+          <span class="mem-val">${fmtBytes(data.total)}</span>
+        </div>
+        <div class="mem-stat">
+          <span class="mem-label">Verwendet</span>
+          <span class="mem-val" style="color:${color}">${fmtBytes(data.used)}</span>
+          <span class="mem-sub">${pct}%</span>
+        </div>
+        <div class="mem-stat">
+          <span class="mem-label">Frei</span>
+          <span class="mem-val">${fmtBytes(data.free)}</span>
+        </div>
+      </div>
+      ${bar(pct)}`;
+  }
+
+  function renderSys(uptime, load) {
+    const cpuN  = navigator.hardwareConcurrency || 1;
+    const lc    = load.m1 > cpuN ? '#ef4444' : load.m1 > cpuN * 0.7 ? '#f59e0b' : '#22c55e';
+    document.getElementById('sysInfo').innerHTML = `
+      <div class="info-item">
+        <span class="info-label">Uptime</span>
+        <span class="info-value">${fmtUptime(uptime)}</span>
+      </div>
+      <div class="info-item">
+        <span class="info-label">Load Average</span>
+        <span class="info-value" style="color:${lc}">${load.m1.toFixed(2)}</span>
+        <span class="info-sub">${load.m5.toFixed(2)} (5m)&nbsp;&nbsp;${load.m15.toFixed(2)} (15m)</span>
+      </div>`;
+  }
+
+  function renderTailscale(ts) {
+    const cls = ts.status === 'online' ? 'ts-online' : ts.status === 'offline' ? 'ts-offline' : 'ts-unknown';
+    const lbl = ts.status === 'online' ? '🟢 Online'  : ts.status === 'offline' ? '🔴 Offline' : '⚪ Unbekannt';
+    document.getElementById('tailscaleContent').innerHTML = `
+      <div class="ts-ip">${esc(ts.ip || '—')}</div>
+      <span class="ts-badge ${cls}">${lbl}</span>`;
+  }
+
+  function renderNetwork(ifaces) {
+    if (!ifaces.length) {
+      document.getElementById('netContent').innerHTML = '<span style="font-size:12px;color:var(--muted)">Keine Interfaces.</span>';
+      return;
+    }
+    const html = ifaces.slice(0, 6).map(i => `
+      <div class="iface-item">
+        <div class="iface-name">${esc(i.iface)}</div>
+        <div class="iface-io">
+          <span class="iface-rx">↓ ${fmtBytes(i.rxBytes)}</span>
+          <span class="iface-tx">↑ ${fmtBytes(i.txBytes)}</span>
+        </div>
+      </div>`).join('');
+    document.getElementById('netContent').innerHTML = `<div class="iface-list">${html}</div>`;
+  }
+
+  function renderProcesses(procs, dashboard) {
+    const running = dashboard.running;
+    document.getElementById('dashStatus').innerHTML = `
+      <div class="dash-dot ${running ? 'running' : 'stopped'}"></div>
+      <span class="dash-text">Dashboard: ${running ? 'Läuft' : 'Gestoppt'}</span>`;
+
+    if (!procs.length) {
+      document.getElementById('procsContent').innerHTML = '<span style="font-size:12px;color:var(--muted)">Keine Prozesse.</span>';
+      return;
+    }
+    document.getElementById('procsContent').innerHTML = procs.map((p, i) => {
+      const c = barColor(p.cpu);
+      return `
+        <div class="proc-item">
+          <span class="proc-rank">${i + 1}</span>
+          <span class="proc-cmd" title="${esc(p.command)}">${esc(p.command)}</span>
+          <span class="proc-cpu" style="color:${c}">${p.cpu.toFixed(1)}%</span>
+          <span class="proc-mem">${p.mem.toFixed(1)}%</span>
+        </div>`;
+    }).join('');
+  }
+
+  /* ── Load ── */
+  async function loadStats(silent = false) {
+    if (!silent) showState('loadingState');
+    setBadge('loading');
+    setRefreshing(true);
+    try {
+      const res = await fetch('/apps/server-monitor/api/stats');
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        throw new Error(d.error || `HTTP ${res.status}`);
+      }
+      const data = await res.json();
+
+      renderCPU(data.cpu);
+      renderMem('ramContent', data.ram);
+      renderMem('diskContent', data.disk);
+      renderSys(data.uptime, data.loadAvg);
+      renderTailscale(data.tailscale);
+      renderNetwork(data.network);
+      renderProcesses(data.processes, data.dashboard);
+
+      document.getElementById('lastUpdated').textContent =
+        new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      showState('contentState');
+      setBadge('ok');
+    } catch (err) {
+      if (!silent || document.getElementById('contentState').style.display === 'none') {
+        document.getElementById('errorMsg').textContent = err.message;
+        showState('errorState');
+      }
+      setBadge('error');
+    } finally {
+      setRefreshing(false);
+    }
+  }
+
+  function startAutoRefresh() {
+    clearInterval(autoTimer);
+    autoTimer = setInterval(() => loadStats(true), 5000);
+  }
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') loadStats(true);
+  });
+
+  loadStats().then(startAutoRefresh);
+</script>
+</body>
+</html>

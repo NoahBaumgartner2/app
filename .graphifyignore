@@ -1,0 +1,10 @@
+node_modules/
+graphify-out/
+*.log
+*.lock
+package-lock.json
+.git/
+tmp/
+uploads/
+*.sqlite
+*.db

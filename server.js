@@ -17,7 +17,7 @@ const bcrypt     = require('bcrypt');
 const app      = express();
 const PORT     = process.env.PORT || 3000;
 const TECTONIC  = path.join(os.homedir(), '.local', 'bin', 'tectonic');
-const APP_SLUGS = ['latex-converter', 'latex-study', 'podcast-compressor', 'pet-meds', 'smart-home', 'vault'];
+const APP_SLUGS = ['latex-converter', 'latex-study', 'podcast-compressor', 'pet-meds', 'smart-home', 'vault', 'server-monitor'];
 
 const FORBIDDEN_HTML = `<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Kein Zugriff</title><style>body{font-family:system-ui,sans-serif;background:#111;color:#f0f0ee;display:flex;align-items:center;justify-content:center;height:100vh;margin:0}.box{text-align:center}.icon{font-size:48px;margin-bottom:1rem}h2{margin:.5rem 0}p{color:#888;font-size:.875rem;margin:.25rem 0 1.5rem}a{display:inline-block;padding:8px 20px;border-radius:8px;background:#f0f0ee;color:#111;text-decoration:none;font-size:.875rem;font-weight:500}</style></head><body><div class="box"><div class="icon">🔒</div><h2>Kein Zugriff</h2><p>Du hast keine Berechtigung für diese App.</p><a href="/">← Zurück zum Dashboard</a></div></body></html>`;
 
@@ -1365,6 +1365,125 @@ app.post('/apps/smart-home/api/scenes/trigger', checkAuth, checkAppAccess('smart
     res.json({ ok: true });
   } catch (err) {
     res.status(503).json({ error: 'HA nicht erreichbar: ' + err.message });
+  }
+});
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  APP: SERVER MONITOR  →  /apps/server-monitor
+//  Systemmetriken: CPU, RAM, Disk, Tailscale, Netzwerk, Prozesse
+// ══════════════════════════════════════════════════════════════════════════════
+app.use('/apps/server-monitor', checkAuth, checkAppAccess('server-monitor'),
+  express.static(path.join(__dirname, 'apps/server-monitor')));
+
+function readProcStat() {
+  const lines = fs.readFileSync('/proc/stat', 'utf8').split('\n');
+  const result = [];
+  for (const line of lines) {
+    if (!line.startsWith('cpu')) break;
+    const parts = line.trim().split(/\s+/);
+    const vals  = parts.slice(1).map(Number);
+    const idle  = vals[3] + (vals[4] || 0); // idle + iowait
+    const total = vals.reduce((a, b) => a + b, 0);
+    result.push({ name: parts[0], idle, total });
+  }
+  return result;
+}
+
+app.get('/apps/server-monitor/api/stats', checkAuth, checkAppAccess('server-monitor'), async (req, res) => {
+  try {
+    // CPU: zwei Messungen mit 250ms Abstand für akkurate Werte
+    const stat1 = readProcStat();
+    await new Promise(r => setTimeout(r, 250));
+    const stat2 = readProcStat();
+
+    const cpuList = stat2.map((s2, i) => {
+      const s1     = stat1[i];
+      const dtotal = s2.total - s1.total;
+      const didle  = s2.idle  - s1.idle;
+      return { name: s2.name, usage: dtotal > 0 ? Math.round((1 - didle / dtotal) * 1000) / 10 : 0 };
+    });
+
+    // RAM
+    const totalMem = os.totalmem();
+    const freeMem  = os.freemem();
+
+    // Uptime & Load Average
+    const uptime  = Math.floor(os.uptime());
+    const loadAvg = os.loadavg();
+
+    // Disk
+    const dfOut = await new Promise((resolve, reject) =>
+      exec('df -B1 /', (err, stdout) => err ? reject(err) : resolve(stdout))
+    );
+    const dfParts = dfOut.trim().split('\n')[1].trim().split(/\s+/);
+    const disk = { total: +dfParts[1], used: +dfParts[2], free: +dfParts[3] };
+
+    // Tailscale
+    let tailscale = { ip: null, status: 'unknown' };
+    try {
+      const [tsIp, tsJson] = await Promise.all([
+        new Promise(r => exec('tailscale ip -4', { timeout: 3000 }, (err, out) => r(err ? null : out.trim()))),
+        new Promise(r => exec('tailscale status --json', { timeout: 3000 }, (err, out) => {
+          if (err) return r(null);
+          try { r(JSON.parse(out)); } catch { r(null); }
+        })),
+      ]);
+      tailscale = {
+        ip:     tsIp || null,
+        status: tsJson?.BackendState === 'Running' ? 'online' : (tsIp ? 'online' : 'offline'),
+      };
+    } catch (_) {}
+
+    // Netzwerk-Traffic aus /proc/net/dev
+    let network = [];
+    try {
+      network = fs.readFileSync('/proc/net/dev', 'utf8').trim().split('\n').slice(2)
+        .map(line => {
+          const [iface, stats] = line.split(':');
+          const vals = stats.trim().split(/\s+/).map(Number);
+          return { iface: iface.trim(), rxBytes: vals[0], txBytes: vals[8] };
+        })
+        .filter(i => i.iface !== 'lo');
+    } catch (_) {}
+
+    // Top 5 Prozesse nach CPU
+    let processes = [];
+    try {
+      const psOut = await new Promise(r =>
+        exec('ps aux --sort=-%cpu --no-headers', { timeout: 5000 }, (err, out) => r(err ? '' : out))
+      );
+      processes = psOut.trim().split('\n').slice(0, 5)
+        .map(line => {
+          const p = line.trim().split(/\s+/);
+          return { pid: p[1], cpu: parseFloat(p[2]) || 0, mem: parseFloat(p[3]) || 0, command: p.slice(10).join(' ').slice(0, 80) };
+        })
+        .filter(p => p.command);
+    } catch (_) {}
+
+    // Dashboard-Prozess
+    let dashRunning = false;
+    try {
+      await new Promise((resolve, reject) =>
+        exec('pgrep -f "node.*server\\.js"', { timeout: 3000 }, err => err ? reject() : resolve())
+      );
+      dashRunning = true;
+    } catch (_) {}
+
+    res.json({
+      cpu:       { total: cpuList[0], cores: cpuList.slice(1) },
+      ram:       { total: totalMem, used: totalMem - freeMem, free: freeMem },
+      disk,
+      uptime,
+      loadAvg:   { m1: loadAvg[0], m5: loadAvg[1], m15: loadAvg[2] },
+      tailscale,
+      network,
+      processes,
+      dashboard: { running: dashRunning },
+      ts:        Date.now(),
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 

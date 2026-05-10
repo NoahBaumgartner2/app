@@ -1,0 +1,130 @@
+{
+  "/home/miniserver/development/dashboard/server.js": {
+    "mtime": 1778405253.653985,
+    "hash": "2c607f1553d3632a5f58dd7d60398995"
+  },
+  "/home/miniserver/development/dashboard/public/sw.js": {
+    "mtime": 1778329325.7067266,
+    "hash": "6f9661612ffd1a38829e777adfcbeaee"
+  },
+  "/home/miniserver/development/dashboard/latexConverter/files/server.js": {
+    "mtime": 1778257479.4122918,
+    "hash": "2d9119ee166ac0c3d06521479f0e2309"
+  },
+  "/home/miniserver/development/dashboard/podcastCompressor/server.js": {
+    "mtime": 1778257549.7595842,
+    "hash": "f9dd13633c290a96c9503de282ead9e2"
+  },
+  "/home/miniserver/development/dashboard/latexStudy/files/server.js": {
+    "mtime": 1778257434.6521084,
+    "hash": "d9fbe2281ac54614470b4765ebfabdd5"
+  },
+  "/home/miniserver/development/dashboard/latexStudy/netlify/functions/summarize.js": {
+    "mtime": 1778257434.7536762,
+    "hash": "fec3cf6873c80e4febcc6eed1724599f"
+  },
+  "/home/miniserver/development/dashboard/latexStudy/netlify/functions/latex-only.js": {
+    "mtime": 1778257434.753147,
+    "hash": "fa39ced83a853c32a65f1f39a529445b"
+  },
+  "/home/miniserver/development/dashboard/latexStudy/netlify/functions/compile-pdf.js": {
+    "mtime": 1778257434.752468,
+    "hash": "fae1dfb22857afc6887efa0aff021bce"
+  },
+  "/home/miniserver/development/dashboard/latexStudy/netlify/functions/_shared.js": {
+    "mtime": 1778257434.7516243,
+    "hash": "0844e337c240779831f890d9248abad1"
+  },
+  "/home/miniserver/development/dashboard/README.md": {
+    "mtime": 1778258642.567111,
+    "hash": "a752a795476bde47e9e79376ac89744b"
+  },
+  "/home/miniserver/development/dashboard/login.html": {
+    "mtime": 1778330050.885645,
+    "hash": "de142b2a3f9cd2dc7537d52d900dd263"
+  },
+  "/home/miniserver/development/dashboard/index.html": {
+    "mtime": 1778257317.635779,
+    "hash": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  "/home/miniserver/development/dashboard/CLAUDE.md": {
+    "mtime": 1778404665.599621,
+    "hash": "da79aa9343cd2b362206f03762160abc"
+  },
+  "/home/miniserver/development/dashboard/public/index.html": {
+    "mtime": 1778405259.4760084,
+    "hash": "a11ee75d99bf4a8d27a7969079e609c7"
+  },
+  "/home/miniserver/development/dashboard/latexConverter/README.md": {
+    "mtime": 1778257479.5323355,
+    "hash": "b0aaa8913eee6cb3954832bcd89adfc4"
+  },
+  "/home/miniserver/development/dashboard/latexConverter/files/index.html": {
+    "mtime": 1778257479.2942226,
+    "hash": "57c6d49c7424bc69bfbf860deb0121cd"
+  },
+  "/home/miniserver/development/dashboard/podcastCompressor/README.md": {
+    "mtime": 1778257549.7059805,
+    "hash": "98828a56f1e5517012c51a8f941753cf"
+  },
+  "/home/miniserver/development/dashboard/podcastCompressor/index.html": {
+    "mtime": 1778365901.1143143,
+    "hash": "ad6697d9e94382167a328e5d5c80ff63"
+  },
+  "/home/miniserver/development/dashboard/latexStudy/README.md": {
+    "mtime": 1778257435.3928444,
+    "hash": "beb077d215737cf83cb0dd480208c464"
+  },
+  "/home/miniserver/development/dashboard/latexStudy/public/index.html": {
+    "mtime": 1778257434.932573,
+    "hash": "445759e09b2e07924597534b257b07a1"
+  },
+  "/home/miniserver/development/dashboard/latexStudy/files/index.html": {
+    "mtime": 1778257434.1072464,
+    "hash": "b424e4995fc3b8c3f2ceb85796deb955"
+  },
+  "/home/miniserver/development/dashboard/apps/smarthome/index.html": {
+    "mtime": 1778357576.2296264,
+    "hash": "063a1d059ddf384e95d9424a33c2482e"
+  },
+  "/home/miniserver/development/dashboard/apps/latexConverter/index.html": {
+    "mtime": 1778262577.2762105,
+    "hash": "74f9ecefd738ed49bf4bb3eeaa10cc50"
+  },
+  "/home/miniserver/development/dashboard/apps/podcastCompressor/index.html": {
+    "mtime": 1778400537.5960968,
+    "hash": "471a6f46218dbac7380fe11d9b7dbbc6"
+  },
+  "/home/miniserver/development/dashboard/apps/admin/index.html": {
+    "mtime": 1778405264.583029,
+    "hash": "9f9891202fd9d6abcc52389da8e95d06"
+  },
+  "/home/miniserver/development/dashboard/apps/petMeds/index.html": {
+    "mtime": 1778329333.2217567,
+    "hash": "dfb36d82db374310d3d10c0d0b471e0a"
+  },
+  "/home/miniserver/development/dashboard/apps/latexStudy/index.html": {
+    "mtime": 1778350326.070391,
+    "hash": "d6a03b008bdc9c43b060bb2a21ad25b6"
+  },
+  "/home/miniserver/development/dashboard/apps/server-monitor/index.html": {
+    "mtime": 1778405221.666856,
+    "hash": "135194344b9e93157280fef05c741c55"
+  },
+  "/home/miniserver/development/dashboard/apps/vault/index.html": {
+    "mtime": 1778400005.7409782,
+    "hash": "ca04569ec17394463df5cbaf121a1f7e"
+  },
+  "/home/miniserver/development/dashboard/public/icons/icon-192x192.png": {
+    "mtime": 1778329547.9416203,
+    "hash": "bb7b8133142f45eb0d26b78170d20a79"
+  },
+  "/home/miniserver/development/dashboard/public/icons/icon-512x512.png": {
+    "mtime": 1778329548.0226207,
+    "hash": "36333d896ffed953ad6df8a247270829"
+  },
+  "/home/miniserver/development/dashboard/public/icons/apple-touch-icon.png": {
+    "mtime": 1778329547.9186733,
+    "hash": "918b49b9859ea0e41f92edcfb278b0d2"
+  }
+}

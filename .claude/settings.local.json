@@ -42,7 +42,14 @@
       "Bash(snap list *)",
       "Bash(sudo apt-get install -y ffmpeg)",
       "Bash(apt-get install *)",
-      "Bash(sqlite3 *)"
+      "Bash(sqlite3 *)",
+      "Bash(xargs -I{} cat {})",
+      "Bash(pm2 status *)",
+      "Bash(kill 826823)",
+      "Bash(nohup node server.js)",
+      "Bash(echo \"PID: $!\")",
+      "Bash(fuser 3000/tcp)",
+      "Bash(xargs kill -9)"
     ]
   }
 }
