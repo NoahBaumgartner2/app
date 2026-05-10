@@ -19,6 +19,8 @@ const PORT     = process.env.PORT || 3000;
 const TECTONIC  = path.join(os.homedir(), '.local', 'bin', 'tectonic');
 const APP_SLUGS = ['latex-converter', 'latex-study', 'podcast-compressor', 'pet-meds', 'smart-home', 'vault', 'server-monitor'];
 
+let petMedsLastUpdated = Date.now();
+
 const FORBIDDEN_HTML = `<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Kein Zugriff</title><style>body{font-family:system-ui,sans-serif;background:#111;color:#f0f0ee;display:flex;align-items:center;justify-content:center;height:100vh;margin:0}.box{text-align:center}.icon{font-size:48px;margin-bottom:1rem}h2{margin:.5rem 0}p{color:#888;font-size:.875rem;margin:.25rem 0 1.5rem}a{display:inline-block;padding:8px 20px;border-radius:8px;background:#f0f0ee;color:#111;text-decoration:none;font-size:.875rem;font-weight:500}</style></head><body><div class="box"><div class="icon">🔒</div><h2>Kein Zugriff</h2><p>Du hast keine Berechtigung für diese App.</p><a href="/">← Zurück zum Dashboard</a></div></body></html>`;
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -41,13 +43,11 @@ db.serialize(() => {
   )`);
   db.run(`CREATE TABLE IF NOT EXISTS medication_schedules (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id     INTEGER NOT NULL,
     pet_name    TEXT    NOT NULL,
     med_name    TEXT    NOT NULL,
     dose        TEXT    NOT NULL,
     time_of_day TEXT    NOT NULL,
-    created_at  TEXT    NOT NULL DEFAULT (date('now')),
-    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+    created_at  TEXT    NOT NULL DEFAULT (date('now'))
   )`);
   db.run(`CREATE TABLE IF NOT EXISTS medication_daily_logs (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -141,6 +141,30 @@ db.serialize(() => {
     updated_at TEXT    NOT NULL DEFAULT (datetime('now')),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
   )`);
+});
+
+// Migration: medication_schedules → user_id entfernen (globale Tabelle)
+db.all('PRAGMA table_info(medication_schedules)', (err, cols) => {
+  if (err || !cols) return;
+  if (!cols.some(c => c.name === 'user_id')) return;
+  console.log('[pet-meds] Migriere medication_schedules: entferne user_id…');
+  db.serialize(() => {
+    db.run(`CREATE TABLE medication_schedules_v2 (
+      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      pet_name    TEXT NOT NULL,
+      med_name    TEXT NOT NULL,
+      dose        TEXT NOT NULL,
+      time_of_day TEXT NOT NULL,
+      created_at  TEXT NOT NULL DEFAULT (date('now'))
+    )`);
+    db.run(`INSERT INTO medication_schedules_v2 (id, pet_name, med_name, dose, time_of_day, created_at)
+            SELECT id, pet_name, med_name, dose, time_of_day, created_at FROM medication_schedules`);
+    db.run('DROP TABLE medication_schedules');
+    db.run('ALTER TABLE medication_schedules_v2 RENAME TO medication_schedules', e => {
+      if (e) console.error('[pet-meds] Migration fehlgeschlagen:', e.message);
+      else   console.log('[pet-meds] Migration abgeschlossen.');
+    });
+  });
 });
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -1045,7 +1069,12 @@ function localDate() {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
 
-// Alle Medikamente des Tages (inkl. heutigem Log-Status)
+// Timestamp der letzten Änderung – für Client-seitiges Polling
+app.get('/apps/pet-meds/api/last-updated', checkAuth, checkAppAccess('pet-meds'), (req, res) => {
+  res.json({ ts: petMedsLastUpdated });
+});
+
+// Alle Medikamente des Tages – global (kein user_id-Filter)
 app.get('/apps/pet-meds/api/today', checkAuth, checkAppAccess('pet-meds'), (req, res) => {
   const today = localDate();
   db.all(
@@ -1053,9 +1082,8 @@ app.get('/apps/pet-meds/api/today', checkAuth, checkAppAccess('pet-meds'), (req,
             l.status
      FROM medication_schedules s
      LEFT JOIN medication_daily_logs l ON l.schedule_id = s.id AND l.log_date = ?
-     WHERE s.user_id = ?
      ORDER BY s.time_of_day, s.pet_name`,
-    [today, req.session.userId],
+    [today],
     (err, rows) => {
       if (err) return res.status(500).json({ error: err.message });
       res.json(rows);
@@ -1063,11 +1091,11 @@ app.get('/apps/pet-meds/api/today', checkAuth, checkAppAccess('pet-meds'), (req,
   );
 });
 
-// Alle Basis-Pläne (für die Verwaltungsansicht)
-app.get('/apps/pet-meds/api/schedules', checkAuth, (req, res) => {
+// Alle Basis-Pläne – global
+app.get('/apps/pet-meds/api/schedules', checkAuth, checkAppAccess('pet-meds'), (req, res) => {
   db.all(
-    'SELECT id, pet_name, med_name, dose, time_of_day, created_at FROM medication_schedules WHERE user_id = ? ORDER BY time_of_day, pet_name',
-    [req.session.userId],
+    'SELECT id, pet_name, med_name, dose, time_of_day, created_at FROM medication_schedules ORDER BY time_of_day, pet_name',
+    [],
     (err, rows) => {
       if (err) return res.status(500).json({ error: err.message });
       res.json(rows);
@@ -1075,41 +1103,44 @@ app.get('/apps/pet-meds/api/schedules', checkAuth, (req, res) => {
   );
 });
 
-// Neuen Medikamentenplan anlegen
-app.post('/apps/pet-meds/api/schedules', checkAuth, (req, res) => {
+// Neuen Medikamentenplan anlegen – global (kein user_id)
+app.post('/apps/pet-meds/api/schedules', checkAuth, checkAppAccess('pet-meds'), (req, res) => {
   const { pet_name, med_name, dose, time_of_day } = req.body;
   if (!pet_name || !med_name || !dose || !time_of_day)
     return res.status(400).json({ error: 'Alle Felder sind erforderlich.' });
   db.run(
-    'INSERT INTO medication_schedules (user_id, pet_name, med_name, dose, time_of_day) VALUES (?, ?, ?, ?, ?)',
-    [req.session.userId, pet_name.trim(), med_name.trim(), dose.trim(), time_of_day],
+    'INSERT INTO medication_schedules (pet_name, med_name, dose, time_of_day) VALUES (?, ?, ?, ?)',
+    [pet_name.trim(), med_name.trim(), dose.trim(), time_of_day],
     function(err) {
       if (err) return res.status(500).json({ error: err.message });
+      petMedsLastUpdated = Date.now();
       res.json({ id: this.lastID, pet_name: pet_name.trim(), med_name: med_name.trim(), dose: dose.trim(), time_of_day });
     }
   );
 });
 
-// Medikamentenplan dauerhaft löschen
-app.delete('/apps/pet-meds/api/schedules/:id', checkAuth, (req, res) => {
+// Medikamentenplan dauerhaft löschen – global
+app.delete('/apps/pet-meds/api/schedules/:id', checkAuth, checkAppAccess('pet-meds'), (req, res) => {
   db.run(
-    'DELETE FROM medication_schedules WHERE id = ? AND user_id = ?',
-    [req.params.id, req.session.userId],
+    'DELETE FROM medication_schedules WHERE id = ?',
+    [req.params.id],
     function(err) {
       if (err) return res.status(500).json({ error: err.message });
       if (this.changes === 0) return res.status(404).json({ error: 'Nicht gefunden.' });
+      petMedsLastUpdated = Date.now();
       res.json({ ok: true });
     }
   );
 });
 
-// Tages-Log setzen (done / skipped) oder entfernen (status: null)
-app.patch('/apps/pet-meds/api/today/:id', checkAuth, (req, res) => {
+// Tages-Log setzen (done / skipped) oder entfernen (status: null) – global
+app.patch('/apps/pet-meds/api/today/:id', checkAuth, checkAppAccess('pet-meds'), (req, res) => {
   const { status } = req.body;
   const today = localDate();
+  const by    = req.session.username;
   db.get(
-    'SELECT id FROM medication_schedules WHERE id = ? AND user_id = ?',
-    [req.params.id, req.session.userId],
+    'SELECT id FROM medication_schedules WHERE id = ?',
+    [req.params.id],
     (err, row) => {
       if (err) return res.status(500).json({ error: err.message });
       if (!row) return res.status(404).json({ error: 'Nicht gefunden.' });
@@ -1117,13 +1148,21 @@ app.patch('/apps/pet-meds/api/today/:id', checkAuth, (req, res) => {
         db.run(
           'DELETE FROM medication_daily_logs WHERE schedule_id = ? AND log_date = ?',
           [req.params.id, today],
-          (e) => { if (e) return res.status(500).json({ error: e.message }); res.json({ ok: true }); }
+          (e) => {
+            if (e) return res.status(500).json({ error: e.message });
+            petMedsLastUpdated = Date.now();
+            res.json({ ok: true, by });
+          }
         );
       } else {
         db.run(
           'INSERT OR REPLACE INTO medication_daily_logs (schedule_id, log_date, status) VALUES (?, ?, ?)',
           [req.params.id, today, status],
-          (e) => { if (e) return res.status(500).json({ error: e.message }); res.json({ ok: true }); }
+          (e) => {
+            if (e) return res.status(500).json({ error: e.message });
+            petMedsLastUpdated = Date.now();
+            res.json({ ok: true, by });
+          }
         );
       }
     }

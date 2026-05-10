@@ -528,8 +528,9 @@
 
 <script>
 // ── State ─────────────────────────────────────────────────────────────────────
-let todayMeds = [];
-let allSchedules = [];
+let todayMeds        = [];
+let allSchedules     = [];
+let knownLastUpdated = null;
 
 // ── Init ─────────────────────────────────────────────────────────────────────
 const now = new Date();
@@ -539,6 +540,26 @@ document.getElementById('dateToday').textContent = now.toLocaleDateString('de-DE
 
 async function init() {
   await Promise.all([loadToday(), loadSchedules()]);
+  // Initialen Timestamp setzen ohne Reload auszulösen
+  try {
+    const r = await fetch('/apps/pet-meds/api/last-updated');
+    const { ts } = await r.json();
+    knownLastUpdated = ts;
+  } catch {}
+  setInterval(pollForUpdates, 4000);
+}
+
+// ── Polling ───────────────────────────────────────────────────────────────────
+async function pollForUpdates() {
+  try {
+    const res = await fetch('/apps/pet-meds/api/last-updated');
+    const { ts } = await res.json();
+    if (knownLastUpdated !== null && ts !== knownLastUpdated) {
+      await Promise.all([loadToday(), loadSchedules()]);
+      showToast('🔄 Aktualisiert von einem anderen Gerät');
+    }
+    knownLastUpdated = ts;
+  } catch {}
 }
 
 // ── API calls ─────────────────────────────────────────────────────────────────
@@ -572,10 +593,10 @@ function renderToday() {
     return;
   }
 
-  const active  = todayMeds.filter(m => m.status !== 'skipped');
-  const done    = active.filter(m => m.status === 'done').length;
-  const total   = active.length;
-  const pill    = document.getElementById('progressPill');
+  const active = todayMeds.filter(m => m.status !== 'skipped');
+  const done   = active.filter(m => m.status === 'done').length;
+  const total  = active.length;
+  const pill   = document.getElementById('progressPill');
   pill.textContent = total === 0 ? 'alle übersprungen' : `${done} / ${total} erledigt`;
   pill.classList.toggle('all-done', done === total && total > 0);
 
@@ -641,32 +662,45 @@ async function toggleDone(id) {
   const med = todayMeds.find(m => m.id === id);
   if (!med || med.status === 'skipped') return;
   const newStatus = med.status === 'done' ? null : 'done';
-  await patchToday(id, newStatus);
+  const data = await patchToday(id, newStatus);
   med.status = newStatus;
+  knownLastUpdated = data?.ts ?? knownLastUpdated;
   renderToday();
 }
 
 async function skipToday(id) {
-  await patchToday(id, 'skipped');
+  const data = await patchToday(id, 'skipped');
   const med = todayMeds.find(m => m.id === id);
   if (med) med.status = 'skipped';
+  knownLastUpdated = data?.ts ?? knownLastUpdated;
   renderToday();
   showToast('Heute übersprungen. Morgen erscheint es wieder.');
 }
 
 async function undoSkip(id) {
-  await patchToday(id, null);
+  const data = await patchToday(id, null);
   const med = todayMeds.find(m => m.id === id);
   if (med) med.status = null;
+  knownLastUpdated = data?.ts ?? knownLastUpdated;
   renderToday();
 }
 
 async function patchToday(id, status) {
-  await fetch(`/apps/pet-meds/api/today/${id}`, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ status })
-  });
+  try {
+    const res = await fetch(`/apps/pet-meds/api/today/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status })
+    });
+    const data = await res.json();
+    // Eigenen Timestamp übernehmen damit der nächste Poll nicht falsch-positiv feuert
+    if (data.ok) {
+      const r2 = await fetch('/apps/pet-meds/api/last-updated');
+      const { ts } = await r2.json();
+      return { ts };
+    }
+  } catch {}
+  return null;
 }
 
 async function deleteSchedule(id) {
@@ -678,6 +712,12 @@ async function deleteSchedule(id) {
     renderSchedules();
     renderToday();
     showToast('Plan gelöscht.');
+    // Eigenen Timestamp übernehmen
+    try {
+      const r2 = await fetch('/apps/pet-meds/api/last-updated');
+      const { ts } = await r2.json();
+      knownLastUpdated = ts;
+    } catch {}
   }
 }
 
@@ -722,6 +762,13 @@ async function submitNewMed(e) {
     e.target.reset();
     toggleAddForm();
     showToast('Medikament gespeichert ✓');
+
+    // Eigenen Timestamp übernehmen
+    try {
+      const r2 = await fetch('/apps/pet-meds/api/last-updated');
+      const { ts } = await r2.json();
+      knownLastUpdated = ts;
+    } catch {}
   } catch (err) {
     showToast('Fehler: ' + err.message);
   } finally {
