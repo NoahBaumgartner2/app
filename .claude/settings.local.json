@@ -41,7 +41,8 @@
       "Bash(apt-cache show *)",
       "Bash(snap list *)",
       "Bash(sudo apt-get install -y ffmpeg)",
-      "Bash(apt-get install *)"
+      "Bash(apt-get install *)",
+      "Bash(sqlite3 *)"
     ]
   }
 }

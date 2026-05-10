@@ -171,7 +171,7 @@
       </div>
       <div class="info-box">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
-        <span>Der Access Token wird nur für den aktuellen Job verwendet. Nach Ablauf (1h) einfach neu verbinden.</span>
+        <span>Das Refresh Token wird dauerhaft gespeichert. Einmal verbinden genügt — alle zukünftigen Uploads laufen automatisch ohne erneuten Login.</span>
       </div>
     </div>
   </div>
@@ -239,27 +239,33 @@
 
 <script>
 // ── State ──────────────────────────────────────────────────────────────────
-let accessToken     = null;
-let selectedFile    = null;
-let pollTimer       = null;
+let driveConnected = false;
+let selectedFile   = null;
+let pollTimer      = null;
 
 // ── Drive Auth ─────────────────────────────────────────────────────────────
 function connectDrive() {
   const clientId = document.getElementById('clientId').value.trim();
   if (!clientId) { document.getElementById('clientId').focus(); return; }
   localStorage.setItem('gdrive_client_id', clientId);
-  const scope       = 'https://www.googleapis.com/auth/drive.file';
-  const redirectUri = window.location.origin + window.location.pathname;
-  window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${encodeURIComponent(clientId)}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=token&scope=${encodeURIComponent(scope)}`;
+  const params = new URLSearchParams({
+    client_id:     clientId,
+    redirect_uri:  'https://miniserver.taild78ddb.ts.net/apps/podcast-compressor/',
+    response_type: 'code',
+    scope:         'https://www.googleapis.com/auth/drive.file',
+    access_type:   'offline',
+    prompt:        'consent',
+  });
+  window.location.href = 'https://accounts.google.com/o/oauth2/v2/auth?' + params;
 }
 
-function setDriveConnected(token) {
-  accessToken = token;
+function setDriveConnected() {
+  driveConnected = true;
   const status = document.getElementById('driveStatus');
   status.className = 'drive-status connected';
   status.innerHTML = `
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-    <span>Google Drive verbunden</span>
+    <span>Google Drive verbunden — Refresh Token gespeichert</span>
     <button class="btn btn-ghost btn-sm" style="margin-left:auto" onclick="disconnectDrive()">Trennen</button>`;
   document.getElementById('driveBadge').textContent = 'Drive: verbunden';
   document.getElementById('driveBadge').classList.add('green');
@@ -268,14 +274,18 @@ function setDriveConnected(token) {
   checkStartable();
 }
 
-function disconnectDrive() {
-  accessToken = null;
+async function disconnectDrive() {
+  await fetch('/apps/podcast-compressor/api/drive-disconnect', { method: 'POST' }).catch(() => {});
+  driveConnected = false;
   const status = document.getElementById('driveStatus');
   status.className = 'drive-status';
   status.innerHTML = `
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6M9 9l6 6"/></svg>
-    <span>Nicht verbunden</span>
-    <button class="btn btn-ghost btn-sm" style="margin-left:auto" onclick="connectDrive()">Verbinden</button>`;
+    <span id="driveStatusText">Nicht verbunden</span>
+    <button class="btn btn-ghost btn-sm" style="margin-left:auto" id="driveBtn" onclick="connectDrive()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4M10 17l5-5-5-5M15 12H3"/></svg>
+      Verbinden
+    </button>`;
   document.getElementById('driveBadge').textContent = 'Drive: nicht verbunden';
   document.getElementById('driveBadge').classList.remove('green');
   checkStartable();
@@ -319,12 +329,12 @@ dz.addEventListener('drop', e => {
 });
 
 function checkStartable() {
-  document.getElementById('startBtn').disabled = !(accessToken && selectedFile);
+  document.getElementById('startBtn').disabled = !(driveConnected && selectedFile);
 }
 
 // ── Upload & start job ─────────────────────────────────────────────────────
 async function startJob() {
-  if (!accessToken || !selectedFile) return;
+  if (!driveConnected || !selectedFile) return;
   const btn = document.getElementById('startBtn');
   btn.disabled = true;
 
@@ -335,7 +345,6 @@ async function startJob() {
   fd.append('video',        selectedFile);
   fd.append('target_mb',    targetMb);
   fd.append('drive_folder', driveFolder);
-  fd.append('access_token', accessToken);
 
   const progWrap = document.getElementById('uploadProgress');
   const fill     = document.getElementById('uploadFill');
@@ -446,6 +455,12 @@ function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').re
   const cid   = saved.google_client_id || localStorage.getItem('gdrive_client_id') || '';
   if (cid) document.getElementById('clientId').value = cid;
 
+  // Restore driveFolder + targetMb
+  const folder = localStorage.getItem('podcast_drive_folder');
+  const mbVal  = localStorage.getItem('podcast_target_mb');
+  if (folder) document.getElementById('driveFolder').value = folder;
+  if (mbVal)  document.getElementById('targetMb').value   = mbVal;
+
   // Auto-save client_id to secrets
   let _t;
   document.getElementById('clientId').addEventListener('input', function() {
@@ -456,15 +471,38 @@ function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').re
     }, 700);
   });
 
-  // Check if returning from OAuth redirect
-  const hash = window.location.hash;
-  if (hash.includes('access_token=')) {
-    const params = new URLSearchParams(hash.substring(1));
-    const token  = params.get('access_token');
-    if (token) {
-      window.history.replaceState(null, null, window.location.pathname);
-      setDriveConnected(token);
+  // Auto-save driveFolder + targetMb to localStorage
+  document.getElementById('driveFolder').addEventListener('input', function() {
+    localStorage.setItem('podcast_drive_folder', this.value.trim());
+  });
+  document.getElementById('targetMb').addEventListener('input', function() {
+    localStorage.setItem('podcast_target_mb', this.value);
+  });
+
+  // Zurückgekehrt von OAuth? → Code eintauschen
+  const urlParams = new URLSearchParams(window.location.search);
+  const code = urlParams.get('code');
+  if (code) {
+    window.history.replaceState(null, null, window.location.pathname);
+    const statusText = document.getElementById('driveStatusText');
+    if (statusText) statusText.textContent = 'Verbinde…';
+    try {
+      const r = await fetch('/apps/podcast-compressor/api/auth/google', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ code }),
+      });
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error || 'Auth fehlgeschlagen');
+      setDriveConnected();
+    } catch (err) {
+      const st = document.getElementById('driveStatusText');
+      if (st) st.textContent = '✕ ' + err.message;
     }
+  } else {
+    // Bestehende Verbindung prüfen (gespeichertes Refresh Token)
+    const s = await fetch('/apps/podcast-compressor/api/drive-status').then(r => r.ok ? r.json() : {}).catch(() => ({}));
+    if (s.connected) setDriveConnected();
   }
 
   loadJobs();

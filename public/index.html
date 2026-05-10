@@ -442,6 +442,19 @@
       <span class="saved-indicator" id="ind-google">✓ gespeichert</span>
     </div>
 
+    <div class="secrets-divider"></div>
+
+    <!-- Google Drive Client-Secret -->
+    <div class="secret-row">
+      <div class="secret-label">Google Client-Secret</div>
+      <div class="secret-meta">Vorlesungs-Kompressor</div>
+      <div class="secret-input-wrap">
+        <input type="password" id="s-google-secret" placeholder="GOCSPX-…" autocomplete="off" spellcheck="false" />
+        <button class="secret-eye" onclick="toggleEye('s-google-secret', this)" title="Anzeigen">👁</button>
+      </div>
+      <span class="saved-indicator" id="ind-google-secret">✓ gespeichert</span>
+    </div>
+
   </div>
 </main>
 
@@ -451,13 +464,6 @@
 </div>
 
 <script>
-// ── Google OAuth Redirect-Handler ──────────────────────────────────────────
-// Nach Google-Login landet der Nutzer auf der Dashboard-Root mit #access_token=...
-// → direkt zur Podcast-Compressor-App weiterleiten.
-if (window.location.hash.includes('access_token=')) {
-  window.location.replace('/apps/podcast-compressor/' + window.location.hash);
-}
-
 // ── Eingeloggten User anzeigen + Berechtigungen laden ─────────────────────
 fetch('/api/me').then(r => r.json()).then(data => {
   const el = document.getElementById('userBadge');
@@ -520,6 +526,16 @@ const apps = [
     path: '/apps/smart-home',
   },
   {
+    id:   'vault',
+    name: 'Tresor',
+    desc: 'API-Keys, Tokens und Credentials verschlüsselt speichern. AES-256-GCM, Schlüssel liegt nur auf dem Server.',
+    icon: '🔑',
+    color: '#ede9fe',
+    colorDark: '#1a0a33',
+    tags: ['Secrets', 'AES-256-GCM', 'Verschlüsselt'],
+    path: '/apps/vault',
+  },
+  {
     id:   'admin',
     name: 'Admin-Panel',
     desc: 'Benutzer verwalten, App-Zugriff steuern und Online-Status einsehen.',
@@ -579,14 +595,16 @@ function renderApps(isAdmin, allowedSlugs) {
 
 // ── Secrets ────────────────────────────────────────────────────────────────
 const SECRET_MAP = {
-  'gemini_api_key':  's-gemini',
-  'ha_token':        's-ha-token',
-  'google_client_id': 's-google',
+  'gemini_api_key':       's-gemini',
+  'ha_token':             's-ha-token',
+  'google_client_id':     's-google',
+  'google_client_secret': 's-google-secret',
 };
 const IND_MAP = {
-  's-gemini':   'ind-gemini',
-  's-ha-token': 'ind-ha-token',
-  's-google':   'ind-google',
+  's-gemini':        'ind-gemini',
+  's-ha-token':      'ind-ha-token',
+  's-google':        'ind-google',
+  's-google-secret': 'ind-google-secret',
 };
 
 async function loadSecrets() {

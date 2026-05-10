@@ -5,7 +5,9 @@ const os         = require('os');
 const path       = require('path');
 const http       = require('http');
 const multer     = require('multer');
+const crypto     = require('crypto');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
+const { google } = require('googleapis');
 const tmp        = require('tmp');
 const session    = require('express-session');
 const SQLiteStore = require('connect-sqlite3')(session);
@@ -15,7 +17,7 @@ const bcrypt     = require('bcrypt');
 const app      = express();
 const PORT     = process.env.PORT || 3000;
 const TECTONIC  = path.join(os.homedir(), '.local', 'bin', 'tectonic');
-const APP_SLUGS = ['latex-converter', 'latex-study', 'podcast-compressor', 'pet-meds', 'smart-home'];
+const APP_SLUGS = ['latex-converter', 'latex-study', 'podcast-compressor', 'pet-meds', 'smart-home', 'vault'];
 
 const FORBIDDEN_HTML = `<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Kein Zugriff</title><style>body{font-family:system-ui,sans-serif;background:#111;color:#f0f0ee;display:flex;align-items:center;justify-content:center;height:100vh;margin:0}.box{text-align:center}.icon{font-size:48px;margin-bottom:1rem}h2{margin:.5rem 0}p{color:#888;font-size:.875rem;margin:.25rem 0 1.5rem}a{display:inline-block;padding:8px 20px;border-radius:8px;background:#f0f0ee;color:#111;text-decoration:none;font-size:.875rem;font-weight:500}</style></head><body><div class="box"><div class="icon">🔒</div><h2>Kein Zugriff</h2><p>Du hast keine Berechtigung für diese App.</p><a href="/">← Zurück zum Dashboard</a></div></body></html>`;
 
@@ -127,6 +129,18 @@ db.serialize(() => {
     sort_order INTEGER NOT NULL DEFAULT 0,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
   )`);
+
+  db.run(`CREATE TABLE IF NOT EXISTS vault_entries (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id    INTEGER NOT NULL,
+    label      TEXT    NOT NULL,
+    category   TEXT    NOT NULL DEFAULT '',
+    value_enc  TEXT    NOT NULL,
+    notes      TEXT    NOT NULL DEFAULT '',
+    created_at TEXT    NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT    NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  )`);
 });
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -146,6 +160,42 @@ app.use(session({
     maxAge: 7 * 24 * 60 * 60 * 1000   // 7 Tage
   }
 }));
+
+// ── Vault encryption key (auto-generated on first run) ─────────────────────
+const VAULT_KEY_PATH = path.join(__dirname, 'vault.key');
+let vaultKey;
+try {
+  const raw = fs.readFileSync(VAULT_KEY_PATH, 'utf8').trim();
+  vaultKey = Buffer.from(raw, 'hex');
+  if (vaultKey.length !== 32) throw new Error('bad key length');
+} catch {
+  vaultKey = crypto.randomBytes(32);
+  fs.writeFileSync(VAULT_KEY_PATH, vaultKey.toString('hex'), { mode: 0o600 });
+  console.log('[vault] Neuer Verschlüsselungsschlüssel erstellt:', VAULT_KEY_PATH);
+}
+
+// Leitet aus dem Master-Schlüssel einen nutzerspezifischen Schlüssel ab.
+// Gleicher vault.key → aber jeder User hat kryptografisch einen eigenen Schlüssel.
+function userVaultKey(userId) {
+  return crypto.hkdfSync('sha256', vaultKey, Buffer.alloc(0), Buffer.from(`vault-user-${userId}`), 32);
+}
+
+function vaultEncrypt(text, userId) {
+  const key    = userVaultKey(userId);
+  const iv     = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
+  const enc    = Buffer.concat([cipher.update(text, 'utf8'), cipher.final()]);
+  const tag    = cipher.getAuthTag();
+  return `${iv.toString('hex')}:${tag.toString('hex')}:${enc.toString('hex')}`;
+}
+
+function vaultDecrypt(stored, userId) {
+  const key = userVaultKey(userId);
+  const [ivHex, tagHex, encHex] = stored.split(':');
+  const dec = crypto.createDecipheriv('aes-256-gcm', key, Buffer.from(ivHex, 'hex'));
+  dec.setAuthTag(Buffer.from(tagHex, 'hex'));
+  return dec.update(Buffer.from(encHex, 'hex')) + dec.final('utf8');
+}
 
 // PWA-Dateien öffentlich (kein Login nötig, damit iOS sie laden kann)
 app.get('/manifest.json', (req, res) =>
@@ -446,6 +496,27 @@ const upload = multer({
   },
   limits: { fileSize: 50 * 1024 * 1024 }
 });
+
+// ── Podcast Compressor — Google OAuth2 ────────────────────────────────────
+const PODCAST_REDIRECT_URI = 'https://miniserver.taild78ddb.ts.net/apps/podcast-compressor/';
+
+async function getOAuth2Client(userId) {
+  const clientId     = await getSecret(userId, 'google_client_id');
+  const clientSecret = await getSecret(userId, 'google_client_secret');
+  if (!clientId || !clientSecret)
+    throw new Error('Google Client-ID oder Client-Secret fehlen. Bitte im Dashboard unter Einstellungen eintragen.');
+  return new google.auth.OAuth2(clientId, clientSecret, PODCAST_REDIRECT_URI);
+}
+
+async function getDriveAccessToken(userId) {
+  const refreshToken = await getSecret(userId, 'google_refresh_token');
+  if (!refreshToken) throw new Error('Kein Google Drive Token gespeichert. Bitte Drive verbinden.');
+  const client = await getOAuth2Client(userId);
+  client.setCredentials({ refresh_token: refreshToken });
+  const { token } = await client.getAccessToken();
+  if (!token) throw new Error('Access Token konnte nicht erneuert werden.');
+  return token;
+}
 
 // ── Podcast Compressor — server-side FFmpeg ─────────────────────────────────
 const PODCAST_TMP = path.join(os.tmpdir(), 'podcast_jobs');
@@ -771,7 +842,7 @@ async function driveUploadFile(token, filePath, fileName, folderPath) {
   return (await uploadRes.json()).id;
 }
 
-async function runPodcastJob(jobId, inputPath, originalName, targetMb, driveFolder, accessToken) {
+async function runPodcastJob(jobId, inputPath, originalName, targetMb, driveFolder, userId) {
   const outputPath = inputPath + '_out.mp4';
   try {
     const inputStats = fs.statSync(inputPath);
@@ -798,6 +869,7 @@ async function runPodcastJob(jobId, inputPath, originalName, targetMb, driveFold
     const outputMb = fs.statSync(finalPath).size / 1024 / 1024;
     await podcastDbSet(jobId, { status: 'uploading', progress_pct: 100, progress_msg: `Hochladen… (${outputMb.toFixed(0)} MB)`, output_mb: outputMb });
 
+    const accessToken = await getDriveAccessToken(userId);
     const driveId = await driveUploadFile(accessToken, finalPath, outName, driveFolder || 'Podcast Compressor');
     await podcastDbSet(jobId, { status: 'done', progress_pct: 100, progress_msg: 'Fertig!', drive_file_id: driveId, drive_filename: outName, output_mb: outputMb });
 
@@ -821,13 +893,16 @@ app.post('/apps/podcast-compressor/api/upload', checkAuth, checkAppAccess('podca
       return res.status(503).json({ error: 'FFmpeg ist nicht installiert. Bitte: sudo apt-get install -y ffmpeg' });
     }
 
-    const { drive_folder = '', target_mb = '195', access_token } = req.body;
-    if (!access_token) {
+    const { drive_folder = '', target_mb = '195' } = req.body;
+    const uid = req.session.userId;
+
+    // Verify a refresh token exists before queuing
+    const hasToken = await getSecret(uid, 'google_refresh_token');
+    if (!hasToken) {
       try { fs.unlinkSync(req.file.path); } catch (_) {}
-      return res.status(400).json({ error: 'Google Drive Access Token fehlt. Bitte zuerst verbinden.' });
+      return res.status(400).json({ error: 'Google Drive nicht verbunden. Bitte zuerst verbinden.' });
     }
 
-    const uid = req.session.userId;
     db.run(
       `INSERT INTO podcast_jobs (user_id, original_name, status, drive_folder, target_mb) VALUES (?, ?, 'pending', ?, ?)`,
       [uid, req.file.originalname, drive_folder, parseInt(target_mb) || 195],
@@ -835,8 +910,7 @@ app.post('/apps/podcast-compressor/api/upload', checkAuth, checkAppAccess('podca
         if (err) { try { fs.unlinkSync(req.file.path); } catch (_) {} return res.status(500).json({ error: err.message }); }
         const jobId = this.lastID;
         res.json({ jobId });
-        // Fire and forget — runs after response is sent
-        setImmediate(() => runPodcastJob(jobId, req.file.path, req.file.originalname, parseInt(target_mb) || 195, drive_folder, access_token));
+        setImmediate(() => runPodcastJob(jobId, req.file.path, req.file.originalname, parseInt(target_mb) || 195, drive_folder, uid));
       }
     );
   }
@@ -858,6 +932,105 @@ app.get('/apps/podcast-compressor/api/jobs', checkAuth, checkAppAccess('podcast-
 app.delete('/apps/podcast-compressor/api/jobs/:id', checkAuth, checkAppAccess('podcast-compressor'), (req, res) => {
   const id = parseInt(req.params.id);
   db.run('DELETE FROM podcast_jobs WHERE id = ? AND user_id = ?', [id, req.session.userId],
+    err => err ? res.status(500).json({ error: err.message }) : res.json({ ok: true }));
+});
+
+// POST — OAuth2 Authorization Code eintauschen
+app.post('/apps/podcast-compressor/api/auth/google', checkAuth, checkAppAccess('podcast-compressor'), async (req, res) => {
+  const { code } = req.body;
+  if (!code) return res.status(400).json({ error: 'Kein Authorization Code.' });
+  try {
+    const client = await getOAuth2Client(req.session.userId);
+    const { tokens } = await client.getToken(code);
+    if (!tokens.refresh_token) {
+      return res.status(400).json({ error: 'Kein Refresh Token erhalten. Stelle sicher dass access_type=offline und prompt=consent gesetzt sind.' });
+    }
+    await new Promise((resolve, reject) => {
+      db.run('INSERT OR REPLACE INTO secrets (user_id, key_name, value) VALUES (?, ?, ?)',
+        [req.session.userId, 'google_refresh_token', tokens.refresh_token],
+        err => err ? reject(err) : resolve());
+    });
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET — Drive Verbindungsstatus prüfen
+app.get('/apps/podcast-compressor/api/drive-status', checkAuth, checkAppAccess('podcast-compressor'), async (req, res) => {
+  const token = await getSecret(req.session.userId, 'google_refresh_token');
+  res.json({ connected: !!token });
+});
+
+// POST — Drive trennen (Refresh Token löschen)
+app.post('/apps/podcast-compressor/api/drive-disconnect', checkAuth, checkAppAccess('podcast-compressor'), (req, res) => {
+  db.run('DELETE FROM secrets WHERE user_id = ? AND key_name = ?',
+    [req.session.userId, 'google_refresh_token'],
+    err => err ? res.status(500).json({ error: err.message }) : res.json({ ok: true }));
+});
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  APP: TRESOR  →  /apps/vault
+// ══════════════════════════════════════════════════════════════════════════════
+app.use('/apps/vault', checkAuth, checkAppAccess('vault'),
+  express.static(path.join(__dirname, 'apps/vault')));
+
+// GET — Schlüsseldatei herunterladen (nur Admins)
+app.get('/apps/vault/api/download-key', checkAuth, checkAdmin, (req, res) => {
+  res.download(VAULT_KEY_PATH, 'vault.key');
+});
+
+// GET — alle Einträge (entschlüsselt)
+app.get('/apps/vault/api/entries', checkAuth, checkAppAccess('vault'), (req, res) => {
+  db.all(
+    `SELECT id, label, category, value_enc, notes, created_at
+     FROM vault_entries WHERE user_id = ? ORDER BY category COLLATE NOCASE, label COLLATE NOCASE`,
+    [req.session.userId],
+    (err, rows) => {
+      if (err) return res.status(500).json({ error: err.message });
+      const uid = req.session.userId;
+      res.json(rows.map(r => {
+        let value = '';
+        try { value = vaultDecrypt(r.value_enc, uid); } catch {}
+        return { id: r.id, label: r.label, category: r.category, value, notes: r.notes, created_at: r.created_at };
+      }));
+    }
+  );
+});
+
+// POST — Eintrag erstellen
+app.post('/apps/vault/api/entries', checkAuth, checkAppAccess('vault'), (req, res) => {
+  const { label, value, category = '', notes = '' } = req.body;
+  if (!label?.trim() || !value) return res.status(400).json({ error: 'Bezeichnung und Wert sind erforderlich.' });
+  db.run(
+    'INSERT INTO vault_entries (user_id, label, category, value_enc, notes) VALUES (?, ?, ?, ?, ?)',
+    [req.session.userId, label.trim(), category.trim(), vaultEncrypt(value, req.session.userId), notes.trim()],
+    function(err) {
+      err ? res.status(500).json({ error: err.message }) : res.json({ id: this.lastID });
+    }
+  );
+});
+
+// PUT — Eintrag aktualisieren
+app.put('/apps/vault/api/entries/:id', checkAuth, checkAppAccess('vault'), (req, res) => {
+  const { label, value, category = '', notes = '' } = req.body;
+  if (!label?.trim() || !value) return res.status(400).json({ error: 'Bezeichnung und Wert sind erforderlich.' });
+  db.run(
+    `UPDATE vault_entries SET label=?, category=?, value_enc=?, notes=?, updated_at=datetime('now')
+     WHERE id=? AND user_id=?`,
+    [label.trim(), category.trim(), vaultEncrypt(value, req.session.userId), notes.trim(), parseInt(req.params.id), req.session.userId],
+    function(err) {
+      if (err) return res.status(500).json({ error: err.message });
+      this.changes === 0 ? res.status(404).json({ error: 'Nicht gefunden.' }) : res.json({ ok: true });
+    }
+  );
+});
+
+// DELETE — Eintrag löschen
+app.delete('/apps/vault/api/entries/:id', checkAuth, checkAppAccess('vault'), (req, res) => {
+  db.run('DELETE FROM vault_entries WHERE id=? AND user_id=?',
+    [parseInt(req.params.id), req.session.userId],
     err => err ? res.status(500).json({ error: err.message }) : res.json({ ok: true }));
 });
 
