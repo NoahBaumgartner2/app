@@ -788,6 +788,7 @@ function runFFmpeg(jobId, inputPath, outputPath, videoBitrate, audioBitrate, dur
     const proc = spawn('ffmpeg', [
       '-i', inputPath,
       '-c:v', 'libx264', '-preset', 'fast',
+      '-threads', '0',
       '-b:v', `${videoBitrate}k`,
       '-maxrate', `${Math.round(videoBitrate * 1.5)}k`,
       '-bufsize', `${Math.round(videoBitrate * 2)}k`,
@@ -796,20 +797,45 @@ function runFFmpeg(jobId, inputPath, outputPath, videoBitrate, audioBitrate, dur
       '-progress', 'pipe:1',
       '-y', outputPath,
     ]);
+
+    const TIMEOUT_MS = 10 * 60 * 1000;
+    const timer = setTimeout(() => {
+      proc.kill('SIGKILL');
+      podcastDbSet(jobId, { status: 'error', progress_msg: 'FFmpeg Timeout (>10 Min)' });
+      reject(new Error('FFmpeg Timeout nach 10 Minuten'));
+    }, TIMEOUT_MS);
+
     let buf = '';
+    let lastStderr = '';
+
     proc.stdout.on('data', chunk => {
       buf += chunk.toString();
       const lines = buf.split('\n'); buf = lines.pop();
       for (const line of lines) {
+        if (line.startsWith('progress=end')) {
+          podcastDbSet(jobId, { progress_pct: 99, progress_msg: 'Finalisiere…' });
+          continue;
+        }
         const m = line.match(/^out_time_ms=(\d+)/);
         if (m && duration > 0) {
-          const pct = Math.min(99, Math.round(parseInt(m[1]) / 1_000_000 / duration * 100));
+          const pct = Math.min(98, Math.round(parseInt(m[1]) / 1_000_000 / duration * 100));
           podcastDbSet(jobId, { progress_pct: pct, progress_msg: `Komprimiere… ${pct}%` });
         }
       }
     });
-    proc.on('error', err => reject(new Error('FFmpeg Fehler: ' + err.message)));
-    proc.on('close', code => code === 0 ? resolve() : reject(new Error(`FFmpeg Code ${code}`)));
+
+    proc.stderr.on('data', chunk => {
+      const text = chunk.toString();
+      lastStderr = text;
+      console.error('[ffmpeg stderr]', text.trimEnd());
+    });
+
+    proc.on('error', err => { clearTimeout(timer); reject(new Error('FFmpeg Fehler: ' + err.message)); });
+    proc.on('close', code => {
+      clearTimeout(timer);
+      if (code === 0) return resolve();
+      reject(new Error(`FFmpeg Code ${code}: ${lastStderr.slice(-300)}`));
+    });
   });
 }
 
@@ -882,6 +908,7 @@ async function runPodcastJob(jobId, inputPath, originalName, targetMb, driveFold
       const duration     = await getVideoDurationSec(inputPath);
       const audioBitrate = 96;
       const videoKbps    = Math.max(100, Math.floor(((targetBytes * 0.93 - (audioBitrate * 1000 / 8) * duration) * 8) / (duration * 1000)));
+      console.log(`[podcast] Job ${jobId}: ${inputMb.toFixed(1)} MB → Ziel ${targetMb} MB, Dauer ${duration.toFixed(0)}s, Video ${videoKbps} kbps, Audio ${audioBitrate} kbps`);
       await podcastDbSet(jobId, { progress_msg: `Komprimiere… 0% (${videoKbps} kbps)` });
       await runFFmpeg(jobId, inputPath, outputPath, videoKbps, audioBitrate, duration);
       finalPath = outputPath;
