@@ -316,6 +316,31 @@
     display: none;
   }
 
+  /* ─── FILENAME FIELD ─── */
+  .filename-field { margin-top: 10px; }
+  .filename-field label {
+    display: block;
+    font-size: 11px;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--text-tertiary);
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    margin-bottom: 5px;
+  }
+  .filename-field input {
+    width: 100%;
+    padding: 8px 10px;
+    font-family: 'EB Garamond', serif;
+    font-size: 15px;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    border: 0.5px solid var(--border-light);
+    border-radius: var(--radius-md);
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .filename-field input:focus { border-color: var(--border-medium); }
+
   /* ─── RESPONSIVE ─── */
   @media (max-width: 720px) {
     .main-content { grid-template-columns: 1fr; }
@@ -377,6 +402,11 @@
 
     <div class="pdf-progress" id="pdfProgress">
       <i class="ti ti-loader spin"></i>&nbsp; Kompiliere LaTeX zu PDF über Server...
+    </div>
+
+    <div class="filename-field">
+      <label>Dateiname</label>
+      <input type="text" id="fileNameInput" placeholder="z.B. Vorlesung_Analysis_01" />
     </div>
 
     <div class="editor-actions">
@@ -582,6 +612,12 @@ ${content}
     document.getElementById('pdfBtn').disabled  = false;
   }
 
+  /* ── FILENAME HELPER ── */
+  function getFileName(fallback) {
+    const raw = document.getElementById('fileNameInput').value.trim();
+    return (raw || fallback).replace(/[/\\:*?"<>|]/g, '_').replace(/\.(pdf|tex)$/i, '');
+  }
+
   /* ── COPY ── */
   function copyLatex() {
     const code = document.getElementById('latexEditor').value;
@@ -594,11 +630,12 @@ ${content}
   function downloadTex() {
     const latex = document.getElementById('latexEditor').value;
     if (!latex) return;
+    const name = getFileName('vorlesungsnotizen');
     const blob = new Blob([latex], { type: 'text/plain;charset=utf-8' });
     const url  = URL.createObjectURL(blob);
     const a    = document.createElement('a');
     a.href     = url;
-    a.download = 'vorlesungsnotizen.tex';
+    a.download = name + '.tex';
     a.click();
     URL.revokeObjectURL(url);
     setStatus('.tex-Datei heruntergeladen', 'active');
@@ -608,6 +645,7 @@ ${content}
   async function downloadPdf() {
     const latex = document.getElementById('latexEditor').value;
     if (!latex) return;
+    const name = getFileName('vorlesungsnotizen');
 
     const btn      = document.getElementById('pdfBtn');
     const progress = document.getElementById('pdfProgress');
@@ -620,7 +658,7 @@ ${content}
       const response = await fetch('/apps/latex-converter/compile', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ latex })
+        body: JSON.stringify({ latex, fileName: name })
       });
 
       if (!response.ok) {
@@ -632,7 +670,7 @@ ${content}
       const url  = URL.createObjectURL(blob);
       const a    = document.createElement('a');
       a.href     = url;
-      a.download = 'vorlesungsnotizen.pdf';
+      a.download = name + '.pdf';
       a.click();
       URL.revokeObjectURL(url);
       setStatus('PDF erfolgreich heruntergeladen', 'active');

@@ -1,7 +1,7 @@
 {
   "/home/miniserver/development/dashboard/server.js": {
-    "mtime": 1778747811.4850953,
-    "hash": "3effbbf8aa69e425963c8bf01840852e"
+    "mtime": 1778748778.6116765,
+    "hash": "0b101825c3e9a133b11c8026ebafb0c7"
   },
   "/home/miniserver/development/dashboard/public/sw.js": {
     "mtime": 1778329325.7067266,
@@ -88,8 +88,8 @@
     "hash": "063a1d059ddf384e95d9424a33c2482e"
   },
   "/home/miniserver/development/dashboard/apps/latexConverter/index.html": {
-    "mtime": 1778262577.2762105,
-    "hash": "74f9ecefd738ed49bf4bb3eeaa10cc50"
+    "mtime": 1778748811.628805,
+    "hash": "c5d61d82a2eef124370f118e125aa8ab"
   },
   "/home/miniserver/development/dashboard/apps/podcastCompressor/index.html": {
     "mtime": 1778400537.5960968,
@@ -108,8 +108,8 @@
     "hash": "bd38118fb84c50b6c0455ba55f4ed8e1"
   },
   "/home/miniserver/development/dashboard/apps/latexStudy/index.html": {
-    "mtime": 1778350326.070391,
-    "hash": "d6a03b008bdc9c43b060bb2a21ad25b6"
+    "mtime": 1778748837.1919043,
+    "hash": "07ef4b8ef0a6f279a8112e13afa09ed1"
   },
   "/home/miniserver/development/dashboard/apps/server-monitor/index.html": {
     "mtime": 1778405221.666856,

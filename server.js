@@ -470,7 +470,7 @@ function runLatexCompiler(compiler, texFile, cwd) {
 }
 
 app.post('/apps/latex-converter/compile', checkAuth, checkAppAccess('latex-converter'), async (req, res) => {
-  const { latex } = req.body;
+  const { latex, fileName } = req.body;
   if (!latex || typeof latex !== 'string')
     return res.status(400).json({ error: 'Kein LaTeX-Code übermittelt.' });
 
@@ -495,7 +495,8 @@ app.post('/apps/latex-converter/compile', checkAuth, checkAppAccess('latex-conve
 
     const pdfBuffer = fs.readFileSync(pdfFile);
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', 'attachment; filename="vorlesungsnotizen.pdf"');
+    const safeName = (fileName || 'vorlesungsnotizen').replace(/[^a-z0-9_\-]/gi, '_');
+    res.setHeader('Content-Disposition', `attachment; filename="${safeName}.pdf"`);
     res.send(pdfBuffer);
   } catch (err) {
     const log = fs.existsSync(logFile) ? fs.readFileSync(logFile, 'utf8').slice(-3000) : '';
