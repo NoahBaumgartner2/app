@@ -1361,6 +1361,60 @@
       "id": "latexstudy_readme_latexstudy",
       "community": 12,
       "norm_label": "latexstudy"
+    },
+    {
+      "label": "[state, ip]",
+      "file_type": "code",
+      "source_file": "server.js",
+      "source_location": "L1556",
+      "community": 0,
+      "norm_label": "[state, ip]",
+      "id": "dashboard_server_state_ip"
+    },
+    {
+      "label": "KODI_CONFIG_PATH",
+      "file_type": "code",
+      "source_file": "server.js",
+      "source_location": "L1547",
+      "community": 0,
+      "norm_label": "kodi_config_path",
+      "id": "dashboard_server_kodi_config_path"
+    },
+    {
+      "label": "readKodiConfig()",
+      "file_type": "code",
+      "source_file": "server.js",
+      "source_location": "L1550",
+      "community": 0,
+      "norm_label": "readkodiconfig()",
+      "id": "dashboard_server_readkodiconfig"
+    },
+    {
+      "label": "readUmbrellaApiKey()",
+      "file_type": "code",
+      "source_file": "server.js",
+      "source_location": "L1555",
+      "community": 0,
+      "norm_label": "readumbrellaapikey()",
+      "id": "dashboard_server_readumbrellaapikey"
+    },
+    {
+      "label": "writeUmbrellaApiKey()",
+      "file_type": "code",
+      "source_file": "server.js",
+      "source_location": "L1563",
+      "community": 0,
+      "norm_label": "writeumbrellaapikey()",
+      "id": "dashboard_server_writeumbrellaapikey"
+    },
+    {
+      "label": "config",
+      "file_type": "code",
+      "source_file": "server.js",
+      "source_location": "L1604",
+      "community": 0,
+      "norm_label": "config",
+      "id": "dashboard_server_config"
     }
   ],
   "links": [
@@ -1550,9 +1604,9 @@
       "source_file": "server.js",
       "source_location": "L22",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "server_js",
-      "target": "dashboard_server_petmedslastupdated",
-      "confidence_score": 1.0
+      "target": "dashboard_server_petmedslastupdated"
     },
     {
       "relation": "contains",
@@ -2193,6 +2247,66 @@
       "confidence_score": 1.0,
       "source": "server_js",
       "target": "dashboard_server_p"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "server.js",
+      "source_location": "L1556",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "server_js",
+      "target": "dashboard_server_state_ip"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "server.js",
+      "source_location": "L1547",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "server_js",
+      "target": "dashboard_server_kodi_config_path"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "server.js",
+      "source_location": "L1550",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "server_js",
+      "target": "dashboard_server_readkodiconfig"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "server.js",
+      "source_location": "L1555",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "server_js",
+      "target": "dashboard_server_readumbrellaapikey"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "server.js",
+      "source_location": "L1563",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "server_js",
+      "target": "dashboard_server_writeumbrellaapikey"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "server.js",
+      "source_location": "L1611",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "server_js",
+      "target": "dashboard_server_config"
     },
     {
       "relation": "calls",
@@ -3007,5 +3121,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "7e36a17de2d5498cb42fc16af484eda65322d359"
+  "built_at_commit": "987c0bf089bd0a0941f48b0362a95d6ab76c6934"
 }

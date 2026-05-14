@@ -1,7 +1,7 @@
 {
   "/home/miniserver/development/dashboard/server.js": {
-    "mtime": 1778446633.6826158,
-    "hash": "b31de4bd37e6d9a5714df4305eef4f9d"
+    "mtime": 1778603231.634585,
+    "hash": "022bfd73cc8127aa1ab001e0ce3d56bd"
   },
   "/home/miniserver/development/dashboard/public/sw.js": {
     "mtime": 1778329325.7067266,
@@ -52,8 +52,8 @@
     "hash": "da79aa9343cd2b362206f03762160abc"
   },
   "/home/miniserver/development/dashboard/public/index.html": {
-    "mtime": 1778405259.4760084,
-    "hash": "a11ee75d99bf4a8d27a7969079e609c7"
+    "mtime": 1778602245.82156,
+    "hash": "c3002f7c9ffaf211b7e8ebd40d712fad"
   },
   "/home/miniserver/development/dashboard/latexConverter/README.md": {
     "mtime": 1778257479.5323355,
@@ -95,6 +95,10 @@
     "mtime": 1778400537.5960968,
     "hash": "471a6f46218dbac7380fe11d9b7dbbc6"
   },
+  "/home/miniserver/development/dashboard/apps/stremio/index.html": {
+    "mtime": 1778603258.3816953,
+    "hash": "f79aba8269c5f1adba8b111795b14bb5"
+  },
   "/home/miniserver/development/dashboard/apps/admin/index.html": {
     "mtime": 1778405264.583029,
     "hash": "9f9891202fd9d6abcc52389da8e95d06"
@@ -114,6 +118,10 @@
   "/home/miniserver/development/dashboard/apps/vault/index.html": {
     "mtime": 1778400005.7409782,
     "hash": "ca04569ec17394463df5cbaf121a1f7e"
+  },
+  "/home/miniserver/development/dashboard/apps/kodi/index.html": {
+    "mtime": 1778596780.0807862,
+    "hash": "161f56be8f45a86c07664af4bf5c7f83"
   },
   "/home/miniserver/development/dashboard/public/icons/icon-192x192.png": {
     "mtime": 1778329547.9416203,

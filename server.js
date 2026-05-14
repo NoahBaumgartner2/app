@@ -17,7 +17,7 @@ const bcrypt     = require('bcrypt');
 const app      = express();
 const PORT     = process.env.PORT || 3000;
 const TECTONIC  = path.join(os.homedir(), '.local', 'bin', 'tectonic');
-const APP_SLUGS = ['latex-converter', 'latex-study', 'podcast-compressor', 'pet-meds', 'smart-home', 'vault', 'server-monitor'];
+const APP_SLUGS = ['latex-converter', 'latex-study', 'podcast-compressor', 'pet-meds', 'smart-home', 'vault', 'server-monitor', 'stremio'];
 
 let petMedsLastUpdated = Date.now();
 
@@ -1537,6 +1537,24 @@ app.get('/apps/server-monitor/api/stats', checkAuth, checkAppAccess('server-moni
 //  4. Karte im Dashboard ergänzen: public/index.html → apps-Array
 // ══════════════════════════════════════════════════════════════════════════════
 
+
+// ── Stremio ─────────────────────────────────────────────────────────────────
+app.use('/apps/stremio', checkAuth, checkAppAccess('stremio'),
+  express.static(path.join(__dirname, 'apps/stremio')));
+
+app.get('/api/stremio/status', checkAuth, (req, res) => {
+  exec("docker inspect --format '{{.State.Status}}' stremio-server", (err, stdout) => {
+    const running = !err && stdout.trim() === 'running';
+    res.json({ running });
+  });
+});
+
+app.post('/api/stremio/restart', checkAuth, (req, res) => {
+  exec('docker restart stremio-server', { timeout: 30000 }, (err, stdout, stderr) => {
+    if (err) return res.status(500).json({ error: stderr || err.message });
+    res.json({ ok: true });
+  });
+});
 
 // ── Start ──────────────────────────────────────────────────────────────────
 app.listen(PORT, async () => {

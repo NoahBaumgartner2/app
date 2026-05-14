@@ -51,7 +51,9 @@
       "Bash(fuser 3000/tcp)",
       "Bash(xargs kill -9)",
       "Bash(kill -9 983325)",
-      "Bash(kill -9 983777)"
+      "Bash(kill -9 983777)",
+      "Bash(chmod +x /home/miniserver/development/dashboard/setup-kodi-umbrella.sh)",
+      "Bash(bash -n /home/miniserver/development/dashboard/setup-kodi-umbrella.sh)"
     ]
   }
 }

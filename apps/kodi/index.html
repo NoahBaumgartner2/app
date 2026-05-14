@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kodi · Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:           #111111;
+      --surface:      #1a1a1a;
+      --surface2:     #222222;
+      --border:       rgba(255,255,255,.08);
+      --border-hv:    rgba(255,255,255,.18);
+      --text:         #f0f0ee;
+      --muted:        #888;
+      --accent:       #e5a00d;
+      --accent-dim:   rgba(229,160,13,.15);
+      --accent-border:rgba(229,160,13,.35);
+      --radius:       14px;
+      --shadow:       0 1px 4px rgba(0,0,0,.4), 0 4px 20px rgba(0,0,0,.35);
+      --ok:           #22c55e;
+      --err:          #ef4444;
+    }
+
+    body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+    /* ── Header ── */
+    .app-header {
+      padding: 0 2rem; background: var(--surface); border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 1rem; height: 56px;
+      position: sticky; top: 0; z-index: 10;
+    }
+    .back-link { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--muted); text-decoration: none; flex-shrink: 0; transition: color .15s; }
+    .back-link:hover { color: var(--text); }
+    .header-title { font-size: 16px; font-weight: 600; letter-spacing: -.3px; flex: 1; }
+    .header-right  { display: flex; align-items: center; gap: 10px; }
+
+    .status-pill {
+      display: flex; align-items: center; gap: 6px;
+      font-family: 'JetBrains Mono', monospace; font-size: 11px;
+      padding: 3px 10px; border-radius: 20px;
+      border: 1px solid var(--border); background: var(--surface2); color: var(--muted);
+      transition: all .3s;
+    }
+    .status-pill.online  { background: rgba(34,197,94,.1);  border-color: rgba(34,197,94,.3);  color: #4ade80; }
+    .status-pill.offline { background: rgba(239,68,68,.08); border-color: rgba(239,68,68,.25); color: #f87171; }
+    .status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); flex-shrink: 0; transition: background .3s; }
+    .status-pill.online  .status-dot { background: var(--ok);  box-shadow: 0 0 6px rgba(34,197,94,.6); }
+    .status-pill.offline .status-dot { background: var(--err); }
+
+    /* ── Layout ── */
+    .main { max-width: 820px; margin: 0 auto; padding: 2rem 1.5rem; display: flex; flex-direction: column; gap: 1.25rem; }
+
+    /* ── Cards ── */
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.25rem 1.5rem; box-shadow: var(--shadow); }
+    .card-title { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .8px; color: var(--muted); margin-bottom: 1rem; }
+
+    /* ── Now Playing ── */
+    .now-playing { display: flex; gap: 1rem; align-items: flex-start; }
+    .thumbnail-wrap {
+      flex-shrink: 0; width: 80px; height: 80px; border-radius: 8px; overflow: hidden;
+      background: var(--surface2); border: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .thumbnail-wrap img { width: 100%; height: 100%; object-fit: cover; display: none; }
+    .thumb-placeholder { font-size: 28px; }
+    .np-info { flex: 1; min-width: 0; }
+    .np-title { font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: .4rem; }
+    .np-idle { color: var(--muted); font-size: 13px; }
+    .progress-track { height: 4px; background: var(--surface2); border-radius: 2px; overflow: hidden; margin: .75rem 0 .35rem; position: relative; }
+    .progress-fill  { height: 100%; background: var(--accent); border-radius: 2px; width: 0%; transition: width .5s linear; }
+    .np-time { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted); display: flex; justify-content: space-between; }
+
+    /* ── Controls ── */
+    .controls { display: flex; gap: .6rem; flex-wrap: wrap; }
+    .btn {
+      padding: 8px 16px; border-radius: 8px; border: 1px solid var(--border);
+      background: var(--surface2); color: var(--text);
+      font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 500;
+      cursor: pointer; transition: background .15s, border-color .15s, transform .1s;
+      display: flex; align-items: center; gap: 6px; white-space: nowrap;
+    }
+    .btn:hover          { background: #2a2a2a; border-color: var(--border-hv); }
+    .btn:active         { transform: scale(.97); }
+    .btn.accent         { background: var(--accent-dim); border-color: var(--accent-border); color: var(--accent); }
+    .btn.accent:hover   { background: rgba(229,160,13,.25); }
+    .btn.danger         { background: rgba(239,68,68,.08); border-color: rgba(239,68,68,.3); color: #f87171; }
+    .btn.danger:hover   { background: rgba(239,68,68,.15); }
+    .btn:disabled       { opacity: .4; cursor: not-allowed; transform: none; }
+    .btn-icon { font-size: 16px; line-height: 1; }
+
+    /* ── Inputs ── */
+    .search-input {
+      flex: 1; padding: 9px 14px; background: var(--surface2);
+      border: 1px solid var(--border); border-radius: 8px;
+      color: var(--text); font-family: 'Inter', sans-serif; font-size: 13px;
+      outline: none; transition: border-color .15s; width: 100%;
+    }
+    .search-input::placeholder { color: var(--muted); }
+    .search-input:focus { border-color: var(--accent-border); }
+
+    /* ── Search results ── */
+    .search-row { display: flex; gap: .6rem; }
+    .results-list { margin-top: .75rem; display: flex; flex-direction: column; gap: 4px; max-height: 280px; overflow-y: auto; }
+    .results-list:empty { display: none; }
+    .result-item {
+      display: flex; align-items: center; gap: .75rem; padding: 9px 12px;
+      border-radius: 8px; background: var(--surface2); border: 1px solid var(--border);
+      cursor: pointer; transition: border-color .15s, background .15s;
+    }
+    .result-item:hover { background: #2a2a2a; border-color: var(--border-hv); }
+    .result-type { font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 2px 6px; border-radius: 4px; flex-shrink: 0; }
+    .result-type.movie { background: rgba(99,102,241,.15); color: #818cf8; border: 1px solid rgba(99,102,241,.3); }
+    .result-type.show  { background: rgba(16,185,129,.12);  color: #34d399; border: 1px solid rgba(16,185,129,.3); }
+    .result-name { font-size: 13px; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .result-year { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted); flex-shrink: 0; }
+
+    /* ── Action row ── */
+    .action-row { display: flex; gap: .6rem; flex-wrap: wrap; }
+
+    /* ── Settings card (collapsible) ── */
+    .settings-card { padding: 0; overflow: hidden; }
+
+    .settings-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 1rem 1.5rem; cursor: pointer; user-select: none;
+      transition: background .15s;
+    }
+    .settings-header:hover { background: rgba(255,255,255,.03); }
+
+    .settings-header-left { display: flex; align-items: center; gap: .5rem; }
+    .settings-title { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .8px; color: var(--muted); }
+    .settings-gear  { font-size: 14px; }
+
+    .settings-chevron {
+      font-size: 11px; color: var(--muted);
+      transition: transform .25s ease;
+      line-height: 1;
+    }
+    .settings-chevron.open { transform: rotate(90deg); }
+
+    .settings-body {
+      max-height: 0; overflow: hidden;
+      transition: max-height .3s ease;
+    }
+    .settings-body.open { max-height: 500px; }
+
+    .settings-inner { padding: 0 1.5rem 1.25rem; border-top: 1px solid var(--border); }
+
+    .field-group { margin-top: 1rem; }
+    .field-label {
+      display: block; font-size: 11px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: .5px;
+      color: var(--muted); margin-bottom: .4rem;
+    }
+    .input-with-btn { display: flex; gap: .5rem; }
+    .input-with-btn .search-input { flex: 1; width: auto; }
+
+    .settings-footer {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-top: 1.25rem; gap: 1rem; flex-wrap: wrap;
+    }
+    .settings-status {
+      font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted);
+      flex: 1;
+    }
+    .settings-status.ok  { color: #4ade80; }
+    .settings-status.err { color: #f87171; }
+
+    /* ── Toast ── */
+    .toast {
+      position: fixed; bottom: 1.5rem; left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 10px; padding: 10px 18px; font-size: 13px;
+      box-shadow: 0 8px 32px rgba(0,0,0,.5);
+      transition: transform .25s ease; z-index: 100; white-space: nowrap;
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+
+    /* ── Scrollbar ── */
+    .results-list::-webkit-scrollbar       { width: 4px; }
+    .results-list::-webkit-scrollbar-track { background: transparent; }
+    .results-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  </style>
+</head>
+<body>
+
+<header class="app-header">
+  <a class="back-link" href="/">← Dashboard</a>
+  <div class="header-title">🎬 Kodi</div>
+  <div class="header-right">
+    <div class="status-pill" id="statusPill">
+      <div class="status-dot"></div>
+      <span id="statusText">Verbinde…</span>
+    </div>
+  </div>
+</header>
+
+<main class="main">
+
+  <!-- Now Playing -->
+  <div class="card">
+    <div class="card-title">Now Playing</div>
+    <div class="now-playing">
+      <div class="thumbnail-wrap">
+        <img id="thumbImg" alt="">
+        <div class="thumb-placeholder" id="thumbPlaceholder">🎬</div>
+      </div>
+      <div class="np-info">
+        <div class="np-title" id="npTitle"><span class="np-idle">Nichts läuft gerade</span></div>
+        <div class="progress-track">
+          <div class="progress-fill" id="progressFill"></div>
+        </div>
+        <div class="np-time">
+          <span id="timeElapsed">0:00:00</span>
+          <span id="timeTotal">0:00:00</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Playback Controls -->
+  <div class="card">
+    <div class="card-title">Steuerung</div>
+    <div class="controls">
+      <button class="btn" onclick="playerGoTo('previous')">
+        <span class="btn-icon">⏮</span> Zurück
+      </button>
+      <button class="btn accent" onclick="playerPlayPause()">
+        <span class="btn-icon" id="playPauseIcon">▶</span>
+        <span id="playPauseLabel">Play / Pause</span>
+      </button>
+      <button class="btn" onclick="playerStop()">
+        <span class="btn-icon">⏹</span> Stop
+      </button>
+      <button class="btn" onclick="playerGoTo('next')">
+        <span class="btn-icon">⏭</span> Weiter
+      </button>
+    </div>
+  </div>
+
+  <!-- Search -->
+  <div class="card">
+    <div class="card-title">Bibliothek durchsuchen</div>
+    <div class="search-row">
+      <input class="search-input" id="searchInput" type="text" placeholder="Film oder Serie suchen…" autocomplete="off">
+      <button class="btn accent" onclick="doSearch()">Suchen</button>
+    </div>
+    <div class="results-list" id="resultsList"></div>
+  </div>
+
+  <!-- Actions -->
+  <div class="card">
+    <div class="card-title">Aktionen</div>
+    <div class="action-row">
+      <button class="btn accent" onclick="openKodiUI()">
+        <span class="btn-icon">🌐</span> Kodi Web-UI öffnen
+      </button>
+      <button class="btn danger" onclick="restartKodi()">
+        <span class="btn-icon">🔄</span> Kodi neu starten
+      </button>
+    </div>
+  </div>
+
+  <!-- Settings (collapsible) -->
+  <div class="card settings-card">
+    <div class="settings-header" onclick="toggleSettings()" id="settingsHeader">
+      <div class="settings-header-left">
+        <span class="settings-gear">⚙️</span>
+        <span class="settings-title">Einstellungen</span>
+      </div>
+      <span class="settings-chevron" id="settingsChevron">▶</span>
+    </div>
+    <div class="settings-body" id="settingsBody">
+      <div class="settings-inner">
+
+        <div class="field-group">
+          <label class="field-label" for="cfgServerIp">Server / Tailscale IP</label>
+          <input class="search-input" id="cfgServerIp" type="text"
+                 placeholder="z.B. 100.64.0.1" autocomplete="off">
+        </div>
+
+        <div class="field-group">
+          <label class="field-label" for="cfgRdKey">Real-Debrid API Key</label>
+          <div class="input-with-btn">
+            <input class="search-input" id="cfgRdKey" type="password"
+                   placeholder="API Key eingeben…" autocomplete="off">
+            <button class="btn" id="rdKeyToggle" onclick="toggleRdKeyVisibility()" title="Anzeigen/Verbergen">👁</button>
+          </div>
+        </div>
+
+        <div class="settings-footer">
+          <span class="settings-status" id="settingsStatus"></span>
+          <button class="btn accent" id="saveSettingsBtn" onclick="saveSettings()">
+            Speichern &amp; Kodi neu starten
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  // ── State ─────────────────────────────────────────────────────────────────
+  let rpcId          = 1;
+  let activePlayerId = null;
+  let isPlaying      = false;
+  let serverIp       = '';   // loaded from /api/kodi/settings
+
+  // ── RPC helper ────────────────────────────────────────────────────────────
+  async function rpc(method, params = {}) {
+    const res = await fetch('/api/kodi/rpc', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ jsonrpc: '2.0', method, params, id: rpcId++ }),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message);
+    return data.result;
+  }
+
+  // ── Toast ─────────────────────────────────────────────────────────────────
+  let toastTimer;
+  function showToast(msg, duration = 3000) {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.remove('show'), duration);
+  }
+
+  // ── Time helpers ──────────────────────────────────────────────────────────
+  function fmtTime(t) {
+    if (!t) return '0:00:00';
+    const { hours = 0, minutes = 0, seconds = 0 } = t;
+    return `${hours}:${String(minutes).padStart(2,'0')}:${String(Math.floor(seconds)).padStart(2,'0')}`;
+  }
+  function toSecs(t) {
+    if (!t) return 0;
+    return (t.hours || 0) * 3600 + (t.minutes || 0) * 60 + (t.seconds || 0);
+  }
+
+  // ── Status poll ───────────────────────────────────────────────────────────
+  async function pollStatus() {
+    const pill = document.getElementById('statusPill');
+    const txt  = document.getElementById('statusText');
+    try {
+      await rpc('JSONRPC.Ping');
+      pill.className = 'status-pill online';
+      txt.textContent = 'Online';
+    } catch {
+      pill.className = 'status-pill offline';
+      txt.textContent = 'Offline';
+      setIdle();
+      return;
+    }
+
+    let players = [];
+    try { players = await rpc('Player.GetActivePlayers'); } catch {}
+
+    if (!players.length) {
+      activePlayerId = null;
+      isPlaying = false;
+      setIdle();
+      return;
+    }
+
+    activePlayerId = players[0].playerid;
+
+    const [item, props] = await Promise.all([
+      rpc('Player.GetItem',       { playerid: activePlayerId, properties: ['title', 'thumbnail', 'duration'] }),
+      rpc('Player.GetProperties', { playerid: activePlayerId, properties: ['time', 'totaltime', 'speed'] }),
+    ]);
+
+    isPlaying = props.speed !== 0;
+    document.getElementById('playPauseIcon').textContent  = isPlaying ? '⏸' : '▶';
+    document.getElementById('playPauseLabel').textContent = isPlaying ? 'Pause' : 'Play';
+
+    const title = item.item?.title || item.item?.label || 'Unbekannter Titel';
+    document.getElementById('npTitle').innerHTML =
+      `<span style="color:var(--text)">${escHtml(title)}</span>`;
+
+    const thumb = item.item?.thumbnail;
+    const img = document.getElementById('thumbImg');
+    const ph  = document.getElementById('thumbPlaceholder');
+    if (thumb) {
+      img.src = `/api/kodi/rpc-image?path=${encodeURIComponent(thumb)}`;
+      img.style.display = 'block';
+      ph.style.display  = 'none';
+    } else {
+      img.style.display = 'none';
+      ph.style.display  = '';
+    }
+
+    const elapsed = toSecs(props.time);
+    const total   = toSecs(props.totaltime);
+    document.getElementById('progressFill').style.width = total > 0 ? (elapsed / total * 100) + '%' : '0%';
+    document.getElementById('timeElapsed').textContent  = fmtTime(props.time);
+    document.getElementById('timeTotal').textContent    = fmtTime(props.totaltime);
+  }
+
+  function setIdle() {
+    document.getElementById('npTitle').innerHTML = '<span class="np-idle">Nichts läuft gerade</span>';
+    document.getElementById('progressFill').style.width = '0%';
+    document.getElementById('timeElapsed').textContent  = '0:00:00';
+    document.getElementById('timeTotal').textContent    = '0:00:00';
+    document.getElementById('thumbImg').style.display   = 'none';
+    document.getElementById('thumbPlaceholder').style.display = '';
+    document.getElementById('playPauseIcon').textContent  = '▶';
+    document.getElementById('playPauseLabel').textContent = 'Play / Pause';
+  }
+
+  // ── Playback controls ─────────────────────────────────────────────────────
+  async function playerPlayPause() {
+    if (activePlayerId === null) return;
+    try { await rpc('Player.PlayPause', { playerid: activePlayerId }); await pollStatus(); }
+    catch (e) { showToast('Fehler: ' + e.message); }
+  }
+  async function playerStop() {
+    if (activePlayerId === null) return;
+    try { await rpc('Player.Stop', { playerid: activePlayerId }); activePlayerId = null; setIdle(); }
+    catch (e) { showToast('Fehler: ' + e.message); }
+  }
+  async function playerGoTo(to) {
+    if (activePlayerId === null) return;
+    try { await rpc('Player.GoTo', { playerid: activePlayerId, to }); }
+    catch (e) { showToast('Fehler: ' + e.message); }
+  }
+
+  // ── Search ────────────────────────────────────────────────────────────────
+  let searchTimeout;
+  document.getElementById('searchInput').addEventListener('keydown', e => { if (e.key === 'Enter') doSearch(); });
+  document.getElementById('searchInput').addEventListener('input',   () => { clearTimeout(searchTimeout); searchTimeout = setTimeout(doSearch, 400); });
+
+  async function doSearch() {
+    const query = document.getElementById('searchInput').value.trim();
+    const list  = document.getElementById('resultsList');
+    if (!query) { list.innerHTML = ''; return; }
+    list.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:8px">Suche…</div>';
+    try {
+      const filter = { operator: 'contains', field: 'title', value: query };
+      const [mRes, sRes] = await Promise.all([
+        rpc('VideoLibrary.GetMovies',  { filter, properties: ['title', 'year'], limits: { end: 10 } }),
+        rpc('VideoLibrary.GetTVShows', { filter, properties: ['title', 'year'], limits: { end: 10 } }),
+      ]);
+      const results = [
+        ...(mRes?.movies  || []).map(m => ({ ...m, _type: 'movie' })),
+        ...(sRes?.tvshows || []).map(s => ({ ...s, _type: 'show'  })),
+      ];
+      if (!results.length) { list.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:8px">Keine Ergebnisse</div>'; return; }
+      list.innerHTML = results.map(r => `
+        <div class="result-item" onclick="openMedia(${r._type === 'movie' ? r.movieid : r.tvshowid}, '${r._type}')">
+          <span class="result-type ${r._type}">${r._type === 'movie' ? 'Film' : 'Serie'}</span>
+          <span class="result-name">${escHtml(r.title)}</span>
+          ${r.year ? `<span class="result-year">${r.year}</span>` : ''}
+        </div>`).join('');
+    } catch (e) {
+      list.innerHTML = `<div style="color:#f87171;font-size:13px;padding:8px">Fehler: ${escHtml(e.message)}</div>`;
+    }
+  }
+
+  function openMedia(id, type) {
+    showToast(`Öffne ${type === 'movie' ? 'Film' : 'Serie'} in Kodi…`);
+    const item = type === 'movie' ? { movieid: id } : { tvshowid: id };
+    rpc('Player.Open', { item }).catch(e => showToast('Fehler: ' + e.message));
+  }
+
+  // ── Action buttons ────────────────────────────────────────────────────────
+  function openKodiUI() {
+    if (!serverIp) {
+      showToast('⚙️ Bitte zuerst die Server-IP in den Einstellungen konfigurieren.');
+      openSettings();
+      return;
+    }
+    window.open(`http://${serverIp}:8080`, '_blank');
+  }
+
+  async function restartKodi() {
+    if (!confirm('Kodi wirklich neu starten?')) return;
+    try {
+      const res  = await fetch('/api/kodi/restart', { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Unbekannter Fehler');
+      showToast('Kodi wird neu gestartet…', 4000);
+    } catch (e) { showToast('Fehler: ' + e.message); }
+  }
+
+  // ── Settings panel ────────────────────────────────────────────────────────
+  function toggleSettings() {
+    const body     = document.getElementById('settingsBody');
+    const chevron  = document.getElementById('settingsChevron');
+    const isOpen   = body.classList.contains('open');
+    body.classList.toggle('open', !isOpen);
+    chevron.classList.toggle('open', !isOpen);
+  }
+
+  function openSettings() {
+    const body    = document.getElementById('settingsBody');
+    const chevron = document.getElementById('settingsChevron');
+    body.classList.add('open');
+    chevron.classList.add('open');
+    document.getElementById('settingsHeader').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function toggleRdKeyVisibility() {
+    const input = document.getElementById('cfgRdKey');
+    const btn   = document.getElementById('rdKeyToggle');
+    if (input.type === 'password') {
+      input.type  = 'text';
+      btn.textContent = '🙈';
+    } else {
+      input.type  = 'password';
+      btn.textContent = '👁';
+    }
+  }
+
+  async function loadSettings() {
+    try {
+      const res  = await fetch('/api/kodi/settings');
+      const data = await res.json();
+      serverIp = data.serverIp || '';
+      document.getElementById('cfgServerIp').value = data.serverIp || '';
+      document.getElementById('cfgRdKey').value    = data.rdApiKey || '';
+      const status = document.getElementById('settingsStatus');
+      if (!data.serverIp) {
+        status.className   = 'settings-status err';
+        status.textContent = 'Server-IP nicht konfiguriert';
+      } else {
+        status.className   = 'settings-status ok';
+        status.textContent = `IP: ${data.serverIp}`;
+      }
+    } catch (e) {
+      console.warn('Einstellungen konnten nicht geladen werden:', e.message);
+    }
+  }
+
+  async function saveSettings() {
+    const btn      = document.getElementById('saveSettingsBtn');
+    const status   = document.getElementById('settingsStatus');
+    const newIp    = document.getElementById('cfgServerIp').value.trim();
+    const newKey   = document.getElementById('cfgRdKey').value.trim();
+
+    btn.disabled     = true;
+    btn.textContent  = 'Speichere…';
+    status.className = 'settings-status';
+    status.textContent = '';
+
+    try {
+      const res  = await fetch('/api/kodi/settings', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ serverIp: newIp, rdApiKey: newKey }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Fehler beim Speichern');
+
+      serverIp = newIp;
+      status.className   = 'settings-status ok';
+      status.textContent = newIp ? `IP: ${newIp} · Kodi startet neu…` : 'Gespeichert · Kodi startet neu…';
+      showToast('Einstellungen gespeichert. Kodi wird neu gestartet…', 4000);
+    } catch (e) {
+      status.className   = 'settings-status err';
+      status.textContent = 'Fehler: ' + e.message;
+      showToast('Fehler: ' + e.message);
+    } finally {
+      btn.disabled    = false;
+      btn.textContent = 'Speichern & Kodi neu starten';
+    }
+  }
+
+  // ── Utility ───────────────────────────────────────────────────────────────
+  function escHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // ── Init ──────────────────────────────────────────────────────────────────
+  loadSettings();
+  pollStatus();
+  setInterval(pollStatus, 5000);
+</script>
+</body>
+</html>
