@@ -15,9 +15,10 @@ const sqlite3    = require('sqlite3').verbose();
 const bcrypt     = require('bcrypt');
 
 const app      = express();
+app.set('trust proxy', 1);
 const PORT     = process.env.PORT || 3000;
 const TECTONIC  = path.join(os.homedir(), '.local', 'bin', 'tectonic');
-const APP_SLUGS = ['latex-converter', 'latex-study', 'podcast-compressor', 'pet-meds', 'smart-home', 'vault', 'server-monitor', 'stremio'];
+const APP_SLUGS = ['latex-converter', 'latex-study', 'podcast-compressor', 'pet-meds', 'smart-home', 'vault', 'server-monitor', 'stremio', 'voice-assistant', 'smarthome-zentrale'];
 
 let petMedsLastUpdated = Date.now();
 
@@ -141,6 +142,16 @@ db.serialize(() => {
     updated_at TEXT    NOT NULL DEFAULT (datetime('now')),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
   )`);
+
+  db.run(`CREATE TABLE IF NOT EXISTS spotify_tokens (
+    user_id           INTEGER PRIMARY KEY,
+    access_token      TEXT    NOT NULL DEFAULT '',
+    refresh_token     TEXT    NOT NULL DEFAULT '',
+    expires_at        INTEGER NOT NULL DEFAULT 0,
+    client_id_enc     TEXT    NOT NULL DEFAULT '',
+    client_secret_enc TEXT    NOT NULL DEFAULT '',
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  )`);
 });
 
 // Migration: medication_schedules → user_id entfernen (globale Tabelle)
@@ -219,6 +230,91 @@ function vaultDecrypt(stored, userId) {
   const dec = crypto.createDecipheriv('aes-256-gcm', key, Buffer.from(ivHex, 'hex'));
   dec.setAuthTag(Buffer.from(tagHex, 'hex'));
   return dec.update(Buffer.from(encHex, 'hex')) + dec.final('utf8');
+}
+
+// ── Spotify Helpers ──────────────────────────────────────────────────────────
+const SPOTIFY_SCOPES = [
+  'user-read-playback-state', 'user-modify-playback-state',
+  'user-read-currently-playing', 'playlist-read-private',
+  'playlist-read-collaborative', 'streaming',
+].join(' ');
+const SPOTIFYD_CONF = path.join(os.homedir(), '.config', 'spotifyd', 'spotifyd.conf');
+
+function spDbGet(sql, params) {
+  return new Promise((res, rej) => db.get(sql, params, (e, r) => e ? rej(e) : res(r)));
+}
+function spDbRun(sql, params) {
+  return new Promise((res, rej) => db.run(sql, params, e => e ? rej(e) : res()));
+}
+
+async function getSpotifyTokens(userId) {
+  const row = await spDbGet('SELECT * FROM spotify_tokens WHERE user_id = ?', [userId]);
+  if (!row) return null;
+  try {
+    return {
+      accessToken:  row.access_token      ? vaultDecrypt(row.access_token,      userId) : '',
+      refreshToken: row.refresh_token     ? vaultDecrypt(row.refresh_token,     userId) : '',
+      expiresAt:    row.expires_at,
+      clientId:     row.client_id_enc     ? vaultDecrypt(row.client_id_enc,     userId) : '',
+      clientSecret: row.client_secret_enc ? vaultDecrypt(row.client_secret_enc, userId) : '',
+    };
+  } catch { return null; }
+}
+
+async function saveSpotifyTokens(userId, { accessToken, refreshToken, expiresAt, clientId, clientSecret } = {}) {
+  const existing = await spDbGet('SELECT * FROM spotify_tokens WHERE user_id = ?', [userId]);
+  const encAccess  = accessToken  !== undefined ? vaultEncrypt(accessToken,  userId) : (existing?.access_token      || '');
+  const encRefresh = refreshToken !== undefined ? vaultEncrypt(refreshToken, userId) : (existing?.refresh_token     || '');
+  const encId      = clientId     !== undefined ? vaultEncrypt(clientId,     userId) : (existing?.client_id_enc     || '');
+  const encSecret  = clientSecret !== undefined ? vaultEncrypt(clientSecret, userId) : (existing?.client_secret_enc || '');
+  const exp        = expiresAt    !== undefined ? expiresAt : (existing?.expires_at || 0);
+  await spDbRun(
+    `INSERT INTO spotify_tokens (user_id, access_token, refresh_token, expires_at, client_id_enc, client_secret_enc)
+     VALUES (?,?,?,?,?,?)
+     ON CONFLICT(user_id) DO UPDATE SET
+       access_token=excluded.access_token, refresh_token=excluded.refresh_token,
+       expires_at=excluded.expires_at, client_id_enc=excluded.client_id_enc,
+       client_secret_enc=excluded.client_secret_enc`,
+    [userId, encAccess, encRefresh, exp, encId, encSecret]);
+}
+
+async function refreshSpotifyToken(userId) {
+  const tokens = await getSpotifyTokens(userId);
+  if (!tokens?.refreshToken || !tokens?.clientId || !tokens?.clientSecret)
+    throw new Error('Keine Spotify-Refresh-Tokens vorhanden');
+  const r = await fetch('https://accounts.spotify.com/api/token', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'Authorization': 'Basic ' + Buffer.from(`${tokens.clientId}:${tokens.clientSecret}`).toString('base64'),
+    },
+    body: new URLSearchParams({ grant_type: 'refresh_token', refresh_token: tokens.refreshToken }),
+  });
+  if (!r.ok) throw new Error('Spotify Token Refresh: ' + r.status);
+  const data = await r.json();
+  await saveSpotifyTokens(userId, {
+    accessToken:  data.access_token,
+    refreshToken: data.refresh_token || tokens.refreshToken,
+    expiresAt:    Date.now() + data.expires_in * 1000,
+  });
+  return data.access_token;
+}
+
+async function spotifyFetch(userId, endpoint, opts = {}) {
+  let tokens = await getSpotifyTokens(userId);
+  if (!tokens?.accessToken) throw new Error('Spotify nicht verbunden');
+  if (Date.now() > tokens.expiresAt - 30_000)
+    tokens.accessToken = await refreshSpotifyToken(userId);
+  const doFetch = (tok) => fetch('https://api.spotify.com/v1' + endpoint, {
+    ...opts,
+    headers: { Authorization: 'Bearer ' + tok, 'Content-Type': 'application/json', ...(opts.headers || {}) },
+  });
+  let r = await doFetch(tokens.accessToken);
+  if (r.status === 401) {
+    tokens.accessToken = await refreshSpotifyToken(userId);
+    r = await doFetch(tokens.accessToken);
+  }
+  return r;
 }
 
 // PWA-Dateien öffentlich (kein Login nötig, damit iOS sie laden kann)
@@ -1581,6 +1677,374 @@ app.post('/api/stremio/restart', checkAuth, (req, res) => {
   exec('docker restart stremio-server', { timeout: 30000 }, (err, stdout, stderr) => {
     if (err) return res.status(500).json({ error: stderr || err.message });
     res.json({ ok: true });
+  });
+});
+
+// ── Voice Assistant ──────────────────────────────────────────────────────────
+app.use('/apps/voice-assistant', checkAuth, checkAppAccess('voice-assistant'),
+  express.static(path.join(__dirname, 'apps/voiceAssistant')));
+
+app.post('/apps/voice-assistant/api/chat', checkAuth, checkAppAccess('voice-assistant'), async (req, res) => {
+  const { message, history, haUrl, haToken, apiKey, assistantName, userName } = req.body;
+
+  if (!apiKey)  return res.status(400).json({ error: 'Kein Gemini API-Key angegeben.' });
+  if (!message) return res.status(400).json({ error: 'Keine Nachricht.' });
+
+  const genAI = new GoogleGenerativeAI(apiKey);
+
+  const haTools = [{
+    functionDeclarations: [
+      {
+        name: 'get_ha_states',
+        description: 'Alle Home Assistant Entities und deren Zustände abrufen. Verwende dies um verfügbare Geräte zu ermitteln.',
+        parameters: { type: 'object', properties: {} }
+      },
+      {
+        name: 'call_ha_service',
+        description: 'Home Assistant Service aufrufen um Geräte zu steuern (ein-/ausschalten, dimmen, Temperatur setzen, etc.)',
+        parameters: {
+          type: 'object',
+          properties: {
+            domain:          { type: 'string', description: 'Domain z.B. light, switch, climate, media_player, cover' },
+            service:         { type: 'string', description: 'Service z.B. turn_on, turn_off, toggle, set_temperature' },
+            entity_id:       { type: 'string', description: 'Entity ID z.B. light.wohnzimmer, switch.steckdose_tv' },
+            additional_data: { type: 'object', description: 'Optionale Zusatzdaten z.B. {"brightness": 128, "temperature": 21}' }
+          },
+          required: ['domain', 'service', 'entity_id']
+        }
+      },
+      {
+        name: 'get_ha_history',
+        description: 'Verlauf einer Home Assistant Entity für die letzten N Stunden abrufen',
+        parameters: {
+          type: 'object',
+          properties: {
+            entity_id: { type: 'string', description: 'Entity ID' },
+            hours:     { type: 'number', description: 'Stunden zurück (Standard 24)' }
+          },
+          required: ['entity_id']
+        }
+      }
+    ]
+  }];
+
+  const systemInstruction = `Du bist ${assistantName || 'Jarvis'}, ein freundlicher Heimassistent. Antworte immer auf Deutsch, kurz und präzise (maximal 2-3 Sätze). Du kannst Home Assistant steuern. Der Benutzer heisst ${userName || 'der Benutzer'}.`;
+
+  const model = genAI.getGenerativeModel({
+    model: 'gemini-3-flash-preview',
+    systemInstruction,
+    tools: (haUrl && haToken) ? haTools : undefined
+  });
+
+  let chatHistory = (history || []).slice(-10).map(h => ({
+    role: h.role === 'assistant' ? 'model' : h.role,
+    parts: [{ text: h.content }]
+  }));
+  while (chatHistory.length && chatHistory[0].role !== 'user') chatHistory.shift();
+
+  const chat = model.startChat({ history: chatHistory });
+
+  async function callHA(method, urlPath, body) {
+    if (!haUrl || !haToken) throw new Error('Home Assistant nicht konfiguriert');
+    const url  = haUrl.replace(/\/$/, '') + urlPath;
+    const opts = { method, headers: { Authorization: 'Bearer ' + haToken, 'Content-Type': 'application/json' } };
+    if (body) opts.body = JSON.stringify(body);
+    const r = await fetch(url, opts);
+    if (!r.ok) throw new Error('HA ' + r.status);
+    return r.json();
+  }
+
+  async function sendMsg(msg, attempt = 1) {
+    try {
+      return await chat.sendMessage(msg);
+    } catch (err) {
+      if ((err.status === 429 || String(err.message).includes('429')) && attempt < 3) {
+        await new Promise(r => setTimeout(r, 2000));
+        return sendMsg(msg, attempt + 1);
+      }
+      throw err;
+    }
+  }
+
+  try {
+    let result = await sendMsg(message);
+
+    let guard = 0;
+    while (result.response.functionCalls()?.length && guard++ < 5) {
+      const parts = [];
+      for (const call of result.response.functionCalls()) {
+        let response;
+        try {
+          if (call.name === 'get_ha_states') {
+            const states = await callHA('GET', '/api/states');
+            response = {
+              states: states.slice(0, 150).map(s => ({
+                entity_id: s.entity_id,
+                state:     s.state,
+                name:      s.attributes?.friendly_name
+              }))
+            };
+          } else if (call.name === 'call_ha_service') {
+            const { domain, service, entity_id, additional_data } = call.args;
+            await callHA('POST', `/api/services/${domain}/${service}`, { entity_id, ...(additional_data || {}) });
+            response = { success: true };
+          } else if (call.name === 'get_ha_history') {
+            const { entity_id, hours = 24 } = call.args;
+            const start = new Date(Date.now() - hours * 3_600_000).toISOString();
+            const data  = await callHA('GET', `/api/history/period/${start}?filter_entity_id=${entity_id}`);
+            response    = { history: (data[0] || []).slice(-30) };
+          } else {
+            response = { error: 'Unbekannte Funktion' };
+          }
+        } catch (err) {
+          response = { error: err.message };
+        }
+        parts.push({ functionResponse: { name: call.name, response } });
+      }
+      result = await sendMsg(parts);
+    }
+
+    res.json({ reply: result.response.text() });
+  } catch (err) {
+    console.error('[voice-assistant]', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── Smarthome Zentrale ───────────────────────────────────────────────────────
+app.use('/apps/smarthome-zentrale', checkAuth, checkAppAccess('smarthome-zentrale'),
+  express.static(path.join(__dirname, 'apps/smarthomeZentrale')));
+
+app.get('/apps/smarthome-zentrale/api/ha-states', checkAuth, checkAppAccess('smarthome-zentrale'), async (req, res) => {
+  const { haUrl, haToken } = req.query;
+  if (!haUrl || !haToken) return res.status(400).json({ error: 'haUrl und haToken erforderlich' });
+  try {
+    const r = await fetch(haUrl.replace(/\/$/, '') + '/api/states', {
+      headers: { Authorization: 'Bearer ' + haToken }
+    });
+    if (!r.ok) throw new Error('HA ' + r.status);
+    res.json(await r.json());
+  } catch (err) {
+    res.status(502).json({ error: err.message });
+  }
+});
+
+app.post('/apps/smarthome-zentrale/api/ha-service', checkAuth, checkAppAccess('smarthome-zentrale'), async (req, res) => {
+  const { haUrl, haToken, domain, service, data } = req.body;
+  if (!haUrl || !haToken || !domain || !service) return res.status(400).json({ error: 'Fehlende Parameter' });
+  try {
+    const r = await fetch(`${haUrl.replace(/\/$/, '')}/api/services/${domain}/${service}`, {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + haToken, 'Content-Type': 'application/json' },
+      body: JSON.stringify(data || {})
+    });
+    if (!r.ok) throw new Error('HA ' + r.status);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(502).json({ error: err.message });
+  }
+});
+
+// ── Spotify Routes (Smarthome Zentrale) ─────────────────────────────────────
+const SP_BASE = '/apps/smarthome-zentrale/api/spotify';
+const spAuth  = [checkAuth, checkAppAccess('smarthome-zentrale')];
+
+// Credentials: GET returns clientId + hasSecret + redirectUri + connected status
+app.get(SP_BASE + '/credentials', ...spAuth, async (req, res) => {
+  try {
+    const tokens = await getSpotifyTokens(req.session.userId);
+    const redirectUri = `${req.protocol}://${req.get('host')}/apps/smarthome-zentrale/api/spotify/callback`;
+    res.json({
+      clientId:    tokens?.clientId     || '',
+      hasSecret:   !!(tokens?.clientSecret),
+      redirectUri,
+      connected:   !!(tokens?.accessToken && tokens?.refreshToken),
+    });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// Credentials: POST saves clientId + optional clientSecret
+app.post(SP_BASE + '/credentials', ...spAuth, async (req, res) => {
+  const { clientId, clientSecret } = req.body;
+  if (!clientId) return res.status(400).json({ error: 'Client ID erforderlich' });
+  try {
+    const update = { clientId };
+    if (clientSecret) update.clientSecret = clientSecret;
+    await saveSpotifyTokens(req.session.userId, update);
+    res.json({ ok: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// OAuth login — redirect to Spotify
+app.get(SP_BASE + '/login', ...spAuth, async (req, res) => {
+  try {
+    const tokens = await getSpotifyTokens(req.session.userId);
+    if (!tokens?.clientId) return res.status(400).send('Spotify Client ID nicht konfiguriert');
+    const redirectUri = `${req.protocol}://${req.get('host')}/apps/smarthome-zentrale/api/spotify/callback`;
+    const params = new URLSearchParams({
+      client_id: tokens.clientId,
+      response_type: 'code',
+      redirect_uri: redirectUri,
+      scope: SPOTIFY_SCOPES,
+      state: req.session.id,
+    });
+    res.redirect('https://accounts.spotify.com/authorize?' + params.toString());
+  } catch (err) { res.status(500).send(err.message); }
+});
+
+// OAuth callback — exchange code for tokens
+app.get(SP_BASE + '/callback', checkAuth, async (req, res) => {
+  const { code, error } = req.query;
+  if (error) return res.redirect('/apps/smarthome-zentrale?spotify_error=' + encodeURIComponent(error));
+  if (!code) return res.status(400).send('Kein Code erhalten');
+  try {
+    const tokens = await getSpotifyTokens(req.session.userId);
+    if (!tokens?.clientId || !tokens?.clientSecret)
+      return res.status(400).send('Spotify-Credentials nicht konfiguriert');
+    const redirectUri = `${req.protocol}://${req.get('host')}/apps/smarthome-zentrale/api/spotify/callback`;
+    const r = await fetch('https://accounts.spotify.com/api/token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Authorization': 'Basic ' + Buffer.from(`${tokens.clientId}:${tokens.clientSecret}`).toString('base64'),
+      },
+      body: new URLSearchParams({ grant_type: 'authorization_code', code, redirect_uri: redirectUri }),
+    });
+    if (!r.ok) {
+      const txt = await r.text();
+      return res.redirect('/apps/smarthome-zentrale?spotify_error=' + encodeURIComponent(txt.slice(0, 200)));
+    }
+    const data = await r.json();
+    await saveSpotifyTokens(req.session.userId, {
+      accessToken:  data.access_token,
+      refreshToken: data.refresh_token,
+      expiresAt:    Date.now() + data.expires_in * 1000,
+    });
+    res.redirect('/apps/smarthome-zentrale?spotify_connected=1');
+  } catch (err) {
+    res.redirect('/apps/smarthome-zentrale?spotify_error=' + encodeURIComponent(err.message));
+  }
+});
+
+// Connection status
+app.get(SP_BASE + '/status', ...spAuth, async (req, res) => {
+  try {
+    const tokens = await getSpotifyTokens(req.session.userId);
+    res.json({ connected: !!(tokens?.accessToken && tokens?.refreshToken) });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// Disconnect (clear tokens, keep credentials)
+app.delete(SP_BASE + '/disconnect', ...spAuth, async (req, res) => {
+  try {
+    await spDbRun(
+      `UPDATE spotify_tokens SET access_token='', refresh_token='', expires_at=0 WHERE user_id=?`,
+      [req.session.userId]);
+    res.json({ ok: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// Current player state
+app.get(SP_BASE + '/player', ...spAuth, async (req, res) => {
+  try {
+    const r = await spotifyFetch(req.session.userId, '/me/player');
+    if (r.status === 204) return res.json(null);
+    if (!r.ok) return res.status(r.status).json({ error: 'Spotify ' + r.status });
+    res.json(await r.json());
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// Playback controls
+app.post(SP_BASE + '/player/play', ...spAuth, async (req, res) => {
+  try {
+    const body = req.body.context_uri ? JSON.stringify({ context_uri: req.body.context_uri })
+      : req.body.uri ? JSON.stringify({ uris: [req.body.uri] }) : undefined;
+    const r = await spotifyFetch(req.session.userId, '/me/player/play', { method: 'PUT', body });
+    res.json({ ok: r.ok || r.status === 204 });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+app.post(SP_BASE + '/player/pause', ...spAuth, async (req, res) => {
+  try {
+    await spotifyFetch(req.session.userId, '/me/player/pause', { method: 'PUT' });
+    res.json({ ok: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+app.post(SP_BASE + '/player/next', ...spAuth, async (req, res) => {
+  try {
+    await spotifyFetch(req.session.userId, '/me/player/next', { method: 'POST' });
+    res.json({ ok: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+app.post(SP_BASE + '/player/prev', ...spAuth, async (req, res) => {
+  try {
+    await spotifyFetch(req.session.userId, '/me/player/previous', { method: 'POST' });
+    res.json({ ok: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+app.post(SP_BASE + '/player/seek', ...spAuth, async (req, res) => {
+  try {
+    const pos = parseInt(req.body.position_ms) || 0;
+    await spotifyFetch(req.session.userId, `/me/player/seek?position_ms=${pos}`, { method: 'PUT' });
+    res.json({ ok: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+app.post(SP_BASE + '/player/volume', ...spAuth, async (req, res) => {
+  try {
+    const vol = Math.max(0, Math.min(100, parseInt(req.body.volume_percent) || 0));
+    await spotifyFetch(req.session.userId, `/me/player/volume?volume_percent=${vol}`, { method: 'PUT' });
+    res.json({ ok: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// Devices
+app.get(SP_BASE + '/devices', ...spAuth, async (req, res) => {
+  try {
+    const r = await spotifyFetch(req.session.userId, '/me/player/devices');
+    if (!r.ok) return res.status(r.status).json({ error: 'Spotify ' + r.status });
+    res.json(await r.json());
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+app.post(SP_BASE + '/player/transfer', ...spAuth, async (req, res) => {
+  try {
+    const { device_id } = req.body;
+    await spotifyFetch(req.session.userId, '/me/player', {
+      method: 'PUT',
+      body: JSON.stringify({ device_ids: [device_id], play: true }),
+    });
+    res.json({ ok: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// Playlists
+app.get(SP_BASE + '/playlists', ...spAuth, async (req, res) => {
+  try {
+    const r = await spotifyFetch(req.session.userId, '/me/playlists?limit=50');
+    if (!r.ok) return res.status(r.status).json({ error: 'Spotify ' + r.status });
+    res.json(await r.json());
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// Spotifyd control
+app.get('/apps/smarthome-zentrale/api/spotifyd/status', ...spAuth, (req, res) => {
+  exec('systemctl --user is-active spotifyd', (err, stdout) => {
+    const status = stdout.trim();
+    res.json({ active: status === 'active', status });
+  });
+});
+app.post('/apps/smarthome-zentrale/api/spotifyd/restart', ...spAuth, (req, res) => {
+  exec('systemctl --user restart spotifyd', err => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ ok: true });
+  });
+});
+app.post('/apps/smarthome-zentrale/api/spotifyd/config', ...spAuth, (req, res) => {
+  const { username, password, deviceName } = req.body;
+  if (!username || !password) return res.status(400).json({ error: 'Username und Passwort erforderlich' });
+  const name = (deviceName || 'Miniserver').replace(/[^a-zA-Z0-9 _-]/g, '').slice(0, 40) || 'Miniserver';
+  const conf = `[global]\nusername = "${username}"\npassword = "${password}"\nbackend = pulseaudio\ndevice_name = "${name}"\nbitrate = 320\nno_audio_cache = false\nvolume_normalisation = true\nnormalisation_pregain = -10\n`;
+  fs.writeFile(SPOTIFYD_CONF, conf, err => {
+    if (err) return res.status(500).json({ error: err.message });
+    exec('systemctl --user restart spotifyd', () => res.json({ ok: true }));
   });
 });
 

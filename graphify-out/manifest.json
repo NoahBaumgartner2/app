@@ -1,7 +1,7 @@
 {
   "/home/miniserver/development/dashboard/server.js": {
-    "mtime": 1778748778.6116765,
-    "hash": "0b101825c3e9a133b11c8026ebafb0c7"
+    "mtime": 1778755874.9574509,
+    "hash": "14691c358582c53b55fbe028ca8e666e"
   },
   "/home/miniserver/development/dashboard/public/sw.js": {
     "mtime": 1778329325.7067266,
@@ -52,8 +52,8 @@
     "hash": "da79aa9343cd2b362206f03762160abc"
   },
   "/home/miniserver/development/dashboard/public/index.html": {
-    "mtime": 1778602245.82156,
-    "hash": "c3002f7c9ffaf211b7e8ebd40d712fad"
+    "mtime": 1778752195.853995,
+    "hash": "c50ab212cad52381ecf10143fc3978f4"
   },
   "/home/miniserver/development/dashboard/latexConverter/README.md": {
     "mtime": 1778257479.5323355,
@@ -95,9 +95,17 @@
     "mtime": 1778400537.5960968,
     "hash": "471a6f46218dbac7380fe11d9b7dbbc6"
   },
+  "/home/miniserver/development/dashboard/apps/voiceAssistant/index.html": {
+    "mtime": 1778751108.3957443,
+    "hash": "c7362bf5c969d28a29495d54035c7574"
+  },
   "/home/miniserver/development/dashboard/apps/stremio/index.html": {
     "mtime": 1778603258.3816953,
     "hash": "f79aba8269c5f1adba8b111795b14bb5"
+  },
+  "/home/miniserver/development/dashboard/apps/smarthomeZentrale/index.html": {
+    "mtime": 1778755972.3008342,
+    "hash": "430ac5c226404e264379063cb08862d1"
   },
   "/home/miniserver/development/dashboard/apps/admin/index.html": {
     "mtime": 1778405264.583029,

@@ -1,0 +1,1255 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Smarthome Zentrale</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg-primary: #ffffff; --bg-secondary: #f6f5f0; --bg-tertiary: #efede6;
+  --bg-info: #e6f1fb; --bg-success: #eaf3de; --bg-warning: #faeeda;
+  --text-primary: #1a1a18; --text-secondary: #5f5e5a; --text-tertiary: #888780;
+  --text-info: #185fa5; --text-success: #3b6d11; --text-warning: #854f0b;
+  --border-light: rgba(26,26,24,0.12); --border-medium: rgba(26,26,24,0.25);
+  --radius-md: 8px; --radius-lg: 12px;
+  --topbar-h: 72px; --statusbar-h: 34px; --header-h: 106px;
+  --sidebar-w: 270px;
+  --c-wake: #185fa5; --c-cmd: #854f0b; --c-speak: #3b6d11;
+  /* Tile-on colours */
+  --light-on-bg: #fef3c7; --light-on-text: #78350f;
+  --switch-on-bg: #dcfce7; --switch-on-text: #14532d;
+  --scene-bg: #ede9fe; --scene-text: #4c1d95;
+  --media-play-bg: #e0f2fe; --media-play-text: #0c4a6e;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg-primary: #1e1e1c; --bg-secondary: #2a2a27; --bg-tertiary: #242422;
+    --bg-info: #0c2a4a; --bg-success: #122b06; --bg-warning: #3a200a;
+    --text-primary: #f0ede4; --text-secondary: #a8a69e; --text-tertiary: #6e6c66;
+    --text-info: #85b7eb; --text-success: #97c459; --text-warning: #ef9f27;
+    --border-light: rgba(240,237,228,0.12); --border-medium: rgba(240,237,228,0.25);
+    --light-on-bg: #3a2800; --light-on-text: #fde68a;
+    --switch-on-bg: #052e16; --switch-on-text: #86efac;
+    --scene-bg: #1e1040; --scene-text: #c4b5fd;
+    --media-play-bg: #0c2540; --media-play-text: #7dd3fc;
+  }
+}
+
+body { font-family: 'EB Garamond', Georgia, serif; background: var(--bg-tertiary); color: var(--text-primary); height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
+
+/* ─── TOP BAR ─── */
+.topbar {
+  height: var(--topbar-h); background: var(--bg-primary);
+  border-bottom: 0.5px solid var(--border-light);
+  display: flex; align-items: center; padding: 0 1rem; gap: 8px;
+  flex-shrink: 0; position: relative; z-index: 10;
+}
+.topbar-left  { display: flex; align-items: center; gap: 10px; }
+.topbar-center { flex: 1; text-align: center; }
+.topbar-right { display: flex; align-items: center; gap: 8px; }
+
+.back-link { font-size: 12px; font-family: 'JetBrains Mono', monospace; color: var(--text-secondary); text-decoration: none; white-space: nowrap; }
+.back-link:hover { color: var(--text-primary); }
+
+.clock { font-size: 30px; font-weight: 500; letter-spacing: -1px; line-height: 1; }
+.clock-date { font-size: 13px; color: var(--text-secondary); font-style: italic; }
+
+.weather-widget { display: flex; align-items: center; gap: 6px; font-size: 15px; }
+.weather-icon { font-size: 22px; }
+.weather-temp { font-weight: 500; }
+.weather-wind { font-size: 11px; font-family: 'JetBrains Mono', monospace; color: var(--text-tertiary); }
+
+.icon-btn {
+  background: none; border: 0.5px solid var(--border-light); border-radius: var(--radius-md);
+  padding: 7px 10px; cursor: pointer; color: var(--text-secondary); font-size: 18px;
+  transition: background 0.15s; display: flex; align-items: center; line-height: 1;
+}
+.icon-btn:hover { background: var(--bg-secondary); color: var(--text-primary); }
+
+.alloff-btn {
+  padding: 7px 12px; font-family: 'EB Garamond', serif; font-size: 15px;
+  background: var(--bg-secondary); color: var(--text-secondary);
+  border: 0.5px solid var(--border-light); border-radius: var(--radius-md);
+  cursor: pointer; display: flex; align-items: center; gap: 6px;
+  transition: background 0.15s; white-space: nowrap;
+}
+.alloff-btn:hover { background: var(--bg-warning); color: var(--text-warning); }
+
+/* ─── STATUS BAR ─── */
+.statusbar {
+  height: var(--statusbar-h); background: var(--bg-secondary);
+  border-bottom: 0.5px solid var(--border-light);
+  display: flex; align-items: center; padding: 0 1rem; gap: 12px;
+  font-size: 12px; font-family: 'JetBrains Mono', monospace; flex-shrink: 0;
+}
+.s-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--border-medium); flex-shrink: 0; }
+.s-dot.ok  { background: #3b6d11; }
+.s-dot.err { background: #a32d2d; }
+.s-dot.loading { background: #185fa5; animation: pulse 1s ease-in-out infinite; }
+.s-text { color: var(--text-secondary); }
+.s-sep { color: var(--border-medium); }
+.s-time { color: var(--text-tertiary); margin-left: auto; }
+
+/* ─── LAYOUT ─── */
+.app-layout {
+  flex: 1; display: grid;
+  grid-template-columns: 1fr var(--sidebar-w);
+  height: calc(100vh - var(--header-h));
+  overflow: hidden;
+}
+@media (max-width: 900px) {
+  .app-layout { grid-template-columns: 1fr; }
+  .voice-sidebar { display: none; position: fixed; bottom: 0; left: 0; right: 0; height: 55vh; z-index: 30; border-left: none; border-top: 0.5px solid var(--border-light); border-radius: var(--radius-lg) var(--radius-lg) 0 0; }
+  .voice-sidebar.mobile-open { display: flex; }
+  .voice-fab { display: flex !important; }
+}
+
+/* ─── TILE AREA ─── */
+.tile-area { overflow-y: auto; padding: 12px; }
+
+.state-overlay { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; height: 60vh; color: var(--text-tertiary); font-style: italic; font-size: 16px; text-align: center; }
+.state-overlay i { font-size: 48px; }
+.action-btn { padding: 9px 18px; font-family: 'EB Garamond', serif; font-size: 16px; background: var(--bg-secondary); color: var(--text-secondary); border: 0.5px solid var(--border-medium); border-radius: var(--radius-md); cursor: pointer; transition: background 0.15s; }
+.action-btn.primary { background: var(--text-primary); color: var(--bg-primary); border-color: transparent; }
+.action-btn.primary:hover { opacity: 0.82; }
+
+/* ─── SECTIONS ─── */
+.tile-section { margin-bottom: 16px; }
+.section-label { font-size: 11px; font-family: 'JetBrains Mono', monospace; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; padding-left: 2px; }
+.section-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(175px, 1fr)); gap: 10px; }
+@media (max-width: 500px) { .section-tiles { grid-template-columns: repeat(2, 1fr); } }
+
+/* ─── TILES ─── */
+.tile {
+  background: var(--bg-primary); border: 0.5px solid var(--border-light);
+  border-radius: var(--radius-lg); padding: 14px 12px; min-height: 100px;
+  cursor: pointer; transition: transform 0.12s, box-shadow 0.12s, background 0.25s, border-color 0.25s;
+  user-select: none; position: relative; display: flex; flex-direction: column; gap: 6px;
+}
+.tile:hover:not(.tile-unavailable) { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(0,0,0,0.1); }
+.tile:active:not(.tile-unavailable) { transform: scale(0.98); }
+.tile-unavailable { opacity: 0.4; pointer-events: none; }
+
+/* Light on */
+.tile-light.tile-on { background: var(--light-on-bg); border-color: transparent; }
+.tile-light.tile-on .tile-name, .tile-light.tile-on .tile-state, .tile-light.tile-on .tile-icon { color: var(--light-on-text); }
+/* Switch/input_boolean on */
+.tile-switch.tile-on, .tile-input_boolean.tile-on { background: var(--switch-on-bg); border-color: transparent; }
+.tile-switch.tile-on .tile-name, .tile-switch.tile-on .tile-state,
+.tile-input_boolean.tile-on .tile-name, .tile-input_boolean.tile-on .tile-state { color: var(--switch-on-text); }
+/* Scene */
+.tile-scene { background: var(--scene-bg); border-color: transparent; cursor: pointer; }
+.tile-scene .tile-name, .tile-scene .tile-state, .tile-scene .tile-icon { color: var(--scene-text); }
+/* Media playing */
+.tile-media_player.tile-on { background: var(--media-play-bg); border-color: transparent; }
+.tile-media_player.tile-on .tile-name { color: var(--media-play-text); }
+/* Sensor warning */
+.tile-sensor.sensor-warn, .tile-binary_sensor.sensor-warn { background: var(--bg-warning); }
+
+.tile-header { display: flex; align-items: center; gap: 8px; }
+.tile-icon { font-size: 20px; color: var(--text-tertiary); flex-shrink: 0; }
+.tile-name { font-size: 13px; font-weight: 500; line-height: 1.2; color: var(--text-secondary); }
+.tile-state { font-size: 22px; font-weight: 500; margin-top: 2px; }
+.tile-sub { font-size: 12px; color: var(--text-tertiary); font-family: 'JetBrains Mono', monospace; }
+
+/* Sliders */
+.tile-slider {
+  width: 100%; height: 5px; margin-top: 6px; cursor: pointer;
+  accent-color: var(--text-warning); border-radius: 3px;
+}
+
+/* Climate */
+.climate-row { display: flex; align-items: center; justify-content: space-between; margin-top: 4px; }
+.climate-cur { font-size: 26px; font-weight: 500; }
+.climate-tgt-ctrl { display: flex; align-items: center; gap: 6px; }
+.temp-btn {
+  width: 34px; height: 34px; border-radius: 50%; border: 0.5px solid var(--border-medium);
+  background: var(--bg-secondary); cursor: pointer; font-size: 20px; line-height: 1;
+  display: flex; align-items: center; justify-content: center; transition: background 0.15s;
+}
+.temp-btn:hover { background: var(--bg-tertiary); }
+.climate-tgt-val { font-size: 18px; font-weight: 500; min-width: 40px; text-align: center; }
+.heating-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-family: 'JetBrains Mono', monospace; color: var(--text-warning); margin-top: 4px; }
+
+/* Media */
+.media-info { min-height: 28px; }
+.media-title { font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.media-controls { display: flex; gap: 6px; margin-top: 6px; }
+.media-btn {
+  flex: 1; height: 36px; border: 0.5px solid var(--border-light); border-radius: var(--radius-md);
+  background: var(--bg-secondary); cursor: pointer; font-size: 16px; color: var(--text-secondary);
+  display: flex; align-items: center; justify-content: center; transition: background 0.15s;
+}
+.media-btn:hover { background: var(--bg-tertiary); }
+.media-btn.play { background: var(--text-primary); color: var(--bg-primary); border-color: transparent; }
+
+/* Sensor */
+.sensor-val { display: flex; align-items: baseline; gap: 4px; }
+.sensor-unit { font-size: 14px; color: var(--text-tertiary); }
+
+/* Drag & Drop */
+.tile.dragging { opacity: 0.45; box-shadow: 0 8px 24px rgba(0,0,0,0.2); }
+.tile.drag-over { outline: 2px dashed var(--text-info); outline-offset: 2px; }
+
+/* ─── VOICE SIDEBAR ─── */
+.voice-sidebar {
+  background: var(--bg-primary); border-left: 0.5px solid var(--border-light);
+  display: flex; flex-direction: column; padding: 14px 12px; gap: 10px;
+  overflow-y: auto;
+}
+.sidebar-title { font-size: 11px; font-family: 'JetBrains Mono', monospace; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 1px; display: flex; align-items: center; gap: 6px; }
+
+.voice-mic-wrap { position: relative; width: 90px; height: 90px; display: flex; align-items: center; justify-content: center; margin: 4px auto; }
+.v-pulse { position: absolute; width: 80px; height: 80px; top: 50%; left: 50%; border-radius: 50%; border: 2px solid transparent; opacity: 0; pointer-events: none; }
+.voice-mic-btn {
+  position: relative; z-index: 2; width: 80px; height: 80px; border-radius: 50%;
+  border: 2px solid var(--border-medium); background: var(--bg-secondary);
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  font-size: 30px; color: var(--text-tertiary); transition: all 0.3s; outline: none;
+}
+.voice-mic-btn:hover { background: var(--bg-tertiary); transform: scale(1.04); }
+
+/* Voice states */
+.vwrap-wake    .voice-mic-btn { color: var(--c-wake); border-color: var(--c-wake); }
+.vwrap-cmd     .voice-mic-btn { color: var(--c-cmd);  border-color: var(--c-cmd); }
+.vwrap-speak   .voice-mic-btn { color: var(--c-speak); border-color: var(--c-speak); }
+
+@keyframes v-ring-wake  { 0%{transform:translate(-50%,-50%) scale(1);opacity:.7}  100%{transform:translate(-50%,-50%) scale(1.65);opacity:0} }
+@keyframes v-ring-cmd   { 0%{transform:translate(-50%,-50%) scale(1);opacity:.85} 100%{transform:translate(-50%,-50%) scale(1.7);opacity:0} }
+@keyframes v-ring-speak { 0%{transform:translate(-50%,-50%) scale(1);opacity:.75} 100%{transform:translate(-50%,-50%) scale(1.75);opacity:0} }
+
+.vwrap-wake  .v-pulse { border-color: var(--c-wake);  animation: v-ring-wake  2s   ease-out infinite; }
+.vwrap-cmd   .v-pulse { border-color: var(--c-cmd);   animation: v-ring-cmd   1.1s ease-out infinite; }
+.vwrap-speak .v-pulse { border-color: var(--c-speak); animation: v-ring-speak 1s   ease-out infinite; }
+.v-pulse:nth-child(2) { animation-delay: .38s !important; }
+
+.voice-status { font-size: 14px; color: var(--text-secondary); text-align: center; font-style: italic; }
+
+.voice-history { flex: 1; display: flex; flex-direction: column; gap: 6px; overflow-y: auto; min-height: 0; }
+.vmsg { font-size: 13px; padding: 7px 10px; border-radius: var(--radius-md); line-height: 1.4; }
+.vmsg-user      { background: var(--bg-secondary); }
+.vmsg-assistant { background: var(--bg-info); color: var(--text-info); }
+.vmsg-system    { color: var(--text-tertiary); font-family: 'JetBrains Mono', monospace; font-size: 11px; }
+.vmeta { display: block; font-size: 10px; font-family: 'JetBrains Mono', monospace; color: var(--text-tertiary); margin-bottom: 3px; }
+
+/* ─── SETTINGS MODAL ─── */
+.modal { position: fixed; inset: 0; background: rgba(0,0,0,.45); display: flex; align-items: center; justify-content: center; z-index: 100; padding: 16px; }
+.modal.hidden { display: none; }
+.modal-box { background: var(--bg-primary); border-radius: var(--radius-lg); padding: 22px 24px; max-width: 500px; width: 100%; max-height: 90vh; overflow-y: auto; }
+.modal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+.modal-head h2 { font-size: 20px; font-weight: 500; }
+.cfg-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 16px; }
+@media (max-width: 480px) { .cfg-grid { grid-template-columns: 1fr; } }
+.field-label { display: block; font-size: 11px; font-family: 'JetBrains Mono', monospace; color: var(--text-tertiary); letter-spacing: .5px; text-transform: uppercase; margin-bottom: 4px; }
+.field-input { width: 100%; padding: 8px 10px; font-family: 'EB Garamond', serif; font-size: 15px; background: var(--bg-secondary); color: var(--text-primary); border: 0.5px solid var(--border-light); border-radius: var(--radius-md); outline: none; transition: border-color .15s; }
+.field-input:focus { border-color: var(--border-medium); }
+.save-btn { width: 100%; padding: 10px; font-family: 'EB Garamond', serif; font-size: 17px; background: var(--text-primary); color: var(--bg-primary); border: none; border-radius: var(--radius-md); cursor: pointer; transition: opacity .15s; margin-top: 14px; }
+.save-btn:hover { opacity: .82; }
+
+/* ─── TOAST ─── */
+.toast { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); background: var(--text-primary); color: var(--bg-primary); padding: 9px 20px; border-radius: 20px; font-family: 'JetBrains Mono', monospace; font-size: 13px; z-index: 200; transition: opacity .3s; white-space: nowrap; }
+.toast.hidden { opacity: 0; pointer-events: none; }
+
+/* ─── FAB (mobile voice) ─── */
+.voice-fab { display: none; position: fixed; bottom: 20px; right: 20px; width: 58px; height: 58px; border-radius: 50%; background: var(--text-primary); color: var(--bg-primary); border: none; cursor: pointer; font-size: 24px; align-items: center; justify-content: center; box-shadow: 0 4px 20px rgba(0,0,0,.25); z-index: 20; }
+
+/* ─── ANIMATIONS ─── */
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.35} }
+@keyframes spin { to{transform:rotate(360deg)} }
+.spin { display: inline-block; animation: spin .8s linear infinite; }
+
+/* ─── SPOTIFY PLAYER BAR ─── */
+.sp-bar { position: fixed; bottom: 0; left: 0; right: 0; height: 68px; background: var(--bg-primary); border-top: 0.5px solid var(--border-light); display: flex; align-items: center; padding: 0 14px; gap: 14px; z-index: 50; }
+.sp-bar.hidden { display: none !important; }
+body.sp-playing .app-layout { padding-bottom: 68px; }
+.sp-art { width: 44px; height: 44px; border-radius: 4px; object-fit: cover; flex-shrink: 0; background: var(--bg-tertiary); }
+.sp-art[src=""] { display: none; }
+.sp-track { display: flex; align-items: center; gap: 10px; width: 190px; flex-shrink: 0; overflow: hidden; }
+.sp-meta { overflow: hidden; }
+.sp-title { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sp-artist { font-size: 12px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-style: italic; }
+.sp-controls { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
+.sp-btn { background: none; border: none; cursor: pointer; color: var(--text-primary); padding: 6px 8px; border-radius: 6px; font-size: 18px; display: flex; align-items: center; transition: background .12s; }
+.sp-btn:hover { background: var(--bg-secondary); }
+.sp-btn.big { font-size: 22px; }
+.sp-progress-wrap { flex: 1; display: flex; align-items: center; gap: 6px; min-width: 80px; }
+.sp-progress, .sp-vol { -webkit-appearance: none; appearance: none; height: 3px; border-radius: 2px; background: var(--bg-tertiary); outline: none; cursor: pointer; }
+.sp-progress { flex: 1; }
+.sp-progress::-webkit-slider-thumb, .sp-vol::-webkit-slider-thumb { -webkit-appearance: none; width: 11px; height: 11px; border-radius: 50%; background: var(--text-primary); cursor: pointer; }
+.sp-time { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-secondary); flex-shrink: 0; min-width: 30px; }
+.sp-vol-wrap { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.sp-vol { width: 72px; }
+.sp-extra { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
+.sp-device-wrap, .sp-pl-wrap { position: relative; }
+.sp-dropdown { position: absolute; bottom: calc(100% + 6px); right: 0; background: var(--bg-primary); border: 0.5px solid var(--border-light); border-radius: var(--radius-md); min-width: 180px; max-height: 240px; overflow-y: auto; z-index: 60; box-shadow: 0 4px 20px rgba(0,0,0,.18); }
+.sp-dropdown.hidden { display: none; }
+.sp-drop-item { padding: 9px 12px; cursor: pointer; font-size: 13px; display: flex; align-items: center; gap: 8px; border-bottom: 0.5px solid var(--border-light); }
+.sp-drop-item:last-child { border-bottom: none; }
+.sp-drop-item:hover { background: var(--bg-secondary); }
+.sp-drop-item.active { color: var(--text-success); }
+/* Spotify settings section */
+.sp-section { border-top: 0.5px solid var(--border-light); margin-top: 20px; padding-top: 16px; }
+.sp-section h3 { font-family: 'EB Garamond', serif; font-size: 15px; font-weight: 500; margin-bottom: 12px; }
+.sp-section-btns { display: flex; gap: 8px; margin-top: 10px; }
+.sp-section-btns .save-btn { flex: 1; margin-top: 0; }
+.sp-section-btns .save-btn.icon-only { flex: 0 0 44px; }
+.sp-redirect { font-family: 'JetBrains Mono', monospace; font-size: 11px; opacity: .75; cursor: default; }
+@media (max-width: 600px) {
+  .sp-vol-wrap { display: none; }
+  .sp-track { width: 130px; }
+}
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<header class="topbar">
+  <div class="topbar-left">
+    <a href="/" class="back-link">← Dashboard</a>
+    <button class="alloff-btn" onclick="allLightsOff()">
+      <i class="ti ti-bulb-off" style="font-size:16px"></i> Alle Lichter aus
+    </button>
+  </div>
+  <div class="topbar-center">
+    <div class="clock" id="clock">--:--</div>
+    <div class="clock-date" id="clockDate"></div>
+  </div>
+  <div class="topbar-right">
+    <div class="weather-widget" id="weatherWidget" title="Wetter">
+      <span class="weather-icon" id="wIcon">🌡️</span>
+      <span class="weather-temp" id="wTemp">--°C</span>
+      <span class="weather-wind" id="wWind"></span>
+    </div>
+    <button class="icon-btn" onclick="openSettings()" title="Einstellungen"><i class="ti ti-settings"></i></button>
+  </div>
+</header>
+
+<!-- STATUS BAR -->
+<div class="statusbar">
+  <div class="s-dot" id="haDot"></div>
+  <span class="s-text" id="haText">Nicht verbunden</span>
+  <span class="s-sep">·</span>
+  <span class="s-text" id="voiceStateBar">Assistent inaktiv</span>
+  <span class="s-time" id="lastUpd"></span>
+</div>
+
+<!-- LAYOUT -->
+<div class="app-layout">
+
+  <!-- TILE AREA -->
+  <main class="tile-area">
+    <div class="state-overlay" id="loadingOverlay">
+      <i class="ti ti-loader-2 spin"></i>
+      <span>Verbinde mit Home Assistant…</span>
+    </div>
+    <div class="state-overlay" id="noConfigOverlay" style="display:none">
+      <i class="ti ti-home-off"></i>
+      <span>Home Assistant URL und Token konfigurieren</span>
+      <button class="action-btn primary" onclick="openSettings()"><i class="ti ti-settings" style="vertical-align:-2px;margin-right:6px"></i>Einstellungen öffnen</button>
+    </div>
+    <div id="tileGrid" style="display:none"></div>
+  </main>
+
+  <!-- VOICE SIDEBAR -->
+  <aside class="voice-sidebar" id="voiceSidebar">
+    <div class="sidebar-title"><i class="ti ti-robot"></i> Sprachassistent</div>
+    <div class="voice-mic-wrap" id="vWrap">
+      <div class="v-pulse"></div>
+      <div class="v-pulse"></div>
+      <button class="voice-mic-btn" id="vBtn" onclick="toggleVoice()">
+        <i class="ti ti-microphone" id="vIcon"></i>
+      </button>
+    </div>
+    <p class="voice-status" id="vStatus">Tippen zum Starten</p>
+    <div class="voice-history" id="vHistory"></div>
+  </aside>
+
+</div>
+
+<!-- SETTINGS MODAL -->
+<div class="modal hidden" id="settingsModal" onclick="if(event.target===this)closeSettings()">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h2>Einstellungen</h2>
+      <button class="icon-btn" onclick="closeSettings()"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="cfg-grid">
+      <div style="grid-column:1/-1">
+        <label class="field-label">Home Assistant URL</label>
+        <input class="field-input" id="cfgHaUrl" type="text" placeholder="http://homeassistant.local:8123">
+      </div>
+      <div style="grid-column:1/-1">
+        <label class="field-label">HA Long-Lived Access Token</label>
+        <input class="field-input" id="cfgHaToken" type="password" placeholder="eyJ0eXAiOiJKV1Qi…" autocomplete="off">
+      </div>
+      <div>
+        <label class="field-label">Assistent Name</label>
+        <input class="field-input" id="cfgAssName" type="text" placeholder="Jarvis">
+      </div>
+      <div>
+        <label class="field-label">Dein Name</label>
+        <input class="field-input" id="cfgUserName" type="text" placeholder="Noah">
+      </div>
+      <div style="grid-column:1/-1">
+        <label class="field-label">Gemini API Key</label>
+        <input class="field-input" id="cfgGemini" type="password" placeholder="AIza…" autocomplete="off">
+      </div>
+      <div>
+        <label class="field-label">Breitengrad</label>
+        <input class="field-input" id="cfgLat" type="text" placeholder="47.37">
+      </div>
+      <div>
+        <label class="field-label">Längengrad</label>
+        <input class="field-input" id="cfgLon" type="text" placeholder="8.55">
+      </div>
+    </div>
+    <button class="save-btn" onclick="saveAndConnect()">
+      <i class="ti ti-plug" style="vertical-align:-2px;margin-right:8px"></i>Speichern &amp; Verbinden
+    </button>
+
+    <!-- Spotify Section -->
+    <div class="sp-section">
+      <h3><i class="ti ti-brand-spotify" style="vertical-align:-2px;margin-right:6px"></i>Spotify</h3>
+      <div class="cfg-grid">
+        <div>
+          <label class="field-label">Client ID</label>
+          <input class="field-input" id="cfgSpClientId" type="text" placeholder="abc123…" autocomplete="off">
+        </div>
+        <div>
+          <label class="field-label">Client Secret</label>
+          <input class="field-input" id="cfgSpClientSecret" type="password" placeholder="••••••" autocomplete="off">
+        </div>
+        <div style="grid-column:1/-1">
+          <label class="field-label">Redirect URI (in Spotify Developer Dashboard eintragen)</label>
+          <input class="field-input sp-redirect" id="cfgSpRedirect" type="text" readonly>
+        </div>
+      </div>
+      <button class="save-btn" style="margin-top:10px" onclick="saveSpotifyCredentials()">
+        <i class="ti ti-key" style="vertical-align:-2px;margin-right:8px"></i>Zugangsdaten speichern
+      </button>
+      <button id="spConnectBtn" class="save-btn" style="margin-top:8px;background:var(--bg-success);color:var(--text-success);display:none" onclick="connectSpotify()">
+        <i class="ti ti-brand-spotify" style="vertical-align:-2px;margin-right:8px"></i>Mit Spotify verbinden
+      </button>
+      <button id="spDisconnectBtn" class="save-btn" style="margin-top:8px;background:transparent;color:var(--text-secondary);border:0.5px solid var(--border-medium);display:none" onclick="disconnectSpotify()">
+        <i class="ti ti-brand-spotify" style="vertical-align:-2px;margin-right:8px"></i>Verbunden ✓ — Trennen
+      </button>
+    </div>
+
+    <!-- Spotifyd Section -->
+    <div class="sp-section">
+      <h3><i class="ti ti-device-speaker" style="vertical-align:-2px;margin-right:6px"></i>Spotifyd (Spotify Connect)</h3>
+      <div class="cfg-grid">
+        <div>
+          <label class="field-label">Spotify Benutzername</label>
+          <input class="field-input" id="cfgSpdUser" type="text" placeholder="nutzername" autocomplete="off">
+        </div>
+        <div>
+          <label class="field-label">Spotify Passwort</label>
+          <input class="field-input" id="cfgSpdPass" type="password" placeholder="••••••" autocomplete="off">
+        </div>
+        <div style="grid-column:1/-1">
+          <label class="field-label">Gerätename (sichtbar in Spotify)</label>
+          <input class="field-input" id="cfgSpdDevice" type="text" placeholder="Miniserver">
+        </div>
+      </div>
+      <div class="sp-section-btns">
+        <button class="save-btn" onclick="saveSpotifydConfig()">
+          <i class="ti ti-refresh" style="vertical-align:-2px;margin-right:8px"></i>Konfigurieren &amp; neu starten
+        </button>
+        <button class="save-btn icon-only" title="Spotifyd Status prüfen" onclick="checkSpotifydStatus()">
+          <i class="ti ti-info-circle"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast hidden" id="toast"></div>
+
+<!-- SPOTIFY PLAYER BAR -->
+<div class="sp-bar hidden" id="spBar">
+  <div class="sp-track">
+    <img class="sp-art" id="spArt" src="" alt="">
+    <div class="sp-meta">
+      <div class="sp-title" id="spTitle">—</div>
+      <div class="sp-artist" id="spArtist">—</div>
+    </div>
+  </div>
+  <div class="sp-controls">
+    <button class="sp-btn" onclick="spAction('prev')" title="Vorheriger Titel"><i class="ti ti-player-skip-back"></i></button>
+    <button class="sp-btn big" id="spPlayBtn" onclick="spTogglePlay()" title="Play / Pause"><i class="ti ti-player-play" id="spPlayIcon"></i></button>
+    <button class="sp-btn" onclick="spAction('next')" title="Nächster Titel"><i class="ti ti-player-skip-forward"></i></button>
+  </div>
+  <div class="sp-progress-wrap">
+    <span class="sp-time" id="spPos">0:00</span>
+    <input class="sp-progress" id="spProgress" type="range" min="0" max="1000" value="0" oninput="spSeekInput(this.value)">
+    <span class="sp-time" id="spDur">0:00</span>
+  </div>
+  <div class="sp-vol-wrap">
+    <i class="ti ti-volume" style="font-size:14px;color:var(--text-secondary)"></i>
+    <input class="sp-vol" id="spVol" type="range" min="0" max="100" value="50" oninput="spVolumeInput(this.value)">
+  </div>
+  <div class="sp-extra">
+    <div class="sp-device-wrap">
+      <button class="sp-btn" onclick="toggleSpDevices()" title="Gerät wählen"><i class="ti ti-device-speaker"></i></button>
+      <div class="sp-dropdown hidden" id="spDevList"></div>
+    </div>
+    <div class="sp-pl-wrap">
+      <button class="sp-btn" onclick="toggleSpPlaylists()" title="Playlists"><i class="ti ti-playlist"></i></button>
+      <div class="sp-dropdown hidden" id="spPlList"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Mobile FAB -->
+<button class="voice-fab" id="voiceFab" onclick="toggleVoiceSidebar()">
+  <i class="ti ti-microphone"></i>
+</button>
+
+<script>
+'use strict';
+
+// ── Constants ────────────────────────────────────────────────────────────────
+const HA_DOMAINS   = ['light','switch','climate','sensor','binary_sensor','media_player','scene','input_boolean'];
+const DOMAIN_ORDER = ['scene','light','switch','input_boolean','climate','media_player','sensor','binary_sensor'];
+const DOMAIN_LABEL = { scene:'Szenen', light:'Lichter', switch:'Steckdosen', input_boolean:'Schalter', climate:'Klimaanlage', media_player:'Medien', sensor:'Sensoren', binary_sensor:'Binärsensoren' };
+const DOMAIN_ICON  = { light:'ti-bulb', switch:'ti-plug', input_boolean:'ti-toggle-right', climate:'ti-temperature', sensor:'ti-chart-line', binary_sensor:'ti-activity', media_player:'ti-device-speaker', scene:'ti-sparkles' };
+const POLL_MS      = 10_000;
+const WEATHER_MS   = 30 * 60_000;
+const WEATHER_ICONS = { 0:'☀️',1:'🌤️',2:'⛅',3:'☁️',45:'🌫️',48:'🌫️',51:'🌦️',53:'🌦️',55:'🌧️',61:'🌧️',63:'🌧️',65:'🌧️',71:'❄️',73:'❄️',75:'❄️',77:'🌨️',80:'🌧️',81:'🌧️',82:'⛈️',95:'⛈️',96:'⛈️',99:'⛈️' };
+
+// ── State ────────────────────────────────────────────────────────────────────
+let cfg = { haUrl:'', haToken:'', assName:'Jarvis', userName:'', gemini:'', lat:'47.37', lon:'8.55' };
+let haStates   = {};    // entity_id → entity
+let tileOrder  = [];    // ordered entity_ids
+let pollTimer  = null;
+let dragSrc    = null;
+let voiceActive = false;
+let vState      = 'idle';
+let wakeRec     = null, cmdRec = null, cmdTimer = null;
+
+// ── Settings ─────────────────────────────────────────────────────────────────
+function loadCfg() {
+  try { cfg = { ...cfg, ...JSON.parse(localStorage.getItem('sh-zentrale') || '{}') }; } catch {}
+  document.getElementById('cfgHaUrl').value    = cfg.haUrl;
+  document.getElementById('cfgHaToken').value  = cfg.haToken;
+  document.getElementById('cfgAssName').value  = cfg.assName;
+  document.getElementById('cfgUserName').value = cfg.userName;
+  document.getElementById('cfgGemini').value   = cfg.gemini;
+  document.getElementById('cfgLat').value      = cfg.lat;
+  document.getElementById('cfgLon').value      = cfg.lon;
+}
+function saveCfg() {
+  cfg.haUrl   = document.getElementById('cfgHaUrl').value.trim();
+  cfg.haToken = document.getElementById('cfgHaToken').value.trim();
+  cfg.assName = document.getElementById('cfgAssName').value.trim() || 'Jarvis';
+  cfg.userName= document.getElementById('cfgUserName').value.trim();
+  cfg.gemini  = document.getElementById('cfgGemini').value.trim();
+  cfg.lat     = document.getElementById('cfgLat').value.trim();
+  cfg.lon     = document.getElementById('cfgLon').value.trim();
+  localStorage.setItem('sh-zentrale', JSON.stringify(cfg));
+  if (cfg.gemini) fetch('/api/secrets',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:'gemini_api_key',value:cfg.gemini})}).catch(()=>{});
+}
+function openSettings()  { document.getElementById('settingsModal').classList.remove('hidden'); loadSpotifySettings().catch(()=>{}); }
+function closeSettings() { document.getElementById('settingsModal').classList.add('hidden'); }
+async function saveAndConnect() { saveCfg(); closeSettings(); await connect(); }
+
+// ── HA API ────────────────────────────────────────────────────────────────────
+async function fetchStates() {
+  const r = await fetch('/apps/smarthome-zentrale/api/ha-states?' + new URLSearchParams({ haUrl: cfg.haUrl, haToken: cfg.haToken }));
+  if (!r.ok) throw new Error((await r.json().catch(()=>({}))).error || 'HA ' + r.status);
+  return r.json();
+}
+async function callService(domain, service, data) {
+  const r = await fetch('/apps/smarthome-zentrale/api/ha-service', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ haUrl: cfg.haUrl, haToken: cfg.haToken, domain, service, data })
+  });
+  if (!r.ok) throw new Error('HA service ' + r.status);
+}
+
+// ── Connect & Poll ────────────────────────────────────────────────────────────
+async function connect() {
+  if (!cfg.haUrl || !cfg.haToken) {
+    show('loadingOverlay', false); show('noConfigOverlay', true); show('tileGrid', false);
+    setHaStatus(false);
+    return;
+  }
+  show('loadingOverlay', true); show('noConfigOverlay', false); show('tileGrid', false);
+  try {
+    const states = await fetchStates();
+    processStates(states, true);
+    setHaStatus(true);
+    if (pollTimer) clearInterval(pollTimer);
+    pollTimer = setInterval(async () => {
+      try { processStates(await fetchStates(), false); setHaStatus(true); }
+      catch { setHaStatus(false); }
+    }, POLL_MS);
+  } catch(err) {
+    show('loadingOverlay', false); show('noConfigOverlay', false);
+    setHaStatus(false, err.message);
+    showToast('Verbindungsfehler: ' + err.message);
+  }
+}
+
+// ── State Processing ──────────────────────────────────────────────────────────
+function processStates(states, initial) {
+  const filtered = states.filter(s => HA_DOMAINS.includes(s.entity_id.split('.')[0]));
+
+  if (initial) {
+    const saved  = JSON.parse(localStorage.getItem('sh-tile-order') || '[]');
+    const ids    = filtered.map(s => s.entity_id);
+    tileOrder    = [...saved.filter(id => ids.includes(id)), ...ids.filter(id => !saved.includes(id))];
+    haStates     = {};
+    filtered.forEach(s => haStates[s.entity_id] = s);
+    renderAllTiles();
+    show('loadingOverlay', false); show('tileGrid', true);
+  } else {
+    filtered.forEach(s => {
+      const cached = haStates[s.entity_id];
+      if (!cached || JSON.stringify(cached.state) !== JSON.stringify(s.state) ||
+          JSON.stringify(cached.attributes) !== JSON.stringify(s.attributes)) {
+        haStates[s.entity_id] = s;
+        patchTile(s);
+      }
+    });
+  }
+  document.getElementById('lastUpd').textContent = 'Zuletzt: ' + new Date().toLocaleTimeString('de-DE', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+}
+
+// ── Render All ────────────────────────────────────────────────────────────────
+function renderAllTiles() {
+  const grid = document.getElementById('tileGrid');
+  grid.innerHTML = '';
+
+  const byDomain = {};
+  tileOrder.forEach(id => {
+    const s = haStates[id]; if (!s) return;
+    const d = id.split('.')[0];
+    (byDomain[d] = byDomain[d] || []).push(s);
+  });
+
+  DOMAIN_ORDER.forEach(domain => {
+    const ents = byDomain[domain]; if (!ents?.length) return;
+    const sec  = document.createElement('div');
+    sec.className = 'tile-section';
+    sec.innerHTML = `<div class="section-label">${DOMAIN_LABEL[domain] || domain}</div>`;
+    const wrap = document.createElement('div');
+    wrap.className = 'section-tiles';
+    ents.forEach(s => { const t = buildTile(s); if (t) wrap.appendChild(t); });
+    sec.appendChild(wrap);
+    grid.appendChild(sec);
+  });
+}
+
+// ── Build Tile Element ────────────────────────────────────────────────────────
+function buildTile(entity) {
+  const { entity_id, state, attributes } = entity;
+  const domain = entity_id.split('.')[0];
+  const name   = attributes.friendly_name || entity_id.split('.')[1].replace(/_/g,' ');
+  const icon   = DOMAIN_ICON[domain] || 'ti-device-unknown';
+  const unavail = state === 'unavailable' || state === 'unknown';
+
+  const div = document.createElement('div');
+  div.className = `tile tile-${domain}${unavail ? ' tile-unavailable' : ''}`;
+  div.dataset.entityId = entity_id;
+  div.dataset.domain   = domain;
+  div.draggable = true;
+  div.addEventListener('dragstart', dStart);
+  div.addEventListener('dragover',  dOver);
+  div.addEventListener('dragleave', dLeave);
+  div.addEventListener('drop',      dDrop);
+  div.addEventListener('dragend',   dEnd);
+
+  div.innerHTML = buildTileHTML(entity, domain, name, icon);
+  applyTileClasses(div, entity);
+  return div;
+}
+
+function buildTileHTML(entity, domain, name, icon) {
+  const { entity_id: eid, state, attributes: a } = entity;
+  const header = `<div class="tile-header"><i class="ti ${icon} tile-icon"></i><span class="tile-name">${esc(name)}</span></div>`;
+
+  if (domain === 'light') {
+    const br = a.brightness ? Math.round(a.brightness / 255 * 100) : 0;
+    return header + `<div class="tile-state">${state === 'on' ? 'An' : 'Aus'}</div>
+      <div class="tile-controls">
+        ${state === 'on' ? `<input type="range" class="tile-slider" min="1" max="255" value="${a.brightness||128}"
+          oninput="onBrightness(event,'${eid}')" onclick="event.stopPropagation()">
+          <span class="tile-sub" id="br-${eid}">${br}%</span>` : ''}
+      </div>`;
+  }
+  if (domain === 'switch' || domain === 'input_boolean') {
+    const watt = a.current_power_w != null ? `<span class="tile-sub">${a.current_power_w} W</span>` : '';
+    return header + `<div class="tile-state">${state === 'on' ? 'An' : 'Aus'}</div>${watt}`;
+  }
+  if (domain === 'climate') {
+    const cur = a.current_temperature ?? '--';
+    const tgt = a.temperature ?? '--';
+    return header + `
+      <div class="climate-row">
+        <div><span class="climate-cur" id="ccur-${eid}">${cur}°</span><br><span class="tile-sub">Ist</span></div>
+        <div class="climate-tgt-ctrl" onclick="event.stopPropagation()">
+          <button class="temp-btn" onclick="adjTemp('${eid}',-0.5)">−</button>
+          <div style="text-align:center"><span class="climate-tgt-val" id="ctgt-${eid}">${tgt}°</span><br><span class="tile-sub">Soll</span></div>
+          <button class="temp-btn" onclick="adjTemp('${eid}',+0.5)">+</button>
+        </div>
+      </div>
+      <div class="heating-badge" id="cheat-${eid}" style="display:${a.hvac_action==='heating'?'flex':'none'}"><i class="ti ti-flame"></i> Heizt</div>`;
+  }
+  if (domain === 'sensor' || domain === 'binary_sensor') {
+    const unit = a.unit_of_measurement || '';
+    return header + `<div class="tile-state sensor-val" id="sv-${eid}">${esc(String(state))} <span class="sensor-unit">${esc(unit)}</span></div>`;
+  }
+  if (domain === 'media_player') {
+    const title  = a.media_title  || '';
+    const artist = a.media_artist || '';
+    const vol    = Math.round((a.volume_level||0)*100);
+    const playing = state === 'playing';
+    return header + `
+      <div class="media-info">
+        <div class="media-title" id="mt-${eid}">${esc(title)||(playing?'Spielt…':'Bereit')}</div>
+        ${artist ? `<div class="tile-sub">${esc(artist)}</div>` : ''}
+      </div>
+      <div class="media-controls" onclick="event.stopPropagation()">
+        <button class="media-btn" onclick="mCmd('${eid}','media_previous_track')"><i class="ti ti-player-skip-back"></i></button>
+        <button class="media-btn play" id="mpbtn-${eid}" onclick="mCmd('${eid}','media_play_pause')">
+          <i class="ti ${playing?'ti-player-pause':'ti-player-play'}"></i></button>
+        <button class="media-btn" onclick="mCmd('${eid}','media_next_track')"><i class="ti ti-player-skip-forward"></i></button>
+      </div>
+      <input type="range" class="tile-slider" min="0" max="100" value="${vol}"
+        oninput="onVol(event,'${eid}')" onclick="event.stopPropagation()">`;
+  }
+  if (domain === 'scene') {
+    return header + `<div class="tile-state" style="font-size:15px;font-style:italic;color:var(--scene-text)">${esc(name)}</div>`;
+  }
+  return header + `<div class="tile-state">${esc(String(state))}</div>`;
+}
+
+function applyTileClasses(div, entity) {
+  const { entity_id, state, attributes } = entity;
+  const domain = entity_id.split('.')[0];
+  const isOn   = state === 'on' || state === 'playing' || state === 'heat' || state === 'cool' || state === 'auto' || state === 'fan_only';
+  div.classList.toggle('tile-on',  isOn);
+  div.classList.toggle('tile-off', !isOn && state !== 'unavailable' && state !== 'unknown');
+  div.classList.toggle('tile-unavailable', state === 'unavailable' || state === 'unknown');
+  if (domain === 'sensor' || domain === 'binary_sensor') {
+    const v = parseFloat(state), dc = attributes.device_class;
+    div.classList.toggle('sensor-warn', (dc === 'temperature' && v > 26) || (dc === 'humidity' && v > 70));
+  }
+}
+
+// ── Patch Tile (polling update) ───────────────────────────────────────────────
+function patchTile(entity) {
+  const { entity_id: eid, state, attributes: a } = entity;
+  const domain = eid.split('.')[0];
+  const div = document.querySelector(`[data-entity-id="${CSS.escape(eid)}"]`);
+  if (!div) return;
+
+  applyTileClasses(div, entity);
+
+  if (domain === 'light') {
+    const stEl = div.querySelector('.tile-state'); if (stEl) stEl.textContent = state === 'on' ? 'An' : 'Aus';
+    const ctrl = div.querySelector('.tile-controls');
+    if (ctrl) {
+      if (state === 'on') {
+        const br = Math.round((a.brightness||128)/255*100);
+        ctrl.innerHTML = `<input type="range" class="tile-slider" min="1" max="255" value="${a.brightness||128}"
+          oninput="onBrightness(event,'${eid}')" onclick="event.stopPropagation()">
+          <span class="tile-sub" id="br-${eid}">${br}%</span>`;
+      } else { ctrl.innerHTML = ''; }
+    }
+  } else if (domain === 'switch' || domain === 'input_boolean') {
+    const stEl = div.querySelector('.tile-state'); if (stEl) stEl.textContent = state === 'on' ? 'An' : 'Aus';
+  } else if (domain === 'climate') {
+    const ce = document.getElementById('ccur-'+eid); if (ce) ce.textContent = (a.current_temperature??'--')+'°';
+    const te = document.getElementById('ctgt-'+eid); if (te) te.textContent = (a.temperature??'--')+'°';
+    const he = document.getElementById('cheat-'+eid); if (he) he.style.display = a.hvac_action==='heating'?'flex':'none';
+  } else if (domain === 'sensor' || domain === 'binary_sensor') {
+    const ve = document.getElementById('sv-'+eid);
+    if (ve) ve.innerHTML = `${esc(String(state))} <span class="sensor-unit">${esc(a.unit_of_measurement||'')}</span>`;
+  } else if (domain === 'media_player') {
+    const te = document.getElementById('mt-'+eid); if (te) te.textContent = a.media_title||(state==='playing'?'Spielt…':'Bereit');
+    const pb = document.getElementById('mpbtn-'+eid); if (pb) pb.querySelector('i').className = 'ti ' + (state==='playing'?'ti-player-pause':'ti-player-play');
+    const vs = div.querySelector('.tile-slider'); if (vs) vs.value = Math.round((a.volume_level||0)*100);
+  }
+}
+
+// ── Tile Actions ──────────────────────────────────────────────────────────────
+document.addEventListener('click', e => {
+  const tile = e.target.closest('.tile');
+  if (!tile) return;
+  if (e.target.closest('.tile-controls') || e.target.closest('.media-controls') ||
+      e.target.closest('.climate-tgt-ctrl') || e.target.closest('.tile-slider')) return;
+  const eid    = tile.dataset.entityId;
+  const domain = tile.dataset.domain;
+  if (!eid || ['sensor','binary_sensor','climate','media_player'].includes(domain)) return;
+  const entity = haStates[eid];
+  if (!entity) return;
+  if (domain === 'scene') {
+    callService('scene','turn_on',{entity_id:eid}).then(()=>showToast('Szene aktiviert')).catch(err=>showToast('Fehler: '+err.message));
+    return;
+  }
+  const svc = entity.state === 'on' ? 'turn_off' : 'turn_on';
+  callService(domain, svc, {entity_id:eid}).then(()=>{
+    haStates[eid] = {...entity, state: svc==='turn_on'?'on':'off'};
+    patchTile(haStates[eid]);
+  }).catch(err => showToast('Fehler: '+err.message));
+});
+
+function onBrightness(e, eid) {
+  const val = +e.target.value;
+  const sub = document.getElementById('br-'+eid); if(sub) sub.textContent = Math.round(val/255*100)+'%';
+  clearTimeout(e.target._t);
+  e.target._t = setTimeout(() => callService('light','turn_on',{entity_id:eid,brightness:val}).catch(()=>{}), 220);
+}
+function adjTemp(eid, delta) {
+  const entity = haStates[eid]; if (!entity) return;
+  const newT = Math.round(((entity.attributes.temperature||20) + delta) * 2) / 2;
+  callService('climate','set_temperature',{entity_id:eid,temperature:newT}).then(()=>{
+    haStates[eid] = {...entity, attributes:{...entity.attributes, temperature:newT}};
+    patchTile(haStates[eid]);
+  }).catch(err=>showToast('Fehler: '+err.message));
+}
+function mCmd(eid, svc) {
+  callService('media_player', svc, {entity_id:eid}).catch(err=>showToast('Fehler: '+err.message));
+}
+function onVol(e, eid) {
+  const val = +e.target.value / 100;
+  clearTimeout(e.target._t);
+  e.target._t = setTimeout(() => callService('media_player','volume_set',{entity_id:eid,volume_level:val}).catch(()=>{}), 220);
+}
+async function allLightsOff() {
+  try {
+    await callService('light','turn_off',{entity_id:'all'});
+    Object.keys(haStates).filter(id=>id.startsWith('light.')).forEach(id=>{
+      haStates[id] = {...haStates[id], state:'off'};
+      patchTile(haStates[id]);
+    });
+    showToast('Alle Lichter ausgeschaltet');
+  } catch(err) { showToast('Fehler: '+err.message); }
+}
+
+// ── Drag & Drop ───────────────────────────────────────────────────────────────
+function dStart(e) { dragSrc=this; this.classList.add('dragging'); e.dataTransfer.effectAllowed='move'; }
+function dOver(e)  { e.preventDefault(); if(this!==dragSrc) this.classList.add('drag-over'); }
+function dLeave()  { this.classList.remove('drag-over'); }
+function dEnd()    { this.classList.remove('dragging'); document.querySelectorAll('.drag-over').forEach(el=>el.classList.remove('drag-over')); }
+function dDrop(e)  {
+  e.preventDefault(); this.classList.remove('drag-over');
+  if (!dragSrc || this===dragSrc) return;
+  const p = this.parentNode;
+  const si = [...p.children].indexOf(dragSrc), di = [...p.children].indexOf(this);
+  if (si < 0 || di < 0) return;
+  p.insertBefore(dragSrc, si < di ? this.nextSibling : this);
+  tileOrder = [...document.querySelectorAll('.tile')].map(t=>t.dataset.entityId);
+  localStorage.setItem('sh-tile-order', JSON.stringify(tileOrder));
+}
+
+// ── HA Status ─────────────────────────────────────────────────────────────────
+function setHaStatus(ok, msg) {
+  document.getElementById('haDot').className  = 's-dot ' + (ok?'ok':'err');
+  document.getElementById('haText').textContent = ok ? 'Home Assistant verbunden ✓' : ('Keine Verbindung' + (msg?': '+msg:''));
+}
+
+// ── Clock ─────────────────────────────────────────────────────────────────────
+function tickClock() {
+  const n = new Date();
+  document.getElementById('clock').textContent     = n.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
+  document.getElementById('clockDate').textContent = n.toLocaleDateString('de-DE',{weekday:'long',day:'numeric',month:'long'});
+}
+
+// ── Weather ───────────────────────────────────────────────────────────────────
+async function fetchWeather() {
+  if (!cfg.lat || !cfg.lon) return;
+  try {
+    const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${cfg.lat}&longitude=${cfg.lon}&current=temperature_2m,weathercode,windspeed_10m`);
+    const d = await r.json();
+    const c = d.current;
+    document.getElementById('wTemp').textContent = c.temperature_2m + '°C';
+    document.getElementById('wIcon').textContent = WEATHER_ICONS[c.weathercode] || '🌡️';
+    document.getElementById('wWind').textContent = c.windspeed_10m + ' km/h';
+  } catch {}
+}
+
+// ── Voice Assistant ───────────────────────────────────────────────────────────
+function toggleVoice() { voiceActive ? stopVoice() : startWake(); }
+function stopVoice() {
+  voiceActive = false; clearTimeout(cmdTimer);
+  try{wakeRec?.abort()}catch{} try{cmdRec?.abort()}catch{}
+  wakeRec = cmdRec = null;
+  window.speechSynthesis?.cancel();
+  setVState('idle');
+}
+
+function setVState(s) {
+  vState = s;
+  const wrap = document.getElementById('vWrap');
+  const icon = document.getElementById('vIcon');
+  const WRAPS = {idle:'',wake:'vwrap-wake',cmd:'vwrap-cmd',process:'',speak:'vwrap-speak'};
+  wrap.className = 'voice-mic-wrap ' + (WRAPS[s]||'');
+  const ICONS = {idle:'ti-microphone',wake:'ti-microphone',cmd:'ti-microphone',process:'ti-loader-2 spin',speak:'ti-volume'};
+  icon.className = 'ti ' + (ICONS[s]||'ti-microphone');
+  const TEXTS = {idle:'Tippen zum Starten',wake:`Sage „${cfg.assName}"`,cmd:'Ich höre…',process:'Verarbeite…',speak:'Spricht…'};
+  document.getElementById('vStatus').textContent = TEXTS[s]||'';
+  document.getElementById('voiceStateBar').textContent = voiceActive ? (TEXTS[s]||'') : 'Assistent inaktiv';
+}
+
+function startWake() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) { addVMsg('system','Web Speech API nicht verfügbar (Chrome/Edge benötigt)'); return; }
+  voiceActive = true; setVState('wake');
+  wakeRec = new SR(); wakeRec.continuous=true; wakeRec.interimResults=true; wakeRec.lang='de-DE';
+  wakeRec.onresult = e => {
+    for (let i=e.resultIndex; i<e.results.length; i++) {
+      if (e.results[i][0].transcript.toLowerCase().includes(cfg.assName.toLowerCase())) {
+        try{wakeRec.abort()}catch{} beep(880,.15); setTimeout(startCmd, 220); return;
+      }
+    }
+  };
+  wakeRec.onend = () => { if (voiceActive&&vState==='wake') setTimeout(()=>{if(voiceActive&&vState==='wake')startWake();},250); };
+  wakeRec.onerror = e => { if (e.error==='not-allowed') { addVMsg('system','Mikrofon-Zugriff verweigert'); stopVoice(); } };
+  try{wakeRec.start()}catch{}
+}
+function startCmd() {
+  if (!voiceActive) return;
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  setVState('cmd'); beep(660,.10);
+  cmdRec = new SR(); cmdRec.lang='de-DE'; cmdRec.continuous=false; cmdRec.interimResults=false;
+  cmdTimer = setTimeout(()=>{try{cmdRec?.abort()}catch{}if(voiceActive)startWake();},7000);
+  cmdRec.onresult = e => { clearTimeout(cmdTimer); const t=e.results[0][0].transcript.trim(); if(t) voiceCmd(t); else if(voiceActive) startWake(); };
+  cmdRec.onerror  = e => { clearTimeout(cmdTimer); if(voiceActive) setTimeout(startWake,200); };
+  cmdRec.onend    = ()=> clearTimeout(cmdTimer);
+  try{cmdRec.start()}catch{if(voiceActive)startWake();}
+}
+async function voiceCmd(text) {
+  setVState('process'); addVMsg('user', text);
+  if (!cfg.gemini) { voiceSpeak('Kein Gemini API-Key konfiguriert.'); return; }
+  try {
+    const r = await fetch('/apps/voice-assistant/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({message:text,history:[],haUrl:cfg.haUrl,haToken:cfg.haToken,apiKey:cfg.gemini,assistantName:cfg.assName,userName:cfg.userName})});
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error||'Fehler');
+    addVMsg('assistant', d.reply);
+    voiceSpeak(d.reply);
+    setTimeout(()=>fetchStates().then(s=>processStates(s,false)).catch(()=>{}),1500);
+  } catch { voiceSpeak('Entschuldigung, da ist ein Fehler aufgetreten.'); }
+}
+function voiceSpeak(text) {
+  setVState('speak'); window.speechSynthesis.cancel();
+  const utt = new SpeechSynthesisUtterance(text); utt.lang='de-DE'; utt.rate=1.05;
+  const voices = window.speechSynthesis.getVoices();
+  const v = voices.find(v=>v.lang==='de-DE') || voices.find(v=>v.lang.startsWith('de'));
+  if (v) utt.voice = v;
+  utt.onend = utt.onerror = ()=>{ if(voiceActive) startWake(); else setVState('idle'); };
+  window.speechSynthesis.speak(utt);
+}
+function addVMsg(role, text) {
+  const h = document.getElementById('vHistory');
+  const el = document.createElement('div');
+  el.className = 'vmsg vmsg-'+role;
+  const label = role==='user'?(cfg.userName||'Du'):role==='assistant'?(cfg.assName||'Assistent'):'⚙';
+  el.innerHTML = `<span class="vmeta">${esc(label)}</span>${esc(text)}`;
+  h.appendChild(el);
+  h.scrollTop = h.scrollHeight;
+  while (h.children.length > 5) h.removeChild(h.firstChild);
+}
+function toggleVoiceSidebar() {
+  document.getElementById('voiceSidebar').classList.toggle('mobile-open');
+}
+
+// ── Utilities ─────────────────────────────────────────────────────────────────
+function beep(freq, vol) {
+  try {
+    const ctx=new(window.AudioContext||window.webkitAudioContext)(), osc=ctx.createOscillator(), gain=ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.frequency.value=freq; gain.gain.setValueAtTime(vol,ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(.001,ctx.currentTime+.18);
+    osc.start(); osc.stop(ctx.currentTime+.18);
+  } catch {}
+}
+let toastT;
+function showToast(msg) {
+  const el=document.getElementById('toast'); el.textContent=msg; el.classList.remove('hidden');
+  clearTimeout(toastT); toastT=setTimeout(()=>el.classList.add('hidden'),3000);
+}
+function show(id, visible) { document.getElementById(id).style.display = visible ? '' : 'none'; }
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// ── Spotify ────────────────────────────────────────────────────────────────────
+let spConnected   = false;
+let spPlayerTimer = null;
+let spState       = null;
+let spSeekDrag    = false;
+let spSeekTimer   = null;
+let spVolTimer    = null;
+
+async function spFetch(endpoint, opts = {}) {
+  return fetch('/apps/smarthome-zentrale/api/spotify' + endpoint, {
+    headers: { 'Content-Type': 'application/json' },
+    ...opts,
+  });
+}
+
+async function loadSpotifySettings() {
+  try {
+    const r = await spFetch('/credentials');
+    if (!r.ok) return;
+    const d = await r.json();
+    document.getElementById('cfgSpClientId').value  = d.clientId || '';
+    document.getElementById('cfgSpRedirect').value  = d.redirectUri || '';
+    if (d.hasSecret) document.getElementById('cfgSpClientSecret').placeholder = '(gespeichert)';
+    spConnected = d.connected;
+    updateSpConnectBtns();
+    if (spConnected && !spPlayerTimer) startSpotifyPolling();
+  } catch {}
+}
+
+function updateSpConnectBtns() {
+  document.getElementById('spConnectBtn').style.display    = spConnected ? 'none' : '';
+  document.getElementById('spDisconnectBtn').style.display = spConnected ? '' : 'none';
+}
+
+async function saveSpotifyCredentials() {
+  const clientId     = document.getElementById('cfgSpClientId').value.trim();
+  const clientSecret = document.getElementById('cfgSpClientSecret').value.trim();
+  if (!clientId) return showToast('Client ID fehlt');
+  const body = { clientId };
+  if (clientSecret) body.clientSecret = clientSecret;
+  try {
+    const r = await spFetch('/credentials', { method: 'POST', body: JSON.stringify(body) });
+    if (!r.ok) { showToast('Fehler: ' + (await r.json()).error); return; }
+    showToast('Spotify-Zugangsdaten gespeichert');
+    document.getElementById('cfgSpClientSecret').value       = '';
+    document.getElementById('cfgSpClientSecret').placeholder = '(gespeichert)';
+    document.getElementById('spConnectBtn').style.display    = '';
+  } catch (e) { showToast('Fehler: ' + e.message); }
+}
+
+function connectSpotify() {
+  window.location.href = '/apps/smarthome-zentrale/api/spotify/login';
+}
+
+async function disconnectSpotify() {
+  try {
+    await spFetch('/disconnect', { method: 'DELETE' });
+    spConnected = false;
+    updateSpConnectBtns();
+    stopSpotifyPolling();
+    document.getElementById('spBar').classList.add('hidden');
+    document.body.classList.remove('sp-playing');
+    showToast('Spotify getrennt');
+  } catch (e) { showToast('Fehler: ' + e.message); }
+}
+
+// Spotifyd
+async function saveSpotifydConfig() {
+  const username   = document.getElementById('cfgSpdUser').value.trim();
+  const password   = document.getElementById('cfgSpdPass').value.trim();
+  const deviceName = document.getElementById('cfgSpdDevice').value.trim() || 'Miniserver';
+  if (!username || !password) return showToast('Benutzername und Passwort erforderlich');
+  try {
+    const r = await fetch('/apps/smarthome-zentrale/api/spotifyd/config', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password, deviceName }),
+    });
+    const d = await r.json();
+    if (!r.ok) return showToast('Fehler: ' + d.error);
+    showToast('Spotifyd konfiguriert & neu gestartet');
+    document.getElementById('cfgSpdPass').value = '';
+  } catch (e) { showToast('Fehler: ' + e.message); }
+}
+
+async function checkSpotifydStatus() {
+  try {
+    const r = await fetch('/apps/smarthome-zentrale/api/spotifyd/status');
+    const d = await r.json();
+    showToast('Spotifyd: ' + (d.active ? '✓ aktiv' : '✗ inaktiv') + ' (' + d.status + ')');
+  } catch (e) { showToast('Fehler: ' + e.message); }
+}
+
+// Player
+function spFmtTime(ms) {
+  const s = Math.floor((ms || 0) / 1000);
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+}
+
+async function fetchSpotifyPlayer() {
+  try {
+    const r = await spFetch('/player');
+    if (!r.ok) return;
+    const state = r.status === 204 ? null : await r.json();
+    spState = state;
+    renderSpotifyBar(state);
+  } catch {}
+}
+
+function renderSpotifyBar(state) {
+  const bar = document.getElementById('spBar');
+  if (!state?.item) {
+    bar.classList.add('hidden');
+    document.body.classList.remove('sp-playing');
+    return;
+  }
+  bar.classList.remove('hidden');
+  document.body.classList.add('sp-playing');
+
+  const art = state.item.album?.images?.[0]?.url || '';
+  document.getElementById('spArt').src       = art;
+  document.getElementById('spTitle').textContent  = state.item.name || '—';
+  document.getElementById('spArtist').textContent = (state.item.artists || []).map(a => a.name).join(', ') || '—';
+  document.getElementById('spPlayIcon').className = state.is_playing ? 'ti ti-player-pause' : 'ti ti-player-play';
+
+  if (!spSeekDrag) {
+    const dur = state.item.duration_ms || 0;
+    const pos = state.progress_ms || 0;
+    const prog = document.getElementById('spProgress');
+    prog.max   = dur;
+    prog.value = pos;
+    document.getElementById('spPos').textContent = spFmtTime(pos);
+    document.getElementById('spDur').textContent = spFmtTime(dur);
+  }
+
+  document.getElementById('spVol').value = state.device?.volume_percent ?? 50;
+}
+
+async function spAction(action) {
+  try {
+    await spFetch('/player/' + action, { method: 'POST', body: '{}' });
+    setTimeout(fetchSpotifyPlayer, 400);
+  } catch {}
+}
+
+async function spTogglePlay() {
+  await spAction(spState?.is_playing ? 'pause' : 'play');
+}
+
+function spSeekInput(val) {
+  spSeekDrag = true;
+  document.getElementById('spPos').textContent = spFmtTime(parseInt(val));
+  clearTimeout(spSeekTimer);
+  spSeekTimer = setTimeout(async () => {
+    await spFetch('/player/seek', { method: 'POST', body: JSON.stringify({ position_ms: parseInt(val) }) });
+    spSeekDrag = false;
+    setTimeout(fetchSpotifyPlayer, 400);
+  }, 400);
+}
+
+function spVolumeInput(val) {
+  clearTimeout(spVolTimer);
+  spVolTimer = setTimeout(() => {
+    spFetch('/player/volume', { method: 'POST', body: JSON.stringify({ volume_percent: parseInt(val) }) });
+  }, 400);
+}
+
+// Devices dropdown
+async function toggleSpDevices() {
+  const list = document.getElementById('spDevList');
+  if (!list.classList.contains('hidden')) { list.classList.add('hidden'); return; }
+  document.getElementById('spPlList').classList.add('hidden');
+  list.innerHTML = '<div class="sp-drop-item" style="color:var(--text-tertiary)"><i class="ti ti-loader-2 spin"></i> Lade…</div>';
+  list.classList.remove('hidden');
+  try {
+    const r = await spFetch('/devices');
+    const d = await r.json();
+    const devices = d.devices || [];
+    list.innerHTML = devices.length
+      ? devices.map(dev => `<div class="sp-drop-item ${dev.is_active ? 'active' : ''}" onclick="spTransfer('${dev.id}')"><i class="ti ti-${dev.type==='Computer'?'laptop':dev.type==='Smartphone'?'device-mobile':'device-speaker'}"></i> ${esc(dev.name)}${dev.is_active ? ' ✓' : ''}</div>`).join('')
+      : '<div class="sp-drop-item" style="color:var(--text-tertiary)">Keine Geräte gefunden</div>';
+  } catch { list.classList.add('hidden'); }
+}
+
+async function spTransfer(deviceId) {
+  document.getElementById('spDevList').classList.add('hidden');
+  try {
+    await spFetch('/player/transfer', { method: 'POST', body: JSON.stringify({ device_id: deviceId }) });
+    setTimeout(fetchSpotifyPlayer, 600);
+  } catch {}
+}
+
+// Playlists dropdown
+async function toggleSpPlaylists() {
+  const list = document.getElementById('spPlList');
+  if (!list.classList.contains('hidden')) { list.classList.add('hidden'); return; }
+  document.getElementById('spDevList').classList.add('hidden');
+  list.innerHTML = '<div class="sp-drop-item" style="color:var(--text-tertiary)"><i class="ti ti-loader-2 spin"></i> Lade…</div>';
+  list.classList.remove('hidden');
+  try {
+    const r = await spFetch('/playlists');
+    const d = await r.json();
+    const items = d.items || [];
+    list.innerHTML = items.length
+      ? items.map(pl => `<div class="sp-drop-item" onclick="spPlayPlaylist('${pl.uri}')"><i class="ti ti-playlist"></i> ${esc(pl.name)}</div>`).join('')
+      : '<div class="sp-drop-item" style="color:var(--text-tertiary)">Keine Playlists</div>';
+  } catch { list.classList.add('hidden'); }
+}
+
+async function spPlayPlaylist(uri) {
+  document.getElementById('spPlList').classList.add('hidden');
+  try {
+    await spFetch('/player/play', { method: 'POST', body: JSON.stringify({ context_uri: uri }) });
+    setTimeout(fetchSpotifyPlayer, 600);
+  } catch {}
+}
+
+function startSpotifyPolling() {
+  fetchSpotifyPlayer();
+  if (spPlayerTimer) clearInterval(spPlayerTimer);
+  spPlayerTimer = setInterval(fetchSpotifyPlayer, 5000);
+}
+function stopSpotifyPolling() {
+  clearInterval(spPlayerTimer);
+  spPlayerTimer = null;
+}
+
+// Close dropdowns on outside click
+document.addEventListener('click', e => {
+  if (!e.target.closest('.sp-device-wrap')) document.getElementById('spDevList')?.classList.add('hidden');
+  if (!e.target.closest('.sp-pl-wrap'))     document.getElementById('spPlList')?.classList.add('hidden');
+});
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+(async () => {
+  loadCfg();
+
+  try {
+    const s = await fetch('/api/secrets').then(r=>r.ok?r.json():{});
+    if (s.gemini_api_key && !cfg.gemini) {
+      cfg.gemini = s.gemini_api_key;
+      document.getElementById('cfgGemini').value = cfg.gemini;
+    }
+  } catch {}
+
+  window.speechSynthesis.getVoices();
+  if ('onvoiceschanged' in window.speechSynthesis) window.speechSynthesis.onvoiceschanged = ()=>window.speechSynthesis.getVoices();
+
+  tickClock(); setInterval(tickClock, 1000);
+  fetchWeather(); setInterval(fetchWeather, WEATHER_MS);
+
+  if (window.innerWidth <= 900) document.getElementById('voiceFab').style.display = 'flex';
+
+  if (cfg.haUrl && cfg.haToken) await connect();
+  else { show('loadingOverlay',false); show('noConfigOverlay',true); }
+
+  // Spotify init
+  await loadSpotifySettings();
+  const _sp = new URLSearchParams(window.location.search);
+  if (_sp.get('spotify_connected') === '1') {
+    showToast('✓ Spotify erfolgreich verbunden!');
+    spConnected = true; updateSpConnectBtns(); startSpotifyPolling();
+    history.replaceState({}, '', window.location.pathname);
+  }
+  if (_sp.get('spotify_error')) {
+    showToast('Spotify Fehler: ' + _sp.get('spotify_error').slice(0, 80));
+    history.replaceState({}, '', window.location.pathname);
+  }
+})();
+</script>
+</body>
+</html>

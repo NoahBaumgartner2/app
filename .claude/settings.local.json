@@ -53,7 +53,22 @@
       "Bash(kill -9 983325)",
       "Bash(kill -9 983777)",
       "Bash(chmod +x /home/miniserver/development/dashboard/setup-kodi-umbrella.sh)",
-      "Bash(bash -n /home/miniserver/development/dashboard/setup-kodi-umbrella.sh)"
+      "Bash(bash -n /home/miniserver/development/dashboard/setup-kodi-umbrella.sh)",
+      "Bash(systemctl restart *)",
+      "Bash(python3 -c \"import sys,json; r=json.load\\(sys.stdin\\); [print\\(a['name'],a['browser_download_url']\\) for a in r['assets'] if 'x86_64' in a['name'] and 'full' in a['name']]\")",
+      "Bash(spotifyd --version)",
+      "Bash(tar xz *)",
+      "Read(//tmp/**)",
+      "Bash(python3 -c \"import sys,json; r=json.load\\(sys.stdin\\); print\\(r.get\\('tag_name',''\\)\\); [print\\(a['browser_download_url']\\) for a in r.get\\('assets',[]\\) if 'linux' in a['name'] and 'x86_64' in a['name']]\")",
+      "Bash(tar xzf *)",
+      "Bash(sudo mv /tmp/spotifyd /usr/local/bin/spotifyd)",
+      "Bash(sudo chmod +x /usr/local/bin/spotifyd)",
+      "Bash(cp /tmp/spotifyd /home/miniserver/.local/bin/spotifyd)",
+      "Bash(chmod +x /home/miniserver/.local/bin/spotifyd)",
+      "Bash(/home/miniserver/.local/bin/spotifyd --version)",
+      "Bash(systemctl --user daemon-reload)",
+      "Bash(systemctl --user enable spotifyd)",
+      "Bash(pm2 logs *)"
     ]
   }
 }

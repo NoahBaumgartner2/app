@@ -1,16 +1,16 @@
 # Graph Report - dashboard  (2026-05-14)
 
 ## Corpus Check
-- 14 files · ~43,682 words
+- 14 files · ~53,565 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 158 nodes · 169 edges · 14 communities (8 shown, 6 thin omitted)
+- 180 nodes · 204 edges · 15 communities (9 shown, 6 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `3f289e99`
+- Built from commit: `7010c8a5`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -28,27 +28,28 @@
 - [[_COMMUNITY_Community 10|Community 10]]
 - [[_COMMUNITY_Community 11|Community 11]]
 - [[_COMMUNITY_Community 12|Community 12]]
+- [[_COMMUNITY_Community 13|Community 13]]
 
 ## God Nodes (most connected - your core abstractions)
 1. `runPodcastJob()` - 6 edges
-2. `getDriveAccessToken()` - 4 edges
-3. `userVaultKey()` - 3 edges
-4. `getOAuth2Client()` - 3 edges
-5. `compileLaTeX()` - 3 edges
-6. `driveUploadFile()` - 3 edges
-7. `getSecret()` - 3 edges
-8. `buildLatexDocument()` - 3 edges
-9. `summarizeWithGemini()` - 3 edges
-10. `parseMultipart()` - 3 edges
+2. `getSpotifyTokens()` - 5 edges
+3. `saveSpotifyTokens()` - 5 edges
+4. `vaultEncrypt()` - 4 edges
+5. `vaultDecrypt()` - 4 edges
+6. `refreshSpotifyToken()` - 4 edges
+7. `getDriveAccessToken()` - 4 edges
+8. `userVaultKey()` - 3 edges
+9. `spDbGet()` - 3 edges
+10. `spotifyFetch()` - 3 edges
 
 ## Surprising Connections (you probably didn't know these)
 - None detected - all connections are within the same source files.
 
-## Communities (14 total, 6 thin omitted)
+## Communities (15 total, 6 thin omitted)
 
 ### Community 0 - "Community 0"
-Cohesion: 0.03
-Nodes (64): ALLOWED, app, APP_SLUGS, areas, b, bcrypt, body, config (+56 more)
+Cohesion: 0.02
+Nodes (76): ALLOWED, app, APP_SLUGS, areas, b, bcrypt, body, chat (+68 more)
 
 ### Community 1 - "Community 1"
 Cohesion: 0.08
@@ -59,23 +60,27 @@ Cohesion: 0.16
 Nodes (14): { buildLatexDocument, summarizeWithGemini, parseMultipart }, date, latexDoc, path, buildLatexDocument(), Busboy, { GoogleGenerativeAI }, parseMultipart() (+6 more)
 
 ### Community 3 - "Community 3"
+Cohesion: 0.29
+Nodes (10): getSpotifyTokens(), refreshSpotifyToken(), saveSpotifyTokens(), spDbGet(), spDbRun(), spotifyFetch(), update, userVaultKey() (+2 more)
+
+### Community 4 - "Community 4"
 Cohesion: 0.25
 Nodes (9): driveGetOrCreateFolder(), driveUploadFile(), getDriveAccessToken(), getOAuth2Client(), getSecret(), getVideoDurationSec(), podcastDbSet(), runFFmpeg() (+1 more)
 
-### Community 4 - "Community 4"
+### Community 5 - "Community 5"
 Cohesion: 0.33
 Nodes (5): ext, fs, http, MIME, path
-
-### Community 6 - "Community 6"
-Cohesion: 0.67
-Nodes (3): userVaultKey(), vaultDecrypt(), vaultEncrypt()
 
 ### Community 7 - "Community 7"
 Cohesion: 0.67
 Nodes (3): compileLaTeX(), findLatexCompiler(), runLatexCompiler()
 
+### Community 8 - "Community 8"
+Cohesion: 0.67
+Nodes (3): checkAdmin(), checkAuth(), status
+
 ## Knowledge Gaps
-- **105 isolated node(s):** `express`, `{ execFile, exec, spawn }`, `fs`, `os`, `path` (+100 more)
+- **117 isolated node(s):** `express`, `{ execFile, exec, spawn }`, `fs`, `os`, `path` (+112 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **6 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
@@ -83,8 +88,8 @@ Nodes (3): compileLaTeX(), findLatexCompiler(), runLatexCompiler()
 _Questions this graph is uniquely positioned to answer:_
 
 - **What connects `express`, `{ execFile, exec, spawn }`, `fs` to the rest of the system?**
-  _105 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _117 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Community 0` be split into smaller, more focused modules?**
-  _Cohesion score 0.03 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.02 - nodes in this community are weakly interconnected._
 - **Should `Community 1` be split into smaller, more focused modules?**
   _Cohesion score 0.08 - nodes in this community are weakly interconnected._
