@@ -1,7 +1,7 @@
 {
   "/home/miniserver/development/dashboard/server.js": {
-    "mtime": 1778768659.8512318,
-    "hash": "f82db82c654bb83289397bb0e4926614"
+    "mtime": 1778851221.686652,
+    "hash": "8db35c5875d98febd34bc140e1ad0a51"
   },
   "/home/miniserver/development/dashboard/public/sw.js": {
     "mtime": 1778329325.7067266,
@@ -52,8 +52,8 @@
     "hash": "da79aa9343cd2b362206f03762160abc"
   },
   "/home/miniserver/development/dashboard/public/index.html": {
-    "mtime": 1778752195.853995,
-    "hash": "c50ab212cad52381ecf10143fc3978f4"
+    "mtime": 1778851232.9705164,
+    "hash": "7287cc4074eb6f4e92a190440189122c"
   },
   "/home/miniserver/development/dashboard/latexConverter/README.md": {
     "mtime": 1778257479.5323355,
@@ -118,6 +118,10 @@
   "/home/miniserver/development/dashboard/apps/latexStudy/index.html": {
     "mtime": 1778748837.1919043,
     "hash": "07ef4b8ef0a6f279a8112e13afa09ed1"
+  },
+  "/home/miniserver/development/dashboard/apps/examTrainer/index.html": {
+    "mtime": 1778856216.294473,
+    "hash": "43cad27d6fa6f67c297d307fe22a4901"
   },
   "/home/miniserver/development/dashboard/apps/server-monitor/index.html": {
     "mtime": 1778405221.666856,

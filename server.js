@@ -18,7 +18,7 @@ const app      = express();
 app.set('trust proxy', 1);
 const PORT     = process.env.PORT || 3000;
 const TECTONIC  = path.join(os.homedir(), '.local', 'bin', 'tectonic');
-const APP_SLUGS = ['latex-converter', 'latex-study', 'podcast-compressor', 'pet-meds', 'smart-home', 'vault', 'server-monitor', 'stremio', 'voice-assistant', 'smarthome-zentrale'];
+const APP_SLUGS = ['latex-converter', 'latex-study', 'podcast-compressor', 'pet-meds', 'smart-home', 'vault', 'server-monitor', 'stremio', 'voice-assistant', 'smarthome-zentrale', 'exam-trainer'];
 
 let petMedsLastUpdated = Date.now();
 
@@ -162,6 +162,42 @@ db.serialize(() => {
     cable_sink  TEXT    NOT NULL DEFAULT '',
     current_out TEXT    NOT NULL DEFAULT 'cable',
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  )`);
+
+  db.run(`CREATE TABLE IF NOT EXISTS exam_sessions (
+    id               INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id          INTEGER NOT NULL,
+    subject          TEXT,
+    score            INTEGER,
+    total            INTEGER,
+    timestamp        TEXT    NOT NULL DEFAULT (datetime('now')),
+    duration_seconds INTEGER,
+    files_used       TEXT,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  )`);
+
+  db.run(`CREATE TABLE IF NOT EXISTS exam_questions (
+    id             INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id     INTEGER NOT NULL,
+    subject        TEXT,
+    question       TEXT,
+    type           TEXT,
+    options_json   TEXT,
+    correct_answer TEXT,
+    explanation    TEXT,
+    source_hint    TEXT,
+    FOREIGN KEY (session_id) REFERENCES exam_sessions(id) ON DELETE CASCADE
+  )`);
+
+  db.run(`CREATE TABLE IF NOT EXISTS user_answers (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id  INTEGER NOT NULL,
+    question_id INTEGER NOT NULL,
+    user_answer TEXT,
+    is_correct  INTEGER,
+    timestamp   TEXT    NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (session_id)  REFERENCES exam_sessions(id)  ON DELETE CASCADE,
+    FOREIGN KEY (question_id) REFERENCES exam_questions(id) ON DELETE CASCADE
   )`);
 });
 
@@ -2336,6 +2372,83 @@ app.post('/apps/voice-assistant/api/tts', checkAuth, (req, res) => {
       stream.on('error', () => { try { fs.unlinkSync(tmpFile); } catch {} });
     });
 });
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  APP: EXAM TRAINER  →  /apps/exam-trainer
+//  Claude-powered exam from uploaded PDFs/images — API calls from browser
+// ══════════════════════════════════════════════════════════════════════════════
+app.use('/apps/exam-trainer', checkAuth, checkAppAccess('exam-trainer'),
+  express.static(path.join(__dirname, 'apps/examTrainer')));
+
+app.post('/apps/exam-trainer/api/save-session', checkAuth, checkAppAccess('exam-trainer'), async (req, res) => {
+  const { subject, score, total, duration_seconds, files_used, questions = [], answers = [] } = req.body;
+  const userId = req.session.userId;
+  try {
+    const sessionId = await new Promise((resolve, reject) =>
+      db.run(
+        `INSERT INTO exam_sessions (user_id, subject, score, total, timestamp, duration_seconds, files_used)
+         VALUES (?, ?, ?, ?, datetime('now'), ?, ?)`,
+        [userId, subject, score, total, duration_seconds, files_used],
+        function(err) { err ? reject(err) : resolve(this.lastID); }
+      )
+    );
+
+    for (let i = 0; i < questions.length; i++) {
+      const q = questions[i];
+      const questionId = await new Promise((resolve, reject) =>
+        db.run(
+          `INSERT INTO exam_questions (session_id, subject, question, type, options_json, correct_answer, explanation, source_hint)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          [sessionId, subject, q.question, q.type, JSON.stringify(q.options || []), q.correct_answer, q.explanation, q.source_hint],
+          function(err) { err ? reject(err) : resolve(this.lastID); }
+        )
+      );
+      const a = answers[i];
+      if (a) {
+        await new Promise((resolve, reject) =>
+          db.run(
+            `INSERT INTO user_answers (session_id, question_id, user_answer, is_correct, timestamp)
+             VALUES (?, ?, ?, ?, datetime('now'))`,
+            [sessionId, questionId, a.user_answer, a.is_correct ? 1 : 0],
+            err => err ? reject(err) : resolve()
+          )
+        );
+      }
+    }
+    res.json({ ok: true, sessionId });
+  } catch (err) {
+    console.error('[exam-trainer]', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/apps/exam-trainer/api/history', checkAuth, checkAppAccess('exam-trainer'), (req, res) => {
+  db.all(
+    `SELECT * FROM exam_sessions WHERE user_id = ? ORDER BY timestamp DESC LIMIT 20`,
+    [req.session.userId],
+    (err, rows) => err ? res.status(500).json({ error: err.message }) : res.json(rows)
+  );
+});
+
+app.get('/apps/exam-trainer/api/weak-topics', checkAuth, checkAppAccess('exam-trainer'), (req, res) => {
+  db.all(
+    `SELECT q.question, q.type, q.correct_answer, q.explanation, q.source_hint,
+            COUNT(a.id)                                                          AS attempts,
+            SUM(CASE WHEN a.is_correct = 0 THEN 1 ELSE 0 END)                   AS wrong_count,
+            ROUND(100.0 * SUM(CASE WHEN a.is_correct = 0 THEN 1 ELSE 0 END) / COUNT(a.id)) AS error_rate
+     FROM exam_questions q
+     JOIN user_answers   a ON a.question_id = q.id
+     JOIN exam_sessions  s ON s.id = q.session_id
+     WHERE s.user_id = ?
+     GROUP BY q.question
+     HAVING error_rate > 50
+     ORDER BY error_rate DESC
+     LIMIT 20`,
+    [req.session.userId],
+    (err, rows) => err ? res.status(500).json({ error: err.message }) : res.json(rows)
+  );
+});
+
 
 // ── Start ──────────────────────────────────────────────────────────────────
 app.listen(PORT, async () => {

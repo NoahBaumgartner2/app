@@ -1,0 +1,1453 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prüfungs-Trainer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<style>
+:root {
+  --bg:  #0f0f0f; --bg2: #171717; --bg3: #1f1f1f; --bg4: #2a2a2a;
+  --border: #2e2e2e; --border2: #3a3a3a;
+  --text: #f0f0f0; --text2: #999; --text3: #555;
+  --accent: #f59e0b; --accent-dim: #92400e; --accent-bg: #1c1200;
+  --green: #4ade80; --green-dim: #166534; --green-bg: #0d2818;
+  --red: #f87171; --red-dim: #7f1d1d; --red-bg: #2a0d0d;
+  --blue: #60a5fa; --blue-bg: #0c1f3a;
+  --purple: #a78bfa; --purple-bg: #1e1040; --purple-dim: #5b21b6;
+  --mono: 'JetBrains Mono', monospace;
+  --sans: 'Inter', sans-serif;
+  --radius: 10px; --radius-sm: 6px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: var(--sans); min-height: 100vh; display: flex; flex-direction: column; }
+
+/* ── Header ──────────────────────────────────────────────────────────── */
+header {
+  border-bottom: 1px solid var(--border); padding: 0 1.5rem; height: 52px;
+  display: flex; align-items: center; gap: 12px;
+  position: sticky; top: 0; background: var(--bg); z-index: 100;
+}
+.logo-back { font-size: 12px; color: var(--text3); text-decoration: none; font-family: var(--mono); }
+.logo-back:hover { color: var(--text2); }
+.logo { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; }
+.logo-icon { width: 26px; height: 26px; background: var(--accent-bg); border: 1px solid var(--accent-dim); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 14px; }
+.header-right { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+.header-nav { display: flex; gap: 4px; }
+.nav-tab { background: none; border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text2); padding: 5px 12px; font-size: 12px; font-family: var(--sans); cursor: pointer; transition: all .15s; }
+.nav-tab:hover { border-color: var(--border2); color: var(--text); }
+.nav-tab.active { background: var(--bg3); border-color: var(--border2); color: var(--text); }
+.gemini-badge { font-family: var(--mono); font-size: 11px; padding: 3px 9px; border-radius: 20px; border: 1px solid; white-space: nowrap; }
+.gemini-badge.ok  { background: var(--green-bg); color: var(--green); border-color: var(--green-dim); }
+.gemini-badge.bad { background: var(--red-bg);   color: var(--red);   border-color: var(--red-dim); }
+
+/* ── Views ───────────────────────────────────────────────────────────── */
+main { flex: 1; }
+.view { display: none; }
+.view.active { display: block; animation: fadeIn .18s ease; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+/* ── Layout ──────────────────────────────────────────────────────────── */
+.setup-wrap    { max-width: 680px; margin: 0 auto; padding: 1.75rem 1.5rem; display: flex; flex-direction: column; gap: 1.25rem; }
+.exam-wrap     { max-width: 720px; margin: 0 auto; padding: 1.5rem;         display: flex; flex-direction: column; gap: 1.25rem; min-height: calc(100vh - 52px); }
+.results-wrap  { max-width: 780px; margin: 0 auto; padding: 1.5rem;         display: flex; flex-direction: column; gap: 1.25rem; }
+.history-wrap  { max-width: 800px; margin: 0 auto; padding: 1.5rem;         display: flex; flex-direction: column; gap: 1.5rem; }
+
+/* ── Cards ───────────────────────────────────────────────────────────── */
+.card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.card-header { padding: 11px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 9px; }
+.card-num { width: 20px; height: 20px; border-radius: 50%; background: var(--bg4); border: 1px solid var(--border2); display: flex; align-items: center; justify-content: center; font-family: var(--mono); font-size: 10px; color: var(--text3); flex-shrink: 0; }
+.card-num.on { background: var(--accent-bg); border-color: var(--accent-dim); color: var(--accent); }
+.card-title { font-size: 13px; font-weight: 500; }
+.card-body { padding: 16px; }
+
+/* ── Drive browser ───────────────────────────────────────────────────── */
+.drive-connect-btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 14px; border: 1.5px dashed var(--border2); border-radius: var(--radius); background: none; color: var(--text2); font-size: 13px; font-family: var(--sans); cursor: pointer; transition: all .15s; }
+.drive-connect-btn:hover { border-color: var(--accent-dim); background: var(--accent-bg); color: var(--accent); }
+.drive-toolbar { display: flex; gap: 8px; margin-bottom: 10px; align-items: center; }
+.drive-toolbar input { flex: 1; }
+.drive-disconnect { background: none; border: none; color: var(--text3); font-size: 12px; font-family: var(--mono); cursor: pointer; white-space: nowrap; }
+.drive-disconnect:hover { color: var(--red); }
+.breadcrumb { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; font-size: 12px; font-family: var(--mono); min-height: 18px; }
+.bc-item { color: var(--text2); cursor: pointer; }
+.bc-item:hover { color: var(--text); }
+.bc-item.last { color: var(--text); cursor: default; }
+.bc-sep { color: var(--text3); }
+.drive-list { max-height: 280px; overflow-y: auto; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg); }
+.drive-item { display: flex; align-items: center; gap: 9px; padding: 8px 12px; cursor: pointer; border-bottom: 1px solid var(--border); transition: background .1s; }
+.drive-item:last-child { border-bottom: none; }
+.drive-item:hover { background: var(--bg3); }
+.drive-item.selected { background: var(--accent-bg); }
+.drive-item-icon { font-size: 14px; flex-shrink: 0; }
+.drive-item-name { flex: 1; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.drive-item-meta { font-family: var(--mono); font-size: 10px; color: var(--text3); white-space: nowrap; }
+.drive-item-arr { color: var(--text3); font-size: 16px; line-height: 1; }
+.drive-item-cb { accent-color: var(--accent); cursor: pointer; width: 15px; height: 15px; flex-shrink: 0; pointer-events: none; }
+.drive-loading { padding: 1.5rem; text-align: center; font-family: var(--mono); font-size: 12px; color: var(--text3); }
+.selected-wrap { margin-top: 10px; }
+.selected-header { font-size: 10px; color: var(--text3); font-family: var(--mono); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 6px; }
+.file-list { display: flex; flex-direction: column; gap: 4px; }
+.file-item { display: flex; align-items: center; gap: 8px; padding: 7px 10px; background: var(--bg3); border-radius: var(--radius-sm); border: 1px solid var(--border); font-size: 12px; }
+.file-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--mono); color: var(--text2); }
+.file-del { background: none; border: none; color: var(--text3); cursor: pointer; font-size: 13px; line-height: 1; padding: 2px 4px; border-radius: 3px; }
+.file-del:hover { color: var(--red); }
+
+/* ── Form ────────────────────────────────────────────────────────────── */
+.fg { margin-bottom: 14px; }
+.fg:last-child { margin-bottom: 0; }
+.lbl { display: block; font-size: 10px; color: var(--text3); font-family: var(--mono); letter-spacing: .05em; text-transform: uppercase; margin-bottom: 6px; }
+input[type="text"], input[type="password"], textarea { width: 100%; background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 12px; font-size: 14px; color: var(--text); font-family: var(--sans); outline: none; transition: border-color .15s; }
+input:focus, textarea:focus { border-color: var(--accent-dim); }
+textarea { resize: vertical; min-height: 100px; line-height: 1.5; }
+
+/* ── Toggles ─────────────────────────────────────────────────────────── */
+.tog-group { display: flex; gap: 6px; flex-wrap: wrap; }
+.tog { background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text2); padding: 6px 14px; font-size: 13px; font-family: var(--sans); cursor: pointer; transition: all .15s; }
+.tog:hover { border-color: var(--border2); color: var(--text); }
+.tog.active { background: var(--accent-bg); border-color: var(--accent-dim); color: var(--accent); }
+
+/* ── Checkboxes ──────────────────────────────────────────────────────── */
+.cb-group { display: flex; flex-direction: column; gap: 9px; }
+.cb-item { display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 13px; color: var(--text2); }
+.cb-item input { width: 15px; height: 15px; accent-color: var(--accent); cursor: pointer; flex-shrink: 0; }
+.cb-item:hover { color: var(--text); }
+
+/* ── Buttons ─────────────────────────────────────────────────────────── */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 10px 20px; border-radius: var(--radius-sm); font-size: 14px; font-weight: 500; font-family: var(--sans); cursor: pointer; transition: all .15s; border: none; }
+.btn-primary { background: var(--accent); color: #0a0700; width: 100%; padding: 13px; font-size: 15px; }
+.btn-primary:hover:not(:disabled) { filter: brightness(1.1); }
+.btn-primary:disabled { background: var(--bg4); color: var(--text3); cursor: not-allowed; }
+.btn-ghost { background: transparent; color: var(--text2); border: 1px solid var(--border); }
+.btn-ghost:hover:not(:disabled) { background: var(--bg3); border-color: var(--border2); color: var(--text); }
+.btn-ghost:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn-sm { padding: 5px 11px; font-size: 12px; }
+
+/* ── Loading overlay ─────────────────────────────────────────────────── */
+.overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.78); z-index: 300; flex-direction: column; align-items: center; justify-content: center; gap: 16px; }
+.overlay.on { display: flex; }
+.spinner { width: 38px; height: 38px; border: 3px solid var(--bg3); border-top-color: var(--accent); border-radius: 50%; animation: spin .7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.overlay-text { font-size: 13px; color: var(--text2); font-family: var(--mono); }
+
+/* ── Exam topbar ─────────────────────────────────────────────────────── */
+.exam-topbar { display: flex; align-items: center; gap: 12px; }
+.prog-label { font-family: var(--mono); font-size: 11px; color: var(--text3); white-space: nowrap; }
+.prog-track { flex: 1; height: 3px; background: var(--bg3); border-radius: 2px; overflow: hidden; }
+.prog-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width .3s; }
+.timer-badge { font-family: var(--mono); font-size: 12px; color: var(--text2); white-space: nowrap; background: var(--bg3); padding: 3px 9px; border-radius: 5px; border: 1px solid var(--border); }
+.timer-badge.urgent { color: var(--red); border-color: var(--red-dim); }
+
+/* ── Question card ───────────────────────────────────────────────────── */
+.q-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; flex: 1; }
+.q-badge { display: inline-flex; align-items: center; font-family: var(--mono); font-size: 10px; color: var(--accent); background: var(--accent-bg); border: 1px solid var(--accent-dim); padding: 3px 9px; border-radius: 4px; margin-bottom: 14px; }
+.q-badge.math-badge { color: var(--purple); background: var(--purple-bg); border-color: var(--purple-dim); }
+.q-text { font-size: 17px; font-weight: 500; line-height: 1.6; margin-bottom: 20px; }
+
+/* ── MC / TF / Open ──────────────────────────────────────────────────── */
+.mc-opts { display: flex; flex-direction: column; gap: 8px; }
+.mc-opt { display: flex; align-items: flex-start; gap: 12px; padding: 11px 14px; background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius-sm); cursor: pointer; transition: all .15s; text-align: left; width: 100%; }
+.mc-opt:hover:not([disabled]) { border-color: var(--border2); background: var(--bg4); }
+.mc-opt.sel { border-color: var(--accent-dim); background: var(--accent-bg); }
+.mc-opt[disabled] { opacity: 0.55; cursor: not-allowed; }
+.mc-key { width: 22px; height: 22px; border-radius: 4px; background: var(--bg4); border: 1px solid var(--border2); display: flex; align-items: center; justify-content: center; font-family: var(--mono); font-size: 10px; color: var(--text3); flex-shrink: 0; margin-top: 1px; }
+.mc-opt.sel .mc-key { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+.mc-text { font-size: 14px; line-height: 1.45; }
+.tf-opts { display: flex; gap: 12px; }
+.tf-btn { flex: 1; padding: 18px 12px; border-radius: var(--radius); font-size: 17px; font-weight: 600; cursor: pointer; border: 2px solid var(--border); background: var(--bg3); transition: all .15s; display: flex; align-items: center; justify-content: center; gap: 8px; font-family: var(--sans); }
+.tf-btn:hover:not([disabled]).tf-true  { border-color: var(--green-dim); background: var(--green-bg); color: var(--green); }
+.tf-btn:hover:not([disabled]).tf-false { border-color: var(--red-dim);   background: var(--red-bg);   color: var(--red); }
+.tf-btn.sel.tf-true  { border-color: var(--green-dim); background: var(--green-bg); color: var(--green); }
+.tf-btn.sel.tf-false { border-color: var(--red-dim);   background: var(--red-bg);   color: var(--red); }
+.tf-btn[disabled] { opacity: 0.5; cursor: not-allowed; }
+.open-feedback { display: none; margin-top: 10px; padding: 10px 14px; border-radius: var(--radius-sm); font-size: 12px; line-height: 1.5; }
+.open-feedback.ok  { display: block; background: var(--green-bg); border: 1px solid var(--green-dim); color: var(--green); }
+.open-feedback.bad { display: block; background: var(--red-bg);   border: 1px solid var(--red-dim);   color: var(--red); }
+
+/* ── Math exam ───────────────────────────────────────────────────────── */
+.math-sub-qs { margin-bottom: 16px; padding: 12px 16px; background: var(--bg3); border-radius: var(--radius-sm); border: 1px solid var(--border); display: flex; flex-direction: column; gap: 6px; }
+.math-sub-q { font-size: 14px; line-height: 1.7; color: var(--text2); }
+.math-textarea { font-family: var(--mono); font-size: 13px; min-height: 180px; line-height: 1.7; resize: vertical; }
+.hint-section { margin-top: 14px; display: flex; flex-direction: column; gap: 8px; }
+.hint-btn { background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text2); padding: 9px 14px; font-size: 13px; font-family: var(--sans); cursor: pointer; text-align: left; transition: all .15s; width: 100%; }
+.hint-btn:hover { border-color: var(--purple-dim); color: var(--purple); background: var(--purple-bg); }
+.hint-item { padding: 12px 14px; background: var(--purple-bg); border: 1px solid var(--purple-dim); border-radius: var(--radius-sm); font-size: 13px; line-height: 1.6; color: var(--purple); }
+.hint-penalty { font-family: var(--mono); font-size: 10px; color: var(--accent); margin-top: 6px; }
+.hint-num-badge { display: inline-block; font-family: var(--mono); font-size: 10px; padding: 1px 6px; border-radius: 3px; background: var(--purple-dim); color: var(--purple); margin-right: 6px; }
+
+/* ── Exam footer ─────────────────────────────────────────────────────── */
+.exam-foot { display: flex; justify-content: flex-end; }
+.btn-next { padding: 10px 28px; font-size: 14px; font-weight: 600; width: 100%; }
+
+/* ── Results ─────────────────────────────────────────────────────────── */
+.score-hero { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 2rem; display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
+.ring-wrap { position: relative; display: flex; align-items: center; justify-content: center; }
+.ring-label { position: absolute; display: flex; flex-direction: column; align-items: center; font-weight: 700; }
+.ring-num { font-size: 26px; line-height: 1; }
+.ring-pct { font-size: 12px; color: var(--text2); font-family: var(--mono); margin-top: 3px; }
+.score-badge { padding: 4px 13px; border-radius: 20px; font-size: 12px; font-weight: 600; font-family: var(--mono); }
+.score-badge.pass { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-dim); }
+.score-badge.fail { background: var(--red-bg);   color: var(--red);   border: 1px solid var(--red-dim); }
+.score-badge.pending { background: var(--purple-bg); color: var(--purple); border: 1px solid var(--purple-dim); }
+.score-dur { font-family: var(--mono); font-size: 11px; color: var(--text3); }
+.res-actions { display: flex; gap: 10px; width: 100%; margin-top: 4px; }
+.res-actions .btn { flex: 1; }
+
+/* ── Review accordion ────────────────────────────────────────────────── */
+.review-list { display: flex; flex-direction: column; gap: 6px; }
+.rev-item { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.rev-item.ok   { border-left: 3px solid var(--green); }
+.rev-item.bad  { border-left: 3px solid var(--red); }
+.rev-item.pending { border-left: 3px solid var(--purple); }
+.rev-head { padding: 11px 14px; cursor: pointer; display: flex; align-items: flex-start; gap: 10px; transition: background .1s; }
+.rev-head:hover { background: var(--bg3); }
+.rev-icon { font-size: 13px; flex-shrink: 0; margin-top: 1px; }
+.rev-q { flex: 1; font-size: 13px; line-height: 1.4; }
+.rev-chev { color: var(--text3); font-size: 11px; flex-shrink: 0; transition: transform .2s; }
+.rev-item.open .rev-chev { transform: rotate(180deg); }
+.rev-body { display: none; border-top: 1px solid var(--border); padding: 14px; flex-direction: column; gap: 12px; }
+.rev-item.open .rev-body { display: flex; }
+.rev-row-lbl { font-family: var(--mono); font-size: 10px; color: var(--text3); text-transform: uppercase; margin-bottom: 3px; }
+.rev-row-val { font-size: 13px; line-height: 1.4; }
+.rev-row-val.green { color: var(--green); }
+.rev-row-val.red   { color: var(--red); }
+.src-hint { display: inline-block; font-family: var(--mono); font-size: 10px; color: var(--accent); background: var(--accent-bg); border: 1px solid var(--accent-dim); padding: 2px 8px; border-radius: 4px; }
+
+/* ── Math results ────────────────────────────────────────────────────── */
+.math-rev-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.math-col-lbl { font-family: var(--mono); font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 8px; }
+.math-user-ans { font-family: var(--mono); font-size: 12px; line-height: 1.7; color: var(--text2); white-space: pre-wrap; word-break: break-word; background: var(--bg3); padding: 10px 12px; border-radius: var(--radius-sm); min-height: 60px; }
+.hint-used-note { font-family: var(--mono); font-size: 10px; color: var(--accent); margin-top: 6px; }
+.solution-steps { display: flex; flex-direction: column; gap: 6px; }
+.step-item { background: var(--bg3); border-radius: var(--radius-sm); border: 1px solid var(--border); overflow: hidden; }
+.step-head { padding: 8px 12px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; font-size: 12px; font-weight: 500; user-select: none; }
+.step-head:hover { background: var(--bg4); }
+.step-body { display: none; padding: 10px 12px; font-size: 13px; line-height: 1.7; border-top: 1px solid var(--border); color: var(--text2); }
+.step-item.open .step-body { display: block; }
+.step-chev { color: var(--text3); font-size: 11px; transition: transform .2s; }
+.step-item.open .step-chev { transform: rotate(180deg); }
+.methods-card { margin-top: 0; }
+.methods-list { display: flex; flex-direction: column; gap: 6px; }
+.method-item { font-size: 13px; color: var(--text2); padding: 9px 12px; background: var(--bg3); border-radius: var(--radius-sm); border-left: 3px solid var(--purple-dim); line-height: 1.5; }
+
+/* ── History ─────────────────────────────────────────────────────────── */
+.hist-section-title { font-size: 11px; font-weight: 600; color: var(--text3); font-family: var(--mono); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 10px; }
+.hist-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.hist-table th { text-align: left; padding: 8px 12px; font-family: var(--mono); font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: .05em; border-bottom: 1px solid var(--border); }
+.hist-table td { padding: 10px 12px; border-bottom: 1px solid var(--border); color: var(--text2); vertical-align: middle; }
+.hist-table tr:last-child td { border-bottom: none; }
+.hist-table tr:hover td { background: var(--bg3); }
+.sc-chip { display: inline-block; padding: 2px 8px; border-radius: 4px; font-family: var(--mono); font-size: 11px; font-weight: 600; }
+.sc-chip.pass { background: var(--green-bg); color: var(--green); }
+.sc-chip.fail { background: var(--red-bg);   color: var(--red); }
+.weak-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
+.weak-card { background: var(--bg2); border: 1px solid var(--red-dim); border-radius: var(--radius); padding: 14px; }
+.weak-err  { font-family: var(--mono); font-size: 10px; color: var(--red); margin-bottom: 6px; }
+.weak-q    { font-size: 13px; line-height: 1.4; margin-bottom: 6px; }
+.weak-src  { font-family: var(--mono); font-size: 10px; color: var(--text3); }
+.empty-state { text-align: center; padding: 2.5rem; font-family: var(--mono); font-size: 12px; color: var(--text3); }
+
+/* ── Math upload zone ────────────────────────────────────────────────────── */
+.math-upload-zone { border: 2px dashed var(--border2); border-radius: var(--radius); padding: 1.75rem 1rem; text-align: center; cursor: pointer; transition: all .15s; background: var(--bg3); position: relative; }
+.math-upload-zone:hover, .math-upload-zone.dragover { border-color: var(--purple-dim); background: var(--purple-bg); }
+.math-upload-icon { font-size: 26px; margin-bottom: 8px; }
+.math-upload-label { font-size: 14px; font-weight: 500; color: var(--text2); }
+.math-upload-hint { font-size: 11px; color: var(--text3); margin-top: 4px; font-family: var(--mono); }
+.math-upload-input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+.math-upload-previews { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; align-items: flex-start; }
+.math-thumb-wrap { position: relative; display: inline-block; }
+.math-thumb { width: 80px; height: 80px; object-fit: cover; border-radius: var(--radius-sm); border: 1px solid var(--border); cursor: zoom-in; display: block; }
+.math-thumb-del { position: absolute; top: -6px; right: -6px; width: 18px; height: 18px; border-radius: 50%; background: var(--red); color: #fff; font-size: 10px; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; line-height: 1; }
+.math-pdf-item { display: flex; align-items: center; gap: 8px; padding: 7px 10px; background: var(--bg3); border-radius: var(--radius-sm); border: 1px solid var(--border); font-size: 12px; color: var(--text2); }
+.math-pdf-del { background: none; border: none; color: var(--text3); cursor: pointer; margin-left: auto; font-size: 13px; padding: 0 4px; }
+.math-pdf-del:hover { color: var(--red); }
+.math-grading-inline { display: flex; align-items: center; gap: 8px; margin-top: 10px; padding: 8px 12px; background: var(--purple-bg); border: 1px solid var(--purple-dim); border-radius: var(--radius-sm); font-size: 12px; color: var(--purple); font-family: var(--mono); }
+.spinner-sm { width: 14px; height: 14px; border: 2px solid var(--purple-dim); border-top-color: var(--purple); border-radius: 50%; animation: spin .7s linear infinite; flex-shrink: 0; }
+
+/* ── Gemini score feedback ───────────────────────────────────────────────── */
+.gemini-score-num { font-family: var(--mono); font-size: 12px; color: var(--text2); margin-bottom: 5px; font-weight: 600; }
+.gemini-score-bar-bg { height: 7px; background: var(--bg4); border-radius: 4px; overflow: hidden; margin-bottom: 10px; }
+.gemini-score-bar-fill { height: 100%; border-radius: 4px; }
+.gemini-feedback-text { font-size: 13px; line-height: 1.55; color: var(--text2); margin-bottom: 10px; }
+.feedback-parts-lbl { font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 5px; }
+.correct-parts, .missing-parts { padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; }
+.correct-parts li { font-size: 12px; color: var(--green); padding: 4px 10px; background: var(--green-bg); border-radius: var(--radius-sm); }
+.missing-parts li { font-size: 12px; color: var(--red); padding: 4px 10px; background: var(--red-bg); border-radius: var(--radius-sm); }
+.math-solution-section { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+
+/* ── Fullscreen image overlay ────────────────────────────────────────────── */
+#imgFullscreen { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.92); z-index: 500; align-items: center; justify-content: center; cursor: zoom-out; }
+#imgFullscreen.on { display: flex; }
+#imgFullscreen img { max-width: 92vw; max-height: 92vh; border-radius: var(--radius); object-fit: contain; }
+
+@media (max-width: 600px) {
+  .setup-wrap, .exam-wrap, .results-wrap, .history-wrap { padding: 1rem; }
+  .tf-opts { flex-direction: column; }
+  .res-actions { flex-direction: column; }
+  .q-text { font-size: 15px; }
+  .math-rev-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <a href="/" class="logo-back">← Dashboard</a>
+  <div class="logo"><div class="logo-icon">🎓</div>Prüfungs-Trainer</div>
+  <div class="header-right">
+    <span class="gemini-badge bad" id="geminiBadge">Gemini Key fehlt</span>
+    <div class="header-nav">
+      <button class="nav-tab active" id="tabExam"    onclick="switchTab('exam')">Prüfung</button>
+      <button class="nav-tab"        id="tabHistory" onclick="switchTab('history')">Verlauf</button>
+    </div>
+  </div>
+</header>
+
+<div class="overlay" id="overlay">
+  <div class="spinner"></div>
+  <div class="overlay-text" id="overlayText">Analysiere Unterlagen…</div>
+</div>
+
+<main>
+
+<!-- ══ VIEW: SETUP ══════════════════════════════════════════════════════ -->
+<div id="vSetup" class="view active">
+<div class="setup-wrap">
+
+  <div class="card">
+    <div class="card-header"><div class="card-num on">1</div><span class="card-title">Unterlagen aus Google Drive</span></div>
+    <div class="card-body">
+      <div id="driveDisconnected">
+        <div id="clientIdWrap" style="display:none;margin-bottom:12px">
+          <label class="lbl">Google OAuth Client-ID</label>
+          <div style="display:flex;gap:8px">
+            <input type="text" id="clientIdInput" placeholder="xxxxx.apps.googleusercontent.com">
+            <button class="btn btn-ghost btn-sm" onclick="saveClientIdAndConnect()">Verbinden</button>
+          </div>
+        </div>
+        <button class="drive-connect-btn" onclick="connectDrive()"><span>📂</span> Mit Google Drive verbinden</button>
+      </div>
+      <div id="driveConnected" style="display:none">
+        <div class="drive-toolbar">
+          <input type="text" id="driveSearch" placeholder="Dateien suchen…" oninput="filterDriveList(this.value)">
+          <button class="drive-disconnect" onclick="disconnectDrive()">Drive trennen ✕</button>
+        </div>
+        <div id="driveBreadcrumb" class="breadcrumb"></div>
+        <div id="driveList" class="drive-list"><div class="drive-loading">Laden…</div></div>
+        <div id="selectedWrap" class="selected-wrap" style="display:none">
+          <div class="selected-header">Ausgewählt (<span id="selectedCount">0</span>)</div>
+          <div id="selectedList" class="file-list"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><div class="card-num">2</div><span class="card-title">Einstellungen</span></div>
+    <div class="card-body">
+      <div class="fg">
+        <label class="lbl">Fach / Thema</label>
+        <input type="text" id="subject" placeholder="z.B. Algorithmen & Wahrscheinlichkeit">
+      </div>
+      <div class="fg">
+        <label class="lbl">Prüfungsformat</label>
+        <div class="tog-group">
+          <button class="tog active" data-format="concept" onclick="setExamFormat(this,'concept')">Konzeptfragen</button>
+          <button class="tog"        data-format="math"    onclick="setExamFormat(this,'math')">Mathematik / Beweise</button>
+          <button class="tog"        data-format="mixed"   onclick="setExamFormat(this,'mixed')">Gemischt</button>
+        </div>
+      </div>
+      <div class="fg">
+        <label class="lbl">Anzahl Fragen</label>
+        <div class="tog-group" id="countTogsWrap">
+          <button class="tog"        data-count="5"  onclick="setTog(this,'count')">5</button>
+          <button class="tog active" data-count="10" onclick="setTog(this,'count')">10</button>
+          <button class="tog"        data-count="20" onclick="setTog(this,'count')">20</button>
+        </div>
+      </div>
+      <div class="fg" id="typesSection">
+        <label class="lbl">Fragentypen</label>
+        <div class="cb-group">
+          <label class="cb-item"><input type="checkbox" class="type-cb" value="multiple_choice" checked><span>Multiple Choice (4 Optionen, Keyboard 1–4)</span></label>
+          <label class="cb-item"><input type="checkbox" class="type-cb" value="true_false"><span>Wahr / Falsch</span></label>
+          <label class="cb-item"><input type="checkbox" class="type-cb" value="open"><span>Offene Frage (Gemini-Bewertung 0–100%)</span></label>
+        </div>
+      </div>
+      <div class="fg">
+        <label class="lbl">Timer</label>
+        <div class="tog-group">
+          <button class="tog active" data-timer="0"  onclick="setTog(this,'timer')">Kein Timer</button>
+          <button class="tog"        data-timer="30" onclick="setTog(this,'timer')">30 min</button>
+          <button class="tog"        data-timer="45" onclick="setTog(this,'timer')">45 min</button>
+          <button class="tog"        data-timer="60" onclick="setTog(this,'timer')">60 min</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <button class="btn btn-primary" onclick="generate()">🎓 Prüfung generieren</button>
+
+</div>
+</div>
+
+<!-- ══ VIEW: EXAM ════════════════════════════════════════════════════════ -->
+<div id="vExam" class="view">
+<div class="exam-wrap">
+  <div class="exam-topbar">
+    <span class="prog-label" id="progLabel">Frage 1 von 10</span>
+    <div class="prog-track"><div class="prog-fill" id="progFill" style="width:0%"></div></div>
+    <span class="timer-badge" id="timerBadge" style="display:none">45:00</span>
+  </div>
+  <div class="q-card">
+    <div class="q-badge" id="qBadge">Multiple Choice</div>
+    <div class="q-text" id="qText"></div>
+    <div id="answerArea"></div>
+  </div>
+  <div class="exam-foot">
+    <button class="btn btn-primary btn-next" id="nextBtn" onclick="nextQuestion()" disabled>Weiter →</button>
+  </div>
+</div>
+</div>
+
+<!-- ══ VIEW: RESULTS ═════════════════════════════════════════════════════ -->
+<div id="vResults" class="view">
+<div class="results-wrap">
+
+  <div class="score-hero">
+    <div class="ring-wrap">
+      <svg width="140" height="140" viewBox="0 0 140 140">
+        <circle cx="70" cy="70" r="54" fill="none" stroke="var(--bg3)" stroke-width="12"/>
+        <circle id="scoreRing" cx="70" cy="70" r="54" fill="none" stroke="var(--accent)"
+          stroke-width="12" stroke-linecap="round" stroke-dasharray="339.3" stroke-dashoffset="339.3"
+          transform="rotate(-90 70 70)" style="transition:stroke-dashoffset .03s linear"/>
+      </svg>
+      <div class="ring-label">
+        <div class="ring-num" id="ringNum">–</div>
+        <div class="ring-pct" id="ringPct">–</div>
+      </div>
+    </div>
+    <span class="score-badge" id="scoreBadge">–</span>
+    <span class="score-dur"   id="scoreDur"></span>
+    <div class="res-actions">
+      <button class="btn btn-ghost" id="retryBtn" onclick="retryWrong()">↺ Falsche wiederholen</button>
+      <button class="btn btn-ghost" onclick="showSetup()">+ Neue Prüfung</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><span class="card-title">Alle Fragen</span></div>
+    <div class="card-body" style="padding:10px">
+      <div id="reviewList" class="review-list"></div>
+    </div>
+  </div>
+
+  <div class="card methods-card" id="methodsCard" style="display:none">
+    <div class="card-header"><span class="card-title">Verwendete Theoreme &amp; Methoden</span></div>
+    <div class="card-body"><div id="methodsList" class="methods-list"></div></div>
+  </div>
+
+</div>
+</div>
+
+<!-- ══ VIEW: HISTORY ═════════════════════════════════════════════════════ -->
+<div id="vHistory" class="view">
+<div class="history-wrap">
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Letzte Prüfungen</span>
+      <button class="btn btn-ghost btn-sm" style="margin-left:auto" onclick="loadHistory()">↻ Neu laden</button>
+    </div>
+    <div class="card-body" style="padding:0;overflow-x:auto">
+      <table class="hist-table">
+        <thead><tr><th>Datum</th><th>Fach</th><th>Score</th><th>Dauer</th><th>Dateien</th></tr></thead>
+        <tbody id="histBody"><tr><td colspan="5" class="empty-state">Laden…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+  <div>
+    <div class="hist-section-title">Schwache Themen (Fehlerrate &gt; 50%)</div>
+    <div id="weakGrid" class="weak-grid"><div class="empty-state">Laden…</div></div>
+  </div>
+</div>
+</div>
+
+</main>
+
+<div id="imgFullscreen" onclick="closeFullscreen()"><img src="" alt=""></div>
+
+<script>
+// ── System prompts ────────────────────────────────────────────────────────
+const CONCEPT_SYSTEM_PROMPT = `Du bist ein Prüfungsexperte. Analysiere die hochgeladenen Vorlesungsunterlagen genau. Generiere ausschliesslich Fragen die direkt aus dem Inhalt dieser Unterlagen ableitbar sind. Beziehe dich auf spezifische Konzepte, Formeln, Definitionen und Beispiele die in den Dokumenten vorkommen. Antworte NUR mit einem JSON Array, kein anderer Text.
+
+Regeln für correct_answer:
+- multiple_choice: muss exakt mit einem Eintrag in options[] übereinstimmen
+- true_false: genau "Wahr" oder "Falsch"
+- open: vollständige Musterlösung als Satz`;
+
+const MATH_SYSTEM_PROMPT = `Du bist ein Mathematik-Prüfungsexperte der Universität Bern. Analysiere die hochgeladenen Prüfungsaufgaben und Vorlesungsunterlagen. Generiere Rechenaufgaben vom selben Schwierigkeitsgrad und Stil wie in den Unterlagen. Wichtig: - Erstelle konkrete Rechenaufgaben mit spezifischen Zahlen (nicht nur Konzeptfragen) - Aufgaben sollen lösbar sein mit den in den Unterlagen gezeigten Methoden - Gib 3 abgestufte Hints: Hint 1 = Welches Theorem, Hint 2 = Ansatz, Hint 3 = Erste Rechenschritte - Gib eine vollständige Schritt-für-Schritt Musterlösung - Beziehe dich auf spezifische Aufgaben aus den Unterlagen als Vorlage - Antworte NUR mit JSON Array, kein anderer Text.
+WICHTIG: Da deine Antwort striktes JSON sein muss, musst du alle Backslashes für LaTeX zwingend doppelt escapen! Schreibe also z.B. "\\\\gamma" statt "\\gamma" und "\\\\frac" statt "\\frac". Antworte NUR mit JSON Array, kein anderer Text.`;
+
+const MIXED_SYSTEM_PROMPT = `Du bist ein Prüfungsexperte. Analysiere die hochgeladenen Vorlesungsunterlagen. Generiere eine ausgewogene Mischung aus Konzeptfragen und Rechenaufgaben. Antworte NUR mit einem JSON Array, kein anderer Text.
+
+Regeln:
+- multiple_choice: correct_answer muss exakt mit einem Eintrag in options[] übereinstimmen
+- true_false: correct_answer genau "Wahr" oder "Falsch"
+- open: correct_answer vollständige Musterlösung als Satz
+- math: Gib zusätzlich solution_steps (Array mit step/title/content Objekten) und hints (Array mit 3 Strings) an`;
+
+// ── State ─────────────────────────────────────────────────────────────────
+let geminiApiKey  = '';
+let examFormat    = 'concept';
+let hintsShown    = [];
+
+let driveToken    = null;
+let currentFolder = 'root';
+let breadcrumb    = [{ id: 'root', name: 'Meine Ablage' }];
+let driveFiles    = [];
+let selectedFiles = [];
+
+let questions     = [];
+let answers       = [];
+let currentQ      = 0;
+let sessionStart  = null;
+let timerHandle   = null;
+let timerRemain   = 0;
+let savedDuration = 0;
+let sessionSaved  = false;
+
+let mathUploads       = [];
+let mathGeminiResults = [];
+
+// ── KaTeX rendering ───────────────────────────────────────────────────────
+function renderLatex(el) {
+  if (!el || !window.renderMathInElement) return;
+  renderMathInElement(el, {
+    delimiters: [
+      { left: '$$', right: '$$', display: true },
+      { left: '$',  right: '$',  display: false },
+    ],
+    throwOnError: false,
+  });
+}
+
+// ── Gemini badge ──────────────────────────────────────────────────────────
+function updateGeminiBadge() {
+  const badge = document.getElementById('geminiBadge');
+  badge.className  = 'gemini-badge ' + (geminiApiKey ? 'ok' : 'bad');
+  badge.textContent = geminiApiKey ? 'Gemini ✓' : 'Gemini Key fehlt – im Dashboard setzen';
+}
+
+// ── View management ───────────────────────────────────────────────────────
+function showView(id) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById('v' + id).classList.add('active');
+}
+
+function switchTab(tab) {
+  document.getElementById('tabExam').classList.toggle('active', tab === 'exam');
+  document.getElementById('tabHistory').classList.toggle('active', tab === 'history');
+  if (tab === 'history') { showView('History'); loadHistory(); }
+  else showView('Setup');
+}
+
+function showSetup() {
+  document.getElementById('tabExam').classList.add('active');
+  document.getElementById('tabHistory').classList.remove('active');
+  stopTimer();
+  showView('Setup');
+}
+
+function setLoading(on, text = 'Analysiere Unterlagen…') {
+  document.getElementById('overlayText').textContent = text;
+  document.getElementById('overlay').classList.toggle('on', on);
+}
+
+// ── Toggle groups ─────────────────────────────────────────────────────────
+function setTog(btn, group) {
+  document.querySelectorAll(`[data-${group}]`).forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+// ── Exam format ───────────────────────────────────────────────────────────
+function setExamFormat(btn, fmt) {
+  examFormat = fmt;
+  document.querySelectorAll('[data-format]').forEach(b => b.classList.toggle('active', b === btn));
+
+  const wrap = document.getElementById('countTogsWrap');
+  if (fmt === 'math') {
+    wrap.innerHTML = `
+      <button class="tog"        data-count="3" onclick="setTog(this,'count')">3</button>
+      <button class="tog active" data-count="5" onclick="setTog(this,'count')">5</button>
+      <button class="tog"        data-count="8" onclick="setTog(this,'count')">8</button>`;
+  } else {
+    wrap.innerHTML = `
+      <button class="tog"        data-count="5"  onclick="setTog(this,'count')">5</button>
+      <button class="tog active" data-count="10" onclick="setTog(this,'count')">10</button>
+      <button class="tog"        data-count="20" onclick="setTog(this,'count')">20</button>`;
+  }
+
+  document.getElementById('typesSection').style.display = fmt === 'math' ? 'none' : '';
+}
+
+// ── OAuth (implicit flow) ─────────────────────────────────────────────────
+function connectDrive() {
+  const clientId = localStorage.getItem('google-client-id') || localStorage.getItem('gdrive_client_id') || '';
+  if (!clientId) {
+    document.getElementById('clientIdWrap').style.display = '';
+    document.getElementById('clientIdInput').focus();
+    return;
+  }
+  const params = new URLSearchParams({
+    client_id: clientId,
+    redirect_uri: window.location.origin + window.location.pathname,
+    response_type: 'token',
+    scope: 'https://www.googleapis.com/auth/drive.readonly',
+    prompt: 'consent',
+  });
+  window.location.href = 'https://accounts.google.com/o/oauth2/v2/auth?' + params;
+}
+
+function saveClientIdAndConnect() {
+  const val = document.getElementById('clientIdInput').value.trim();
+  if (!val) return;
+  localStorage.setItem('google-client-id', val);
+  connectDrive();
+}
+
+function handleOAuthReturn() {
+  if (!window.location.hash) return false;
+  const params = new URLSearchParams(window.location.hash.substring(1));
+  const token  = params.get('access_token');
+  if (!token) return false;
+  history.replaceState(null, '', window.location.pathname);
+  driveToken = token;
+  showDriveConnected();
+  loadDriveFolder('root');
+  return true;
+}
+
+function showDriveConnected() {
+  document.getElementById('driveDisconnected').style.display = 'none';
+  document.getElementById('driveConnected').style.display   = '';
+}
+
+function disconnectDrive() {
+  driveToken = null; selectedFiles = []; driveFiles = [];
+  breadcrumb = [{ id: 'root', name: 'Meine Ablage' }]; currentFolder = 'root';
+  document.getElementById('driveDisconnected').style.display = '';
+  document.getElementById('driveConnected').style.display   = 'none';
+  document.getElementById('clientIdWrap').style.display     = 'none';
+  renderSelectedFiles();
+}
+
+// ── Drive browser ─────────────────────────────────────────────────────────
+async function loadDriveFolder(folderId) {
+  currentFolder = folderId;
+  renderBreadcrumb();
+  document.getElementById('driveList').innerHTML = '<div class="drive-loading">Laden…</div>';
+  const q      = `'${folderId}' in parents and trashed=false and (mimeType='application/pdf' or mimeType contains 'image/' or mimeType='application/vnd.google-apps.folder')`;
+  const fields = 'files(id,name,mimeType,size,modifiedTime)';
+  const url    = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}&fields=${encodeURIComponent(fields)}&orderBy=folder,name`;
+  try {
+    const res  = await fetch(url, { headers: { Authorization: `Bearer ${driveToken}` } });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    driveFiles = data.files || [];
+    renderDriveList(driveFiles);
+  } catch (err) {
+    document.getElementById('driveList').innerHTML = `<div class="drive-loading">Fehler: ${esc(err.message)}</div>`;
+  }
+}
+
+function renderBreadcrumb() {
+  const el = document.getElementById('driveBreadcrumb');
+  el.innerHTML = breadcrumb.map((item, i) => {
+    const isLast = i === breadcrumb.length - 1;
+    return (isLast
+      ? `<span class="bc-item last">${esc(item.name)}</span>`
+      : `<span class="bc-item" data-bc="${i}">${esc(item.name)}</span>`) +
+      (!isLast ? '<span class="bc-sep">›</span>' : '');
+  }).join('');
+}
+
+function renderDriveList(list) {
+  const el = document.getElementById('driveList');
+  if (!list.length) { el.innerHTML = '<div class="drive-loading">Keine passenden Dateien</div>'; return; }
+  el.innerHTML = list.map(f => {
+    const isFolder   = f.mimeType === 'application/vnd.google-apps.folder';
+    const isSelected = !isFolder && selectedFiles.some(s => s.id === f.id);
+    const icon = isFolder ? '📁' : (f.mimeType === 'application/pdf' ? '📄' : '🖼️');
+    const size = (!isFolder && f.size) ? ` · ${(f.size / 1024 / 1024).toFixed(1)} MB` : '';
+    return `<div class="drive-item${isSelected ? ' selected' : ''}" data-id="${esc(f.id)}" data-folder="${isFolder}">
+      <span class="drive-item-icon">${icon}</span>
+      <span class="drive-item-name">${esc(f.name)}</span>
+      <span class="drive-item-meta">${size}</span>
+      ${isFolder ? '<span class="drive-item-arr">›</span>' : `<input type="checkbox" class="drive-item-cb"${isSelected ? ' checked' : ''}>`}
+    </div>`;
+  }).join('');
+}
+
+function filterDriveList(term) {
+  renderDriveList(term ? driveFiles.filter(f => f.name.toLowerCase().includes(term.toLowerCase())) : driveFiles);
+}
+
+function renderSelectedFiles() {
+  const wrap = document.getElementById('selectedWrap');
+  if (!selectedFiles.length) { wrap.style.display = 'none'; return; }
+  wrap.style.display = '';
+  document.getElementById('selectedCount').textContent = selectedFiles.length;
+  document.getElementById('selectedList').innerHTML = selectedFiles.map((f, i) => `
+    <div class="file-item">
+      <span>${f.mimeType === 'application/pdf' ? '📄' : '🖼️'}</span>
+      <span class="file-name">${esc(f.name)}</span>
+      <button class="file-del" data-deselect="${i}">✕</button>
+    </div>`).join('');
+}
+
+document.getElementById('driveList').addEventListener('click', function(e) {
+  const item = e.target.closest('.drive-item');
+  if (!item) return;
+  const id = item.dataset.id;
+  if (item.dataset.folder === 'true') {
+    const f = driveFiles.find(f => f.id === id);
+    if (!f) return;
+    breadcrumb.push({ id: f.id, name: f.name });
+    loadDriveFolder(f.id);
+  } else {
+    const f = driveFiles.find(f => f.id === id);
+    if (!f) return;
+    const idx = selectedFiles.findIndex(s => s.id === id);
+    if (idx >= 0) selectedFiles.splice(idx, 1);
+    else selectedFiles.push({ id: f.id, name: f.name, mimeType: f.mimeType });
+    const term = document.getElementById('driveSearch').value;
+    renderDriveList(term ? driveFiles.filter(f => f.name.toLowerCase().includes(term.toLowerCase())) : driveFiles);
+    renderSelectedFiles();
+  }
+});
+
+document.getElementById('driveBreadcrumb').addEventListener('click', function(e) {
+  const item = e.target.closest('.bc-item');
+  if (!item || item.classList.contains('last')) return;
+  breadcrumb = breadcrumb.slice(0, parseInt(item.dataset.bc) + 1);
+  loadDriveFolder(breadcrumb[breadcrumb.length - 1].id);
+});
+
+document.getElementById('selectedList').addEventListener('click', function(e) {
+  const btn = e.target.closest('[data-deselect]');
+  if (!btn) return;
+  selectedFiles.splice(parseInt(btn.dataset.deselect), 1);
+  const term = document.getElementById('driveSearch').value;
+  renderDriveList(term ? driveFiles.filter(f => f.name.toLowerCase().includes(term.toLowerCase())) : driveFiles);
+  renderSelectedFiles();
+});
+
+// ── Download Drive file as base64 ─────────────────────────────────────────
+async function downloadDriveFile(fileId) {
+  const resp = await fetch(
+    `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`,
+    { headers: { Authorization: `Bearer ${driveToken}` } }
+  );
+  if (!resp.ok) throw new Error('Drive Download Fehler: HTTP ' + resp.status);
+  const blob = await resp.blob();
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload  = e => resolve(e.target.result.split(',')[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
+// ── Generate ──────────────────────────────────────────────────────────────
+async function generate() {
+  const geminiKey = geminiApiKey;
+  if (!geminiKey) { alert('Kein Gemini API Key gesetzt. Bitte im Dashboard unter Einstellungen setzen.'); return; }
+  if (!selectedFiles.length) { alert('Bitte mindestens eine Datei aus Google Drive auswählen.'); return; }
+
+  let types, systemPrompt, userPromptSuffix;
+  const subject = document.getElementById('subject').value.trim() || 'Allgemein';
+  const count   = parseInt(document.querySelector('[data-count].active').dataset.count);
+
+  if (examFormat === 'math') {
+    types = ['math'];
+    systemPrompt = MATH_SYSTEM_PROMPT;
+    userPromptSuffix = `Generiere genau ${count} Rechenaufgaben zum Thema "${subject}". Alle Aufgaben müssen vom Typ "math" sein mit den Feldern: type, question, sub_questions (optional), solution_steps (Array), hints (Array mit 3 Einträgen), points, correct_answer, explanation.`;
+  } else if (examFormat === 'concept') {
+    types = [...document.querySelectorAll('.type-cb:checked')].map(cb => cb.value);
+    if (!types.length) { alert('Bitte mindestens einen Fragentyp auswählen.'); return; }
+    systemPrompt = CONCEPT_SYSTEM_PROMPT;
+    userPromptSuffix = `Generiere genau ${count} Prüfungsfragen zum Thema "${subject}". Fragentypen (gleichmässig verteilen): ${types.join(', ')}.`;
+  } else {
+    const conceptTypes = [...document.querySelectorAll('.type-cb:checked')].map(cb => cb.value);
+    types = [...conceptTypes, 'math'];
+    systemPrompt = MIXED_SYSTEM_PROMPT;
+    userPromptSuffix = `Generiere genau ${count} Prüfungsfragen zum Thema "${subject}". Verteile gleichmässig auf: ${types.join(', ')}. Für Typ "math": solution_steps und hints (3 Einträge) angeben.`;
+  }
+
+  setLoading(true, 'Lade Unterlagen von Google Drive…');
+
+  try {
+    const parts = [];
+    for (const f of selectedFiles) {
+      setLoading(true, `Lade ${f.name}…`);
+      const base64   = await downloadDriveFile(f.id);
+      const mimeType = f.mimeType === 'application/pdf' ? 'application/pdf'
+        : (['image/jpeg','image/png','image/webp','image/gif'].includes(f.mimeType) ? f.mimeType : 'image/jpeg');
+      parts.push({ inline_data: { mime_type: mimeType, data: base64 } });
+    }
+
+    parts.push({ text: `${systemPrompt}\n\n${userPromptSuffix}\nAntworte NUR mit dem JSON Array. Kein Markdown, kein Text davor/danach.` });
+
+    setLoading(true, 'Generiere Prüfungsfragen…');
+
+    const totalBytes = parts.reduce((s, p) => s + (p.inline_data?.data?.length || 0), 0);
+    console.log('API Key:', geminiKey?.slice(0, 8), 'Dateien:', selectedFiles.length, 'Grösse:', totalBytes);
+
+    const resp = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${encodeURIComponent(geminiKey)}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts }],
+          generationConfig: { responseMimeType: 'application/json' },
+        }),
+      }
+    );
+
+    if (!resp.ok) {
+      const bodyText = await resp.text().catch(() => '');
+      let msg = `HTTP ${resp.status}`;
+      try { msg = JSON.parse(bodyText).error?.message || msg; } catch {}
+      console.error('Gemini API Fehler', resp.status, bodyText);
+      throw new Error(msg + (bodyText && !msg.includes(bodyText) ? '\n\n' + bodyText.slice(0, 300) : ''));
+    }
+
+    const data    = await resp.json();
+    const raw     = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
+    const jsonStr = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '');
+// Repariert illegale Backslashes, ignoriert aber bereits korrekt doppelte Backslashes
+    const sanitizedJsonStr = jsonStr.replace(/(?<!\\)\\(?!["\\/bfnrt])/g, "\\\\");
+
+    try {
+      questions = JSON.parse(sanitizedJsonStr);
+    } catch (parseErr) {
+      console.error("JSON Parsing schlug fehl. Roher String:", sanitizedJsonStr);
+      throw new Error("Konnte die Gemini-Antwort nicht lesen (LaTeX/JSON Konflikt).");
+    }
+    if (!Array.isArray(questions) || !questions.length) throw new Error('Keine Fragen erhalten');
+
+    answers           = new Array(questions.length).fill(null);
+    hintsShown        = new Array(questions.length).fill(0);
+    mathUploads       = new Array(questions.length).fill(null).map(() => []);
+    mathGeminiResults = new Array(questions.length).fill(null);
+    currentQ          = 0;
+    sessionStart      = Date.now();
+    sessionSaved      = false;
+
+    const timerMin = parseInt(document.querySelector('[data-timer].active')?.dataset.timer || '0');
+    timerRemain = timerMin * 60;
+    if (timerRemain > 0) startTimer();
+
+    showView('Exam');
+    renderQuestion();
+
+  } catch (err) {
+    console.error('Gemini Error:', err, err?.message, err?.stack);
+    alert('Fehler: ' + err.message);
+  } finally {
+    setLoading(false);
+  }
+}
+
+// ── Timer ─────────────────────────────────────────────────────────────────
+function startTimer() {
+  const el = document.getElementById('timerBadge');
+  el.style.display = '';
+  updateTimerDisplay(el);
+  timerHandle = setInterval(() => {
+    timerRemain--;
+    if (timerRemain <= 0) { clearInterval(timerHandle); finishExam(); return; }
+    updateTimerDisplay(el);
+  }, 1000);
+}
+
+function updateTimerDisplay(el) {
+  const m = Math.floor(timerRemain / 60).toString().padStart(2, '0');
+  const s = (timerRemain % 60).toString().padStart(2, '0');
+  el.textContent = `${m}:${s}`;
+  el.classList.toggle('urgent', timerRemain <= 300);
+}
+
+function stopTimer() {
+  if (timerHandle) { clearInterval(timerHandle); timerHandle = null; }
+  document.getElementById('timerBadge').style.display = 'none';
+}
+
+// ── Exam rendering ────────────────────────────────────────────────────────
+const TYPE_LABELS = { multiple_choice: 'Multiple Choice', true_false: 'Wahr / Falsch', open: 'Offene Frage', math: 'Rechenaufgabe' };
+
+function renderQuestion() {
+  const q   = questions[currentQ];
+  const pct = Math.round((currentQ / questions.length) * 100);
+  document.getElementById('progLabel').textContent = `Frage ${currentQ + 1} von ${questions.length}`;
+  document.getElementById('progFill').style.width  = pct + '%';
+
+  const badge = document.getElementById('qBadge');
+  badge.textContent = TYPE_LABELS[q.type] || q.type;
+  badge.className   = 'q-badge' + (q.type === 'math' ? ' math-badge' : '');
+
+  const qTextEl = document.getElementById('qText');
+  qTextEl.textContent = q.question;
+
+  document.getElementById('nextBtn').disabled = q.type === 'math' ? false : true;
+
+  const area = document.getElementById('answerArea');
+
+  if (q.type === 'multiple_choice') {
+    const opts = (q.options || []).slice(0, 4);
+    area.innerHTML = `<div class="mc-opts">${opts.map((opt, i) =>
+      `<button class="mc-opt" onclick="selectMC(this,${JSON.stringify(opt)})">
+        <span class="mc-key">${String.fromCharCode(65 + i)}</span>
+        <span class="mc-text">${esc(opt)}</span>
+      </button>`).join('')}</div>`;
+
+  } else if (q.type === 'true_false') {
+    area.innerHTML = `<div class="tf-opts">
+      <button class="tf-btn tf-true"  onclick="selectTF(this,'Wahr')">✓ Wahr</button>
+      <button class="tf-btn tf-false" onclick="selectTF(this,'Falsch')">✗ Falsch</button>
+    </div>`;
+
+  } else if (q.type === 'math') {
+    const subQsHtml = (q.sub_questions || []).length
+      ? `<div class="math-sub-qs">${q.sub_questions.map(sq => `<div class="math-sub-q">${esc(sq)}</div>`).join('')}</div>`
+      : '';
+    const shown          = hintsShown[currentQ] || 0;
+    const hintsTotal     = (q.hints || []).length;
+    const uploads        = mathUploads[currentQ] || [];
+    const shownHintsHtml = (q.hints || []).slice(0, shown).map((h, hi) =>
+      `<div class="hint-item"><span class="hint-num-badge">Hint ${hi + 1}</span>${esc(h)}<div class="hint-penalty">−${(hi + 1) * 10}% Punktabzug</div></div>`
+    ).join('');
+    const uploadPreviewHtml = uploads.map((u, ui) =>
+      u.mimeType.startsWith('image/')
+        ? `<div class="math-thumb-wrap"><img class="math-thumb" src="${u.dataUrl}" onclick="openFullscreen('${u.dataUrl}')" title="${esc(u.name)}"><button class="math-thumb-del" onclick="removeMathUpload(${ui})">✕</button></div>`
+        : `<div class="math-pdf-item">📄 <span>${esc(u.name)}</span><button class="math-pdf-del" onclick="removeMathUpload(${ui})">✕</button></div>`
+    ).join('');
+
+    area.innerHTML = `
+      ${subQsHtml}
+      <div class="math-upload-zone" id="mathUploadZone"
+           ondragover="event.preventDefault();this.classList.add('dragover')"
+           ondragleave="this.classList.remove('dragover')"
+           ondrop="handleMathDrop(event)">
+        <input type="file" class="math-upload-input" id="mathFileInput"
+               accept=".jpg,.jpeg,.png,.webp,.pdf" multiple
+               onchange="handleMathFiles(this.files)">
+        <div class="math-upload-icon">📷</div>
+        <div class="math-upload-label">Lösung hochladen</div>
+        <div class="math-upload-hint">Fotografiere oder scanne deine handschriftliche Lösung</div>
+        <div class="math-upload-hint">JPG · PNG · WebP · PDF · Mehrere Seiten möglich</div>
+      </div>
+      <div class="math-upload-previews" id="mathPreviews">${uploadPreviewHtml}</div>
+      <div id="mathGradingSpinner" style="display:none" class="math-grading-inline">
+        <div class="spinner-sm"></div>
+        <span>Gemini bewertet deine Lösung…</span>
+      </div>
+      <div class="hint-section">
+        <div id="hintsContainer">${shownHintsHtml}</div>
+        ${shown < hintsTotal
+          ? `<button class="hint-btn" id="hintBtn" onclick="showNextHint()">💡 Hint ${shown + 1} anzeigen (−${(shown + 1) * 10}%)</button>`
+          : (hintsTotal > 0 ? '<div style="font-size:11px;color:var(--text3);font-family:var(--mono)">Alle Hints verwendet</div>' : '')}
+      </div>`;
+
+  } else {
+    area.innerHTML = `
+      <textarea id="openTA" placeholder="Deine Antwort…" rows="5"></textarea>
+      <div style="margin-top:8px">
+        <button class="btn btn-ghost" id="checkBtn" onclick="checkOpen()">🤖 Antwort prüfen</button>
+      </div>
+      <div id="openFB" class="open-feedback"></div>`;
+  }
+
+  renderLatex(qTextEl);
+  renderLatex(area);
+}
+
+function showNextHint() {
+  const q = questions[currentQ];
+  if (!q.hints) return;
+  hintsShown[currentQ] = (hintsShown[currentQ] || 0) + 1;
+  const shown = hintsShown[currentQ];
+  const newHint = q.hints[shown - 1];
+  if (newHint) {
+    const div = document.createElement('div');
+    div.className = 'hint-item';
+    div.innerHTML = `<span class="hint-num-badge">Hint ${shown}</span>${esc(newHint)}<div class="hint-penalty">−${shown * 10}% Punktabzug</div>`;
+    document.getElementById('hintsContainer').appendChild(div);
+    renderLatex(div);
+  }
+  const btn = document.getElementById('hintBtn');
+  if (btn) {
+    if (shown >= q.hints.length) {
+      btn.replaceWith(Object.assign(document.createElement('div'), { className: 'drive-loading', textContent: 'Alle Hints verwendet' }));
+    } else {
+      btn.textContent = `💡 Hint anzeigen (${shown + 1}/${q.hints.length}) — kostet −${(shown + 1) * 10}% der Punkte`;
+    }
+  }
+}
+
+// ── Math upload helpers ───────────────────────────────────────────────────
+function handleMathDrop(e) {
+  e.preventDefault();
+  document.getElementById('mathUploadZone')?.classList.remove('dragover');
+  handleMathFiles(e.dataTransfer.files);
+}
+
+async function handleMathFiles(files) {
+  if (!mathUploads[currentQ]) mathUploads[currentQ] = [];
+  const accepted = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
+  for (const file of files) {
+    if (!accepted.includes(file.type)) continue;
+    const dataUrl = await new Promise((res, rej) => {
+      const r = new FileReader();
+      r.onload  = e => res(e.target.result);
+      r.onerror = rej;
+      r.readAsDataURL(file);
+    });
+    mathUploads[currentQ].push({ name: file.name, mimeType: file.type, base64: dataUrl.split(',')[1], dataUrl });
+  }
+  renderMathUploadPreviews();
+  const inp = document.getElementById('mathFileInput');
+  if (inp) inp.value = '';
+}
+
+function removeMathUpload(idx) {
+  if (mathUploads[currentQ]) mathUploads[currentQ].splice(idx, 1);
+  renderMathUploadPreviews();
+}
+
+function renderMathUploadPreviews() {
+  const el = document.getElementById('mathPreviews');
+  if (!el) return;
+  const uploads = mathUploads[currentQ] || [];
+  el.innerHTML = uploads.map((u, ui) =>
+    u.mimeType.startsWith('image/')
+      ? `<div class="math-thumb-wrap"><img class="math-thumb" src="${u.dataUrl}" onclick="openFullscreen('${u.dataUrl}')" title="${esc(u.name)}"><button class="math-thumb-del" onclick="removeMathUpload(${ui})">✕</button></div>`
+      : `<div class="math-pdf-item">📄 <span>${esc(u.name)}</span><button class="math-pdf-del" onclick="removeMathUpload(${ui})">✕</button></div>`
+  ).join('');
+}
+
+async function gradeMathWithGemini(qIdx) {
+  const q       = questions[qIdx];
+  const uploads = mathUploads[qIdx] || [];
+  const parts   = uploads.map(u => ({ inline_data: { mime_type: u.mimeType, data: u.base64 } }));
+  const subQs   = (q.sub_questions || []).length ? '\nTeilaufgaben: ' + q.sub_questions.join('; ') : '';
+  const steps   = (q.solution_steps || []).length ? '\nMusterlösung-Schritte:\n' + q.solution_steps.map(s => `${s.step}. ${s.title}: ${s.content}`).join('\n') : '';
+  parts.push({ text:
+    `Bewerte diese handgeschriebene Mathematiklösung.\n` +
+    `Die Aufgabe lautet: ${q.question}${subQs}\n` +
+    `Die Musterlösung ist: ${q.correct_answer || ''}${steps}\n\n` +
+    `Bewerte streng aber fair auf einer Skala 0-100%.\n` +
+    `Antworte NUR mit JSON: {"score":0,"feedback":"kurzes Feedback auf Deutsch (2-3 Sätze)","correct_parts":["was richtig war"],"missing_parts":["was fehlte oder falsch war"]}`
+  });
+  const resp = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${encodeURIComponent(geminiApiKey)}`,
+    { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contents: [{ parts }], generationConfig: { responseMimeType: 'application/json' } }) }
+  );
+  if (!resp.ok) {
+    const txt = await resp.text().catch(() => '');
+    throw new Error(`Gemini ${resp.status}: ${txt.slice(0, 200)}`);
+  }
+  const data   = await resp.json();
+  const raw    = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '{}';
+  const result = JSON.parse(raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, ''));
+  return {
+    score:         Math.min(100, Math.max(0, parseInt(result.score) || 0)),
+    feedback:      result.feedback || '',
+    correct_parts: result.correct_parts || [],
+    missing_parts: result.missing_parts || [],
+  };
+}
+
+function openFullscreen(src) {
+  const ov  = document.getElementById('imgFullscreen');
+  ov.querySelector('img').src = src;
+  ov.classList.add('on');
+}
+
+function closeFullscreen() {
+  document.getElementById('imgFullscreen').classList.remove('on');
+}
+
+function selectMC(btn, answer) {
+  if (answers[currentQ]) return;
+  document.querySelectorAll('.mc-opt').forEach(b => { b.classList.remove('sel'); b.disabled = true; });
+  btn.classList.add('sel'); btn.disabled = false;
+  answers[currentQ] = { userAnswer: answer, isCorrect: norm(answer) === norm(questions[currentQ].correct_answer) };
+  document.getElementById('nextBtn').disabled = false;
+}
+
+function selectTF(btn, answer) {
+  if (answers[currentQ]) return;
+  document.querySelectorAll('.tf-btn').forEach(b => { b.classList.remove('sel'); b.disabled = true; });
+  btn.classList.add('sel');
+  const ca = norm(questions[currentQ].correct_answer);
+  const ua = norm(answer);
+  answers[currentQ] = { userAnswer: answer, isCorrect: ua === ca || (ua === 'wahr' && ca === 'true') || (ua === 'falsch' && ca === 'false') };
+  document.getElementById('nextBtn').disabled = false;
+}
+
+async function checkOpen() {
+  const ta = document.getElementById('openTA');
+  const ua = ta.value.trim();
+  if (!ua) { ta.focus(); return; }
+  const q   = questions[currentQ];
+  const btn = document.getElementById('checkBtn');
+  btn.disabled = true; btn.textContent = '⏳ Prüfe…';
+  try {
+    const resp = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${encodeURIComponent(geminiApiKey)}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text:
+            `Frage: ${q.question}\nMusterlösung: ${q.correct_answer}\nSchülerantwort: ${ua}\n\nBewerte 0–100. Antworte NUR mit JSON: {"score":75,"feedback":"..."}`
+          }] }],
+          generationConfig: { responseMimeType: 'application/json' },
+        }),
+      }
+    );
+    const data   = await resp.json();
+    const raw    = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '{}';
+    const result = JSON.parse(raw.replace(/^```(?:json)?\s*/i,'').replace(/\s*```$/i,''));
+    const score  = Math.min(100, Math.max(0, parseInt(result.score) || 0));
+    const isOk   = score >= 60;
+    answers[currentQ] = { userAnswer: ua, isCorrect: isOk, openScore: score };
+    const fb = document.getElementById('openFB');
+    fb.className  = 'open-feedback ' + (isOk ? 'ok' : 'bad');
+    fb.textContent = `${isOk ? '✓' : '✗'} ${score}/100 — ${result.feedback || ''}`;
+  } catch {
+    answers[currentQ] = { userAnswer: ua, isCorrect: false, openScore: 0 };
+    const fb = document.getElementById('openFB');
+    fb.className  = 'open-feedback bad';
+    fb.textContent = '⚠ Bewertung fehlgeschlagen — als nicht korrekt gewertet.';
+  }
+  document.getElementById('nextBtn').disabled = false;
+}
+
+async function nextQuestion() {
+  const q         = questions[currentQ];
+  const btn       = document.getElementById('nextBtn');
+  const hintsUsed = hintsShown[currentQ] || 0;
+
+  if (q.type === 'math') {
+    const uploads = mathUploads[currentQ] || [];
+    if (!uploads.length) {
+      const ok = confirm('Keine Lösung hochgeladen – trotzdem weiter? (0 Punkte für diese Aufgabe)');
+      if (!ok) return;
+      mathGeminiResults[currentQ] = { score: 0, feedback: 'Keine Lösung hochgeladen.', correct_parts: [], missing_parts: [] };
+    } else {
+      btn.disabled = true;
+      const spinner = document.getElementById('mathGradingSpinner');
+      if (spinner) spinner.style.display = 'flex';
+      try {
+        mathGeminiResults[currentQ] = await gradeMathWithGemini(currentQ);
+      } catch (err) {
+        alert('Bewertung fehlgeschlagen: ' + err.message);
+        mathGeminiResults[currentQ] = { score: 0, feedback: 'Bewertung fehlgeschlagen.', correct_parts: [], missing_parts: [] };
+      } finally {
+        if (spinner) spinner.style.display = 'none';
+        btn.disabled = false;
+      }
+    }
+    const gemScore      = mathGeminiResults[currentQ]?.score ?? 0;
+    const effectiveScore = Math.max(0, gemScore - hintsUsed * 10);
+    answers[currentQ]   = {
+      userAnswer:    `[${(mathUploads[currentQ] || []).length} Datei(en) hochgeladen]`,
+      isCorrect:     effectiveScore >= 60,
+      geminiScore:   gemScore,
+      effectiveScore,
+      hintsUsed,
+    };
+  }
+
+  if (currentQ < questions.length - 1) { currentQ++; renderQuestion(); }
+  else finishExam();
+}
+
+document.addEventListener('keydown', e => {
+  if (!document.getElementById('vExam').classList.contains('active')) return;
+  const q = questions[currentQ];
+  if (!q || q.type === 'math') return;
+  if (q.type === 'multiple_choice' && !answers[currentQ]) {
+    const idx = parseInt(e.key) - 1;
+    if (idx >= 0 && idx <= 3) { const btns = document.querySelectorAll('.mc-opt'); if (btns[idx]) btns[idx].click(); }
+  }
+  if (e.key === 'Enter' && !document.getElementById('nextBtn').disabled) nextQuestion();
+});
+
+// ── Finish exam ───────────────────────────────────────────────────────────
+async function finishExam() {
+  stopTimer();
+  savedDuration = Math.round((Date.now() - sessionStart) / 1000);
+
+  // Handle current question if it's a math question that wasn't graded (e.g. timer expired)
+  if (questions[currentQ]?.type === 'math' && !mathGeminiResults[currentQ]) {
+    const hintsUsed = hintsShown[currentQ] || 0;
+    mathGeminiResults[currentQ] = { score: 0, feedback: 'Nicht beantwortet (Zeit abgelaufen).', correct_parts: [], missing_parts: [] };
+    answers[currentQ] = { userAnswer: '', isCorrect: false, geminiScore: 0, effectiveScore: 0, hintsUsed };
+  }
+
+  showView('Results');
+  renderReview();
+
+  const score = answers.filter(a => a?.isCorrect).length;
+  animateScore(score, questions.length);
+  document.getElementById('scoreDur').textContent = fmtDur(savedDuration);
+  document.getElementById('retryBtn').style.display = answers.some(a => !a?.isCorrect) ? '' : 'none';
+  if (!sessionSaved) {
+    sessionSaved = true;
+    await saveSession(score, savedDuration).catch(() => {});
+  }
+}
+
+// ── Score animation ───────────────────────────────────────────────────────
+function animateScore(score, total) {
+  const C    = 339.29;
+  const pct  = total > 0 ? score / total : 0;
+  const pass = pct >= 0.6;
+  const ring = document.getElementById('scoreRing');
+  ring.style.stroke = pass ? 'var(--green)' : 'var(--red)';
+  let t = 0;
+  const iv = setInterval(() => {
+    t = Math.min(t + pct / 45, pct);
+    ring.style.strokeDashoffset = C * (1 - t);
+    if (t >= pct) clearInterval(iv);
+  }, 16);
+  document.getElementById('ringNum').textContent = `${score}/${total}`;
+  document.getElementById('ringPct').textContent = Math.round(pct * 100) + '%';
+  const badge = document.getElementById('scoreBadge');
+  badge.className  = 'score-badge ' + (pass ? 'pass' : 'fail');
+  badge.textContent = pass ? 'Bestanden ✓' : 'Nicht bestanden ✗';
+  document.getElementById('scoreDur').textContent = fmtDur(savedDuration);
+}
+
+
+function toggleStep(qIdx, stepIdx) {
+  document.getElementById(`step-${qIdx}-${stepIdx}`)?.classList.toggle('open');
+}
+
+// ── Results review ────────────────────────────────────────────────────────
+function renderReview() {
+  document.getElementById('reviewList').innerHTML = questions.map((q, i) =>
+    q.type === 'math' ? renderMathReviewItem(q, i) : renderConceptReviewItem(q, i)
+  ).join('');
+
+  renderLatex(document.getElementById('reviewList'));
+
+  const mathQs = questions.filter(q => q.type === 'math' && q.explanation);
+  const methodsCard = document.getElementById('methodsCard');
+  if (mathQs.length) {
+    methodsCard.style.display = '';
+    document.getElementById('methodsList').innerHTML = mathQs.map(q =>
+      `<div class="method-item">📐 ${esc(q.explanation)}</div>`
+    ).join('');
+  } else {
+    methodsCard.style.display = 'none';
+  }
+}
+
+function renderConceptReviewItem(q, i) {
+  const a  = answers[i] || {};
+  const ok = !!a.isCorrect;
+  const ua = a.userAnswer || '(keine Antwort)';
+  return `<div class="rev-item ${ok?'ok':'bad'}" id="ri${i}">
+    <div class="rev-head" onclick="toggleRev(${i})">
+      <span class="rev-icon">${ok ? '✓' : '✗'}</span>
+      <span class="rev-q">${esc(q.question)}</span>
+      <span class="rev-chev">▼</span>
+    </div>
+    <div class="rev-body">
+      <div>
+        <div class="rev-row-lbl">Deine Antwort</div>
+        <div class="rev-row-val ${ok?'green':'red'}">${esc(ua)}${a.openScore != null ? ` (${a.openScore}/100)` : ''}</div>
+      </div>
+      ${!ok ? `<div>
+        <div class="rev-row-lbl">Richtige Antwort</div>
+        <div class="rev-row-val green">${esc(q.correct_answer || '')}</div>
+      </div>` : ''}
+      ${q.explanation ? `<div><div class="rev-row-lbl">Erklärung</div><div class="rev-row-val">${esc(q.explanation)}</div></div>` : ''}
+      ${q.source_hint ? `<div><span class="src-hint">📍 ${esc(q.source_hint)}</span></div>` : ''}
+    </div>
+  </div>`;
+}
+
+function renderMathReviewItem(q, i) {
+  const a         = answers[i] || {};
+  const gemResult = mathGeminiResults[i] || {};
+  const score     = gemResult.score ?? 0;
+  const effective = a.effectiveScore ?? score;
+  const hintsUsed = a.hintsUsed || 0;
+  const isOk      = a.isCorrect;
+  const barColor  = effective >= 60 ? 'var(--green)' : (effective >= 40 ? 'var(--accent)' : 'var(--red)');
+
+  const uploads = mathUploads[i] || [];
+  const thumbsHtml = uploads.map(u =>
+    u.mimeType.startsWith('image/')
+      ? `<div class="math-thumb-wrap"><img class="math-thumb" src="${u.dataUrl}" onclick="openFullscreen('${u.dataUrl}')" title="${esc(u.name)}"></div>`
+      : `<div class="math-pdf-item">📄 <span>${esc(u.name)}</span></div>`
+  ).join('');
+
+  const stepsHtml = (q.solution_steps || []).map((s, si) =>
+    `<div class="step-item" id="step-${i}-${si}">
+      <div class="step-head" onclick="toggleStep(${i},${si})">
+        <span>Schritt ${s.step}: ${esc(s.title || '')}</span>
+        <span class="step-chev">▼</span>
+      </div>
+      <div class="step-body">${esc(s.content || '')}</div>
+    </div>`
+  ).join('');
+
+  const correctHtml = (gemResult.correct_parts || []).map(p => `<li>${esc(p)}</li>`).join('');
+  const missingHtml = (gemResult.missing_parts || []).map(p => `<li>${esc(p)}</li>`).join('');
+  const hintNote    = hintsUsed > 0
+    ? `<span style="color:var(--text3);font-weight:400">(${score}% − ${hintsUsed * 10}% Hints)</span>`
+    : '';
+
+  return `<div class="rev-item ${isOk ? 'ok' : 'bad'} open" id="ri${i}">
+    <div class="rev-head" onclick="toggleRev(${i})">
+      <span class="rev-icon">${isOk ? '✓' : '✗'}</span>
+      <span class="rev-q">${esc(q.question)}</span>
+      <span class="rev-chev">▼</span>
+    </div>
+    <div class="rev-body">
+      <div class="math-rev-grid">
+        <div>
+          <div class="math-col-lbl">Deine Lösung</div>
+          ${uploads.length
+            ? `<div class="math-upload-previews">${thumbsHtml}</div>`
+            : `<div style="font-size:12px;color:var(--text3);font-style:italic;font-family:var(--mono)">Keine Lösung hochgeladen</div>`}
+          ${hintsUsed > 0 ? `<div class="hint-used-note">⚠ ${hintsUsed} Hint(s) verwendet (−${hintsUsed * 10}%)</div>` : ''}
+        </div>
+        <div>
+          <div class="math-col-lbl">Gemini-Bewertung</div>
+          <div class="gemini-score-num">${effective}% ${hintNote}</div>
+          <div class="gemini-score-bar-bg"><div class="gemini-score-bar-fill" style="width:${effective}%;background:${barColor}"></div></div>
+          ${gemResult.feedback ? `<div class="gemini-feedback-text">${esc(gemResult.feedback)}</div>` : ''}
+          ${correctHtml ? `<div class="feedback-parts-lbl" style="color:var(--green)">Richtig</div><ul class="correct-parts">${correctHtml}</ul>` : ''}
+          ${missingHtml ? `<div class="feedback-parts-lbl" style="color:var(--red)">Fehlend / Falsch</div><ul class="missing-parts">${missingHtml}</ul>` : ''}
+        </div>
+      </div>
+      ${(stepsHtml || q.correct_answer) ? `
+        <div class="math-solution-section">
+          <div class="math-col-lbl">Musterlösung${q.points ? ` (${q.points} Punkte)` : ''}</div>
+          ${stepsHtml || `<div class="rev-row-val">${esc(q.correct_answer || '')}</div>`}
+          ${q.explanation ? `<div style="margin-top:8px;font-size:12px;color:var(--text3);font-family:var(--mono)">📐 ${esc(q.explanation)}</div>` : ''}
+        </div>` : ''}
+    </div>
+  </div>`;
+}
+
+function toggleRev(i) { document.getElementById('ri' + i).classList.toggle('open'); }
+
+// ── Retry wrong ───────────────────────────────────────────────────────────
+function retryWrong() {
+  const wrongIdxs = answers.map((a, i) => a?.isCorrect ? null : i).filter(i => i !== null);
+  if (!wrongIdxs.length) return;
+  questions    = wrongIdxs.map(i => questions[i]);
+  answers           = new Array(questions.length).fill(null);
+  hintsShown        = new Array(questions.length).fill(0);
+  mathUploads       = new Array(questions.length).fill(null).map(() => []);
+  mathGeminiResults = new Array(questions.length).fill(null);
+  currentQ          = 0;
+  sessionStart      = Date.now();
+  sessionSaved      = false;
+  const timerMin = parseInt(document.querySelector('[data-timer].active')?.dataset.timer || '0');
+  timerRemain = timerMin * 60;
+  if (timerRemain > 0) startTimer();
+  showView('Exam');
+  renderQuestion();
+}
+
+// ── Save session ──────────────────────────────────────────────────────────
+async function saveSession(score, duration) {
+  const subject   = document.getElementById('subject').value.trim() || 'Allgemein';
+  const filesUsed = selectedFiles.map(f => f.name).join(', ');
+  await fetch('/apps/exam-trainer/api/save-session', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      subject, score, total: questions.length,
+      duration_seconds: duration, files_used: filesUsed,
+      questions: questions.map(q => ({
+        question: q.question, type: q.type, options: q.options || [],
+        correct_answer: q.correct_answer || '', explanation: q.explanation || '', source_hint: q.source_hint || '',
+      })),
+      answers: answers.map(a => ({ user_answer: a?.userAnswer || '', is_correct: a?.isCorrect ? 1 : 0 })),
+    }),
+  });
+}
+
+// ── History ───────────────────────────────────────────────────────────────
+async function loadHistory() {
+  const [hRes, wRes] = await Promise.all([
+    fetch('/apps/exam-trainer/api/history').catch(() => null),
+    fetch('/apps/exam-trainer/api/weak-topics').catch(() => null),
+  ]);
+
+  const tbody = document.getElementById('histBody');
+  if (hRes?.ok) {
+    const rows = await hRes.json();
+    tbody.innerHTML = !rows.length
+      ? '<tr><td colspan="5" class="empty-state">Noch keine Prüfungen</td></tr>'
+      : rows.map(r => {
+          const pct  = r.total > 0 ? Math.round(r.score / r.total * 100) : 0;
+          const pass = pct >= 60;
+          const dt   = new Date(r.timestamp).toLocaleString('de-CH', { day:'2-digit', month:'2-digit', year:'2-digit', hour:'2-digit', minute:'2-digit' });
+          return `<tr>
+            <td style="white-space:nowrap;color:var(--text)">${dt}</td>
+            <td style="color:var(--text)">${esc(r.subject||'–')}</td>
+            <td><span class="sc-chip ${pass?'pass':'fail'}">${r.score}/${r.total} (${pct}%)</span></td>
+            <td style="font-family:var(--mono);font-size:11px;white-space:nowrap">${fmtDur(r.duration_seconds)}</td>
+            <td style="font-size:11px;color:var(--text3);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(r.files_used||'')}">${esc(r.files_used||'–')}</td>
+          </tr>`;
+        }).join('');
+  } else {
+    tbody.innerHTML = '<tr><td colspan="5" class="empty-state">Fehler beim Laden</td></tr>';
+  }
+
+  const wg = document.getElementById('weakGrid');
+  if (wRes?.ok) {
+    const weak = await wRes.json();
+    wg.innerHTML = !weak.length
+      ? '<div class="empty-state">Keine schwachen Themen — weiter so! 🎉</div>'
+      : weak.map(w => `
+          <div class="weak-card">
+            <div class="weak-err">⚠ ${w.error_rate}% Fehlerrate (${w.wrong_count}/${w.attempts} falsch)</div>
+            <div class="weak-q">${esc(w.question)}</div>
+            ${w.source_hint ? `<div class="weak-src">📍 ${esc(w.source_hint)}</div>` : ''}
+          </div>`).join('');
+  } else {
+    wg.innerHTML = '<div class="empty-state">Fehler beim Laden</div>';
+  }
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────
+function esc(s)    { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function norm(s)   { return String(s||'').trim().toLowerCase(); }
+function fmtDur(s) { if (!s) return '–'; const m = Math.floor(s/60), r = s%60; return m ? `${m} min ${r} s` : `${r} s`; }
+
+// ── Init ──────────────────────────────────────────────────────────────────
+(async () => {
+  const s = await fetch('/api/secrets').then(r => r.ok ? r.json() : {}).catch(() => ({}));
+  geminiApiKey = s.gemini_api_key || '';
+  updateGeminiBadge();
+  handleOAuthReturn();
+})();
+</script>
+</body>
+</html>
