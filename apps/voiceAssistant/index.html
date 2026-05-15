@@ -47,6 +47,7 @@
   .field-label { display: block; font-size: 11px; font-family: 'JetBrains Mono', monospace; color: var(--text-tertiary); letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 4px; }
   .field-input { width: 100%; padding: 7px 10px; font-family: 'EB Garamond', serif; font-size: 15px; background: var(--bg-secondary); color: var(--text-primary); border: 0.5px solid var(--border-light); border-radius: var(--radius-md); outline: none; transition: border-color 0.15s; }
   .field-input:focus { border-color: var(--border-medium); }
+  select.field-input { font-family: 'JetBrains Mono', monospace; font-size: 12px; padding: 6px 10px; cursor: pointer; -webkit-appearance: none; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23888' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; padding-right: 30px; }
   .save-btn { padding: 8px 20px; font-family: 'EB Garamond', serif; font-size: 16px; background: var(--text-primary); color: var(--bg-primary); border: none; border-radius: var(--radius-md); cursor: pointer; transition: opacity 0.15s; }
   .save-btn:hover { opacity: 0.82; }
 
@@ -163,8 +164,23 @@
       <label class="field-label">Home Assistant Token</label>
       <input type="password" class="field-input" id="cfgHaToken" placeholder="Long-Lived Access Token…" autocomplete="off" />
     </div>
+    <div style="grid-column:1/-1">
+      <label class="field-label">Voice (TTS)</label>
+      <div style="display:flex;gap:6px;align-items:center">
+        <select class="field-input" id="cfgVoice" style="flex:1">
+          <option value="en-GB-RyanNeural">JARVIS – British Male (en-GB-RyanNeural)</option>
+          <option value="en-US-GuyNeural">Guy – US Male (en-US-GuyNeural)</option>
+          <option value="en-GB-SoniaNeural">Sonia – British Female (en-GB-SoniaNeural)</option>
+          <option value="de-DE-KillianNeural">Killian – German Male (de-DE-KillianNeural)</option>
+          <option value="de-DE-AmalaNeural">Amala – German Female (de-DE-AmalaNeural)</option>
+        </select>
+        <button class="save-btn" style="flex:0 0 auto;padding:6px 14px;font-size:14px;white-space:nowrap" onclick="testSpeech()"><i class="ti ti-volume" style="font-size:14px;vertical-align:-2px;margin-right:4px"></i>Test</button>
+      </div>
+    </div>
   </div>
-  <button class="save-btn" onclick="saveSettings()"><i class="ti ti-device-floppy" style="font-size:15px;vertical-align:-2px;margin-right:6px"></i>Einstellungen speichern</button>
+  <div style="display:flex;gap:8px;margin-top:0;flex-wrap:wrap">
+    <button class="save-btn" onclick="saveSettings()"><i class="ti ti-device-floppy" style="font-size:15px;vertical-align:-2px;margin-right:6px"></i>Einstellungen speichern</button>
+  </div>
 </div>
 
 <!-- MAIN -->
@@ -209,7 +225,7 @@
 'use strict';
 
 // ── Settings ─────────────────────────────────────────────────────────────────
-let cfg = { assistantName: 'Jarvis', userName: '', apiKey: '', haUrl: '', haToken: '' };
+let cfg = { assistantName: 'Jarvis', userName: '', apiKey: '', haUrl: '', haToken: '', voiceName: 'en-GB-RyanNeural' };
 
 function loadSettings() {
   try { cfg = { ...cfg, ...JSON.parse(localStorage.getItem('voice-assistant-settings') || '{}') }; } catch {}
@@ -218,6 +234,8 @@ function loadSettings() {
   document.getElementById('cfgApiKey').value  = cfg.apiKey;
   document.getElementById('cfgHaUrl').value   = cfg.haUrl;
   document.getElementById('cfgHaToken').value = cfg.haToken;
+  const voiceSel = document.getElementById('cfgVoice');
+  if (voiceSel) voiceSel.value = cfg.voiceName || 'en-GB-RyanNeural';
   refreshStatusText();
 }
 
@@ -227,6 +245,7 @@ function saveSettings() {
   cfg.apiKey        = document.getElementById('cfgApiKey').value.trim();
   cfg.haUrl         = document.getElementById('cfgHaUrl').value.trim();
   cfg.haToken       = document.getElementById('cfgHaToken').value.trim();
+  cfg.voiceName     = document.getElementById('cfgVoice')?.value || 'en-GB-RyanNeural';
   localStorage.setItem('voice-assistant-settings', JSON.stringify(cfg));
   if (cfg.apiKey) {
     fetch('/api/secrets', {
@@ -253,6 +272,7 @@ let active  = false; // wake-word mode on/off
 let history = [];    // conversation history
 
 let wakeRec = null, cmdRec = null, cmdTimer = null;
+let isSpeaking = false;
 
 function setState(s) {
   state = s;
@@ -323,16 +343,18 @@ function toggleListening() {
 
 function stopAll() {
   active = false;
+  isSpeaking = false;
   clearTimeout(cmdTimer);
   try { wakeRec?.abort(); } catch {}
   try { cmdRec?.abort();  } catch {}
   wakeRec = cmdRec = null;
-  window.speechSynthesis.cancel();
+  if (_ttsAudio) { try { _ttsAudio.pause(); } catch {} _ttsAudio = null; }
   setState('idle');
 }
 
 // ── Wake-Word Recognition ─────────────────────────────────────────────────────
 function startWake() {
+  if (isSpeaking) return;
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SR) {
     document.getElementById('statusText').textContent = 'Web Speech API nicht verfügbar. Bitte Chrome oder Edge verwenden.';
@@ -345,11 +367,15 @@ function startWake() {
   wakeRec = new SR();
   wakeRec.continuous     = true;
   wakeRec.interimResults = true;
-  wakeRec.lang           = 'de-DE';
+  wakeRec.lang           = 'en-GB';
 
   wakeRec.onresult = (e) => {
     for (let i = e.resultIndex; i < e.results.length; i++) {
-      if (e.results[i][0].transcript.toLowerCase().includes(cfg.assistantName.toLowerCase())) {
+      const transcript = e.results[i][0].transcript;
+      console.log('[wake] heard:', transcript);
+      // Show live transcript in status so user can confirm mic is working
+      document.getElementById('statusText').textContent = `Waiting for "${cfg.assistantName}" — heard: ${transcript}`;
+      if (transcript.toLowerCase().includes(cfg.assistantName.toLowerCase())) {
         onWakeWord();
         return;
       }
@@ -361,14 +387,16 @@ function startWake() {
   };
 
   wakeRec.onerror = (e) => {
+    console.warn('[wake] error:', e.error);
     if (e.error === 'not-allowed') {
-      document.getElementById('statusText').textContent = 'Mikrofon-Zugriff verweigert. Bitte in den Browser-Einstellungen erlauben und Seite neu laden.';
+      document.getElementById('statusText').textContent = 'Mic access denied — allow microphone and reload.';
       setState('error');
       active = false;
     }
+    // For all other errors (network, audio-capture, etc.) let onend restart
   };
 
-  try { wakeRec.start(); } catch {}
+  try { wakeRec.start(); console.log('[wake] recognition started, lang:', wakeRec.lang); } catch (err) { console.error('[wake] start failed:', err); }
 }
 
 function onWakeWord() {
@@ -386,7 +414,7 @@ function startCommand() {
   beep(660, 0.10);
 
   cmdRec = new SR();
-  cmdRec.lang           = 'de-DE';
+  cmdRec.lang           = 'en-GB';
   cmdRec.continuous     = false;
   cmdRec.interimResults = false;
 
@@ -435,11 +463,12 @@ async function processCommand(text) {
     const data = await r.json();
     if (!r.ok) throw new Error(data.error || 'Serverfehler');
 
-    const reply = data.reply;
+    const { text: reply, actions } = parseActions(data.reply);
     addTranscript('assistant', reply);
     showResponse(reply);
     history.push({ role: 'user', content: text }, { role: 'model', content: reply });
     if (history.length > 20) history = history.slice(-20);
+    executeSpotifyActions(actions);
     speak(reply);
 
   } catch (err) {
@@ -451,23 +480,69 @@ async function processCommand(text) {
   }
 }
 
+// ── Spotify Action Parsing ────────────────────────────────────────────────────
+function parseActions(raw) {
+  const actions = [];
+  const text = raw.replace(/<action>([\s\S]*?)<\/action>/g, (_, json) => {
+    try { actions.push(JSON.parse(json.trim())); } catch {}
+    return '';
+  }).replace(/\s{2,}/g, ' ').trim();
+  return { text: text || raw.trim(), actions };
+}
+
+async function executeSpotifyActions(actions) {
+  for (const a of actions) {
+    if (a.type !== 'spotify') continue;
+    try {
+      const r = await fetch('/apps/smarthome-zentrale/api/spotify/control', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(a),
+      });
+      const d = await r.json();
+      if (!r.ok) console.warn('[Spotify]', d.error);
+    } catch (e) { console.warn('[Spotify]', e.message); }
+  }
+}
+
 // ── TTS ────────────────────────────────────────────────────────────────────────
-function speak(text) {
+let _ttsAudio = null;
+
+async function speak(text) {
+  isSpeaking = true;
   setState('speak');
-  window.speechSynthesis.cancel();
+  // Stop wake-word recognition so it can't fire during playback
+  try { wakeRec?.abort(); } catch {}
+  wakeRec = null;
+  if (_ttsAudio) { try { _ttsAudio.pause(); } catch {} _ttsAudio = null; }
 
-  const utt  = new SpeechSynthesisUtterance(text);
-  utt.lang   = 'de-DE';
-  utt.rate   = 1.05;
+  const afterSpeak = () => {
+    isSpeaking = false;
+    if (active) setTimeout(startWake, 500); else setState('idle');
+  };
 
-  const voices = window.speechSynthesis.getVoices();
-  const deVoice = voices.find(v => v.lang === 'de-DE') || voices.find(v => v.lang.startsWith('de'));
-  if (deVoice) utt.voice = deVoice;
+  const voice = cfg.voiceName || 'en-GB-RyanNeural';
+  try {
+    const res = await fetch('/apps/voice-assistant/api/tts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text, voice })
+    });
+    if (!res.ok) throw new Error(await res.text());
+    const blob = await res.blob();
+    const url  = URL.createObjectURL(blob);
+    _ttsAudio  = new Audio(url);
+    _ttsAudio.onended = () => { URL.revokeObjectURL(url); _ttsAudio = null; afterSpeak(); };
+    _ttsAudio.onerror = () => { URL.revokeObjectURL(url); _ttsAudio = null; afterSpeak(); };
+    await _ttsAudio.play();
+  } catch (err) {
+    console.error('[TTS]', err);
+    afterSpeak();
+  }
+}
 
-  utt.onend  = () => { if (active) startWake(); else setState('idle'); };
-  utt.onerror = () => { if (active) startWake(); else setState('idle'); };
-
-  window.speechSynthesis.speak(utt);
+function testSpeech() {
+  speak('Hello, I am your assistant and I am working correctly.');
 }
 
 // ── UI ─────────────────────────────────────────────────────────────────────────
@@ -530,11 +605,6 @@ function beep(freq = 880, vol = 0.18) {
     document.getElementById('settingsToggle').classList.add('active');
   }
 
-  // Pre-warm voice list
-  window.speechSynthesis.getVoices();
-  if ('onvoiceschanged' in window.speechSynthesis) {
-    window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
-  }
 })();
 </script>
 </body>

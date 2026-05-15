@@ -18,7 +18,6 @@
   --border-light: rgba(26,26,24,0.12); --border-medium: rgba(26,26,24,0.25);
   --radius-md: 8px; --radius-lg: 12px;
   --topbar-h: 72px; --statusbar-h: 34px; --header-h: 106px;
-  --sidebar-w: 270px;
   --c-wake: #185fa5; --c-cmd: #854f0b; --c-speak: #3b6d11;
   /* Tile-on colours */
   --light-on-bg: #fef3c7; --light-on-text: #78350f;
@@ -98,15 +97,9 @@ body { font-family: 'EB Garamond', Georgia, serif; background: var(--bg-tertiary
 /* ─── LAYOUT ─── */
 .app-layout {
   flex: 1; display: grid;
-  grid-template-columns: 1fr var(--sidebar-w);
+  grid-template-columns: 1fr;
   height: calc(100vh - var(--header-h));
   overflow: hidden;
-}
-@media (max-width: 900px) {
-  .app-layout { grid-template-columns: 1fr; }
-  .voice-sidebar { display: none; position: fixed; bottom: 0; left: 0; right: 0; height: 55vh; z-index: 30; border-left: none; border-top: 0.5px solid var(--border-light); border-radius: var(--radius-lg) var(--radius-lg) 0 0; }
-  .voice-sidebar.mobile-open { display: flex; }
-  .voice-fab { display: flex !important; }
 }
 
 /* ─── TILE AREA ─── */
@@ -196,13 +189,46 @@ body { font-family: 'EB Garamond', Georgia, serif; background: var(--bg-tertiary
 .tile.dragging { opacity: 0.45; box-shadow: 0 8px 24px rgba(0,0,0,0.2); }
 .tile.drag-over { outline: 2px dashed var(--text-info); outline-offset: 2px; }
 
-/* ─── VOICE SIDEBAR ─── */
-.voice-sidebar {
-  background: var(--bg-primary); border-left: 0.5px solid var(--border-light);
-  display: flex; flex-direction: column; padding: 14px 12px; gap: 10px;
-  overflow-y: auto;
+/* ─── VOICE FAB ─── */
+.voice-fab {
+  position: fixed; bottom: 80px; right: 20px;
+  width: 64px; height: 64px; border-radius: 50%;
+  background: #1a3a1a; border: 1px solid #2d5a2d;
+  color: #fff; font-size: 26px;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 4px 20px rgba(0,0,0,.5); z-index: 100;
+  cursor: pointer; transition: background 0.25s; outline: none;
 }
-.sidebar-title { font-size: 11px; font-family: 'JetBrains Mono', monospace; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 1px; display: flex; align-items: center; gap: 6px; }
+.voice-fab-dot {
+  display: none; position: absolute; top: 8px; right: 8px;
+  width: 12px; height: 12px; border-radius: 50%;
+  background: var(--c-wake); border: 2px solid #1a3a1a;
+}
+.voice-fab-dot.active { display: block; }
+@keyframes fab-pulse     { 0%{box-shadow:0 4px 20px rgba(0,0,0,.5),0 0 0 0 rgba(24,95,165,.5)}  70%{box-shadow:0 4px 20px rgba(0,0,0,.5),0 0 0 16px rgba(24,95,165,0)}  100%{box-shadow:0 4px 20px rgba(0,0,0,.5),0 0 0 0 rgba(24,95,165,0)} }
+@keyframes fab-pulse-cmd { 0%{box-shadow:0 4px 20px rgba(0,0,0,.5),0 0 0 0 rgba(133,79,11,.5)} 70%{box-shadow:0 4px 20px rgba(0,0,0,.5),0 0 0 16px rgba(133,79,11,0)} 100%{box-shadow:0 4px 20px rgba(0,0,0,.5),0 0 0 0 rgba(133,79,11,0)} }
+.voice-fab.fab-wake  { background: #1a3060; animation: fab-pulse     1.5s ease-out infinite; }
+.voice-fab.fab-cmd   { background: #3a1f08; animation: fab-pulse-cmd 0.9s ease-out infinite; }
+.voice-fab.fab-speak { background: #1a3a1a; }
+
+/* ─── VOICE MODAL ─── */
+.voice-modal-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 98; }
+.voice-modal-backdrop.open { display: block; }
+.voice-modal {
+  display: none; position: fixed;
+  top: 50%; left: 50%; transform: translate(-50%, -50%);
+  width: 400px; max-height: 80vh;
+  background: var(--bg-primary); border: 0.5px solid var(--border-light);
+  border-radius: var(--radius-lg); padding: 20px 20px 24px;
+  z-index: 99; flex-direction: column; align-items: center; gap: 12px; overflow: hidden;
+}
+.voice-modal.open { display: flex; }
+.voice-modal-close { position: absolute; top: 12px; right: 12px; background: none; border: none; cursor: pointer; color: var(--text-tertiary); font-size: 22px; padding: 4px; line-height: 1; }
+.voice-modal-close:hover { color: var(--text-primary); }
+.voice-modal-title { font-size: 11px; font-family: 'JetBrains Mono', monospace; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 1px; display: flex; align-items: center; gap: 6px; }
+@media (max-width: 500px) {
+  .voice-modal { top: auto; bottom: 0; left: 0; right: 0; transform: none; width: 100%; max-height: 65vh; border-radius: 20px 20px 0 0; padding: 12px 16px 32px; }
+}
 
 .voice-mic-wrap { position: relative; width: 90px; height: 90px; display: flex; align-items: center; justify-content: center; margin: 4px auto; }
 .v-pulse { position: absolute; width: 80px; height: 80px; top: 50%; left: 50%; border-radius: 50%; border: 2px solid transparent; opacity: 0; pointer-events: none; }
@@ -255,8 +281,24 @@ body { font-family: 'EB Garamond', Georgia, serif; background: var(--bg-tertiary
 .toast { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); background: var(--text-primary); color: var(--bg-primary); padding: 9px 20px; border-radius: 20px; font-family: 'JetBrains Mono', monospace; font-size: 13px; z-index: 200; transition: opacity .3s; white-space: nowrap; }
 .toast.hidden { opacity: 0; pointer-events: none; }
 
-/* ─── FAB (mobile voice) ─── */
-.voice-fab { display: none; position: fixed; bottom: 20px; right: 20px; width: 58px; height: 58px; border-radius: 50%; background: var(--text-primary); color: var(--bg-primary); border: none; cursor: pointer; font-size: 24px; align-items: center; justify-content: center; box-shadow: 0 4px 20px rgba(0,0,0,.25); z-index: 20; }
+
+/* ─── AUDIO SWITCHER ─── */
+.aud-wrap { position: relative; }
+.aud-panel { min-width: 200px; padding: 12px; right: 0; }
+.aud-panel-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-tertiary); letter-spacing: .08em; margin-bottom: 8px; }
+.aud-toggle { display: flex; gap: 6px; }
+.aud-btn { flex: 1; padding: 6px 10px; border-radius: 20px; border: 0.5px solid var(--border-medium); background: none; color: var(--text-secondary); font-size: 12px; font-family: 'EB Garamond', serif; cursor: pointer; transition: all .15s; display: flex; align-items: center; justify-content: center; gap: 5px; }
+.aud-btn.active { background: var(--bg-success); color: var(--text-success); border-color: transparent; font-weight: 500; }
+.aud-btn:disabled { opacity: .45; cursor: default; }
+.aud-status { font-size: 11px; color: var(--text-tertiary); margin-top: 7px; line-height: 1.4; font-family: 'JetBrains Mono', monospace; }
+.aud-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--text-tertiary); margin-right: 4px; vertical-align: middle; }
+.aud-dot.on { background: var(--text-success); }
+/* Topbar icon tinted when BT active */
+#audTopbarIcon.bt-active { color: var(--text-success); }
+
+/* ─── SHOW-ALL BUTTON ─── */
+.show-all-btn { display: block; width: 100%; margin-top: 6px; padding: 7px 12px; background: none; border: 0.5px solid var(--border-light); border-radius: var(--radius-md); color: var(--text-secondary); font-family: 'JetBrains Mono', monospace; font-size: 12px; cursor: pointer; transition: background .12s, color .12s; }
+.show-all-btn:hover { background: var(--bg-secondary); color: var(--text-primary); }
 
 /* ─── ANIMATIONS ─── */
 @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.35} }
@@ -325,6 +367,17 @@ body.sp-playing .app-layout { padding-bottom: 68px; }
       <span class="weather-temp" id="wTemp">--°C</span>
       <span class="weather-wind" id="wWind"></span>
     </div>
+    <div class="aud-wrap">
+      <button class="icon-btn" onclick="toggleAudioPanel()" id="audTopbarBtn" title="Audio Output"><i class="ti ti-antenna" id="audTopbarIcon"></i></button>
+      <div class="sp-dropdown aud-panel hidden" id="audPanel">
+        <div class="aud-panel-label">AUDIO OUTPUT</div>
+        <div class="aud-toggle">
+          <button class="aud-btn" id="audCableBtn" onclick="switchAudio('cable')"><i class="ti ti-plug"></i> <span id="audCableName">Kabel</span></button>
+          <button class="aud-btn" id="audBtBtn"    onclick="switchAudio('bluetooth')"><i class="ti ti-bluetooth"></i> <span id="audBtName">Bluetooth</span></button>
+        </div>
+        <div class="aud-status" id="audStatus">—</div>
+      </div>
+    </div>
     <button class="icon-btn" onclick="openSettings()" title="Einstellungen"><i class="ti ti-settings"></i></button>
   </div>
 </header>
@@ -355,19 +408,6 @@ body.sp-playing .app-layout { padding-bottom: 68px; }
     <div id="tileGrid" style="display:none"></div>
   </main>
 
-  <!-- VOICE SIDEBAR -->
-  <aside class="voice-sidebar" id="voiceSidebar">
-    <div class="sidebar-title"><i class="ti ti-robot"></i> Sprachassistent</div>
-    <div class="voice-mic-wrap" id="vWrap">
-      <div class="v-pulse"></div>
-      <div class="v-pulse"></div>
-      <button class="voice-mic-btn" id="vBtn" onclick="toggleVoice()">
-        <i class="ti ti-microphone" id="vIcon"></i>
-      </button>
-    </div>
-    <p class="voice-status" id="vStatus">Tippen zum Starten</p>
-    <div class="voice-history" id="vHistory"></div>
-  </aside>
 
 </div>
 
@@ -399,13 +439,26 @@ body.sp-playing .app-layout { padding-bottom: 68px; }
         <label class="field-label">Gemini API Key</label>
         <input class="field-input" id="cfgGemini" type="password" placeholder="AIza…" autocomplete="off">
       </div>
+      <div style="grid-column:1/-1">
+        <label class="field-label">Voice (TTS)</label>
+        <div style="display:flex;gap:6px;align-items:center">
+          <select class="field-input" id="cfgVoice" style="flex:1;font-family:'JetBrains Mono',monospace;font-size:12px;cursor:pointer">
+            <option value="en-GB-RyanNeural">JARVIS – British Male (en-GB-RyanNeural)</option>
+            <option value="en-US-GuyNeural">Guy – US Male (en-US-GuyNeural)</option>
+            <option value="en-GB-SoniaNeural">Sonia – British Female (en-GB-SoniaNeural)</option>
+            <option value="de-DE-KillianNeural">Killian – German Male (de-DE-KillianNeural)</option>
+            <option value="de-DE-AmalaNeural">Amala – German Female (de-DE-AmalaNeural)</option>
+          </select>
+          <button class="save-btn" style="flex:0 0 auto;padding:6px 14px;font-size:14px;white-space:nowrap" onclick="voiceSpeak('Hello, voice output is working correctly.')"><i class="ti ti-volume" style="font-size:14px;vertical-align:-2px;margin-right:4px"></i>Test</button>
+        </div>
+      </div>
       <div>
         <label class="field-label">Breitengrad</label>
-        <input class="field-input" id="cfgLat" type="text" placeholder="47.37">
+        <input class="field-input" id="cfgLat" type="text" placeholder="46.9480">
       </div>
       <div>
         <label class="field-label">Längengrad</label>
-        <input class="field-input" id="cfgLon" type="text" placeholder="8.55">
+        <input class="field-input" id="cfgLon" type="text" placeholder="7.4474">
       </div>
     </div>
     <button class="save-btn" onclick="saveAndConnect()">
@@ -466,6 +519,44 @@ body.sp-playing .app-layout { padding-bottom: 68px; }
         </button>
       </div>
     </div>
+
+    <!-- Audio Section -->
+    <div class="sp-section">
+      <h3><i class="ti ti-antenna" style="vertical-align:-2px;margin-right:6px"></i>Audio Output</h3>
+      <div class="cfg-grid">
+        <div>
+          <label class="field-label">Bluetooth Gerätename</label>
+          <input class="field-input" id="cfgBtName" type="text" placeholder="Bad Speaker">
+        </div>
+        <div>
+          <label class="field-label">Kabel-Output Name</label>
+          <input class="field-input" id="cfgCableName" type="text" placeholder="Klinke">
+        </div>
+        <div style="grid-column:1/-1">
+          <label class="field-label">Bluetooth MAC-Adresse</label>
+          <input class="field-input" id="cfgBtMac" type="text" placeholder="AA:BB:CC:DD:EE:FF" autocomplete="off" style="font-family:'JetBrains Mono',monospace;font-size:13px">
+        </div>
+        <div style="grid-column:1/-1">
+          <label class="field-label">Bluetooth Sink (leer = auto-detect)</label>
+          <input class="field-input" id="cfgBtSink" type="text" placeholder="bluez_output.AA_BB_CC_DD_EE_FF.1" autocomplete="off" style="font-family:'JetBrains Mono',monospace;font-size:12px">
+        </div>
+        <div style="grid-column:1/-1">
+          <label class="field-label">Kabel Sink (leer = auto-detect)</label>
+          <input class="field-input" id="cfgCableSink" type="text" placeholder="alsa_output.pci-…analog-stereo" autocomplete="off" style="font-family:'JetBrains Mono',monospace;font-size:12px">
+        </div>
+      </div>
+      <div class="sp-section-btns">
+        <button class="save-btn" onclick="saveAudioSettings()">
+          <i class="ti ti-device-floppy" style="vertical-align:-2px;margin-right:8px"></i>Speichern
+        </button>
+        <button class="save-btn icon-only" title="Verfügbare Sinks anzeigen" onclick="showAvailableSinks()">
+          <i class="ti ti-list"></i>
+        </button>
+        <button class="save-btn icon-only" title="Gekoppelte BT-Geräte anzeigen" onclick="showBtDevices()">
+          <i class="ti ti-bluetooth"></i>
+        </button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -507,10 +598,30 @@ body.sp-playing .app-layout { padding-bottom: 68px; }
   </div>
 </div>
 
-<!-- Mobile FAB -->
-<button class="voice-fab" id="voiceFab" onclick="toggleVoiceSidebar()">
+<!-- Voice FAB (always visible) -->
+<button class="voice-fab" id="voiceFab" onclick="openVoiceModal()">
   <i class="ti ti-microphone"></i>
+  <span class="voice-fab-dot" id="voiceFabDot"></span>
 </button>
+
+<!-- Voice Modal -->
+<div class="voice-modal-backdrop" id="voiceModalBackdrop" onclick="closeVoiceModal()"></div>
+<div class="voice-modal" id="voiceModal">
+  <button class="voice-modal-close" onclick="closeVoiceModal()"><i class="ti ti-x"></i></button>
+  <div class="voice-modal-title"><i class="ti ti-robot"></i> Sprachassistent</div>
+  <div class="voice-mic-wrap" id="vWrap">
+    <div class="v-pulse"></div>
+    <div class="v-pulse"></div>
+    <button class="voice-mic-btn" id="vBtn" onclick="toggleVoice()">
+      <i class="ti ti-microphone" id="vIcon"></i>
+    </button>
+  </div>
+  <p class="voice-status" id="vStatus">Tippen zum Starten</p>
+  <div class="voice-history" id="vHistory"></div>
+  <button onclick="voiceSpeak('Hello, voice output is working correctly.')" style="margin-top:4px;width:100%;padding:5px 0;background:none;border:0.5px solid var(--border-light);border-radius:var(--radius-md);color:var(--text-tertiary);font-size:12px;font-family:'JetBrains Mono',monospace;cursor:pointer">
+    <i class="ti ti-volume" style="vertical-align:-2px;margin-right:4px"></i>Test Voice
+  </button>
+</div>
 
 <script>
 'use strict';
@@ -521,11 +632,14 @@ const DOMAIN_ORDER = ['scene','light','switch','input_boolean','climate','media_
 const DOMAIN_LABEL = { scene:'Szenen', light:'Lichter', switch:'Steckdosen', input_boolean:'Schalter', climate:'Klimaanlage', media_player:'Medien', sensor:'Sensoren', binary_sensor:'Binärsensoren' };
 const DOMAIN_ICON  = { light:'ti-bulb', switch:'ti-plug', input_boolean:'ti-toggle-right', climate:'ti-temperature', sensor:'ti-chart-line', binary_sensor:'ti-activity', media_player:'ti-device-speaker', scene:'ti-sparkles' };
 const POLL_MS      = 10_000;
-const WEATHER_MS   = 30 * 60_000;
+const WEATHER_MS   = 60_000;
 const WEATHER_ICONS = { 0:'☀️',1:'🌤️',2:'⛅',3:'☁️',45:'🌫️',48:'🌫️',51:'🌦️',53:'🌦️',55:'🌧️',61:'🌧️',63:'🌧️',65:'🌧️',71:'❄️',73:'❄️',75:'❄️',77:'🌨️',80:'🌧️',81:'🌧️',82:'⛈️',95:'⛈️',96:'⛈️',99:'⛈️' };
+const SENSOR_BLACKLIST = ['backup','sun','iphone','phone','battery_state','sim','ssid','bssid','geocoded','location','permission','app_version','last_update','connection_type','storage','audio_output'];
+const SENSOR_MAX = 6;
 
 // ── State ────────────────────────────────────────────────────────────────────
-let cfg = { haUrl:'', haToken:'', assName:'Jarvis', userName:'', gemini:'', lat:'47.37', lon:'8.55' };
+let cfg = { haUrl:'', haToken:'', assName:'Jarvis', userName:'', gemini:'', lat:'46.9480', lon:'7.4474', voiceName:'en-GB-RyanNeural' };
+let weatherCache = null;
 let haStates   = {};    // entity_id → entity
 let tileOrder  = [];    // ordered entity_ids
 let pollTimer  = null;
@@ -544,19 +658,22 @@ function loadCfg() {
   document.getElementById('cfgGemini').value   = cfg.gemini;
   document.getElementById('cfgLat').value      = cfg.lat;
   document.getElementById('cfgLon').value      = cfg.lon;
+  const voiceSel = document.getElementById('cfgVoice');
+  if (voiceSel) voiceSel.value = cfg.voiceName || 'en-GB-RyanNeural';
 }
 function saveCfg() {
-  cfg.haUrl   = document.getElementById('cfgHaUrl').value.trim();
-  cfg.haToken = document.getElementById('cfgHaToken').value.trim();
-  cfg.assName = document.getElementById('cfgAssName').value.trim() || 'Jarvis';
-  cfg.userName= document.getElementById('cfgUserName').value.trim();
-  cfg.gemini  = document.getElementById('cfgGemini').value.trim();
-  cfg.lat     = document.getElementById('cfgLat').value.trim();
-  cfg.lon     = document.getElementById('cfgLon').value.trim();
+  cfg.haUrl     = document.getElementById('cfgHaUrl').value.trim();
+  cfg.haToken   = document.getElementById('cfgHaToken').value.trim();
+  cfg.assName   = document.getElementById('cfgAssName').value.trim() || 'Jarvis';
+  cfg.userName  = document.getElementById('cfgUserName').value.trim();
+  cfg.gemini    = document.getElementById('cfgGemini').value.trim();
+  cfg.lat       = document.getElementById('cfgLat').value.trim();
+  cfg.lon       = document.getElementById('cfgLon').value.trim();
+  cfg.voiceName = document.getElementById('cfgVoice')?.value || 'en-GB-RyanNeural';
   localStorage.setItem('sh-zentrale', JSON.stringify(cfg));
   if (cfg.gemini) fetch('/api/secrets',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:'gemini_api_key',value:cfg.gemini})}).catch(()=>{});
 }
-function openSettings()  { document.getElementById('settingsModal').classList.remove('hidden'); loadSpotifySettings().catch(()=>{}); }
+function openSettings()  { document.getElementById('settingsModal').classList.remove('hidden'); loadSpotifySettings().catch(()=>{}); loadAudioSettings().catch(()=>{}); }
 function closeSettings() { document.getElementById('settingsModal').classList.add('hidden'); }
 async function saveAndConnect() { saveCfg(); closeSettings(); await connect(); }
 
@@ -620,6 +737,7 @@ function processStates(states, initial) {
       }
     });
   }
+  updateTopbarTemp();
   document.getElementById('lastUpd').textContent = 'Zuletzt: ' + new Date().toLocaleTimeString('de-DE', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
 }
 
@@ -636,14 +754,43 @@ function renderAllTiles() {
   });
 
   DOMAIN_ORDER.forEach(domain => {
-    const ents = byDomain[domain]; if (!ents?.length) return;
+    let ents = byDomain[domain]; if (!ents?.length) return;
+
+    if (domain === 'sensor') {
+      ents = ents.filter(s =>
+        s.state !== 'unavailable' && s.state !== 'unknown' &&
+        !SENSOR_BLACKLIST.some(kw => s.entity_id.toLowerCase().includes(kw))
+      );
+      if (!ents.length) return;
+    }
+    if (domain === 'binary_sensor') {
+      ents = ents.filter(s => s.state !== 'unavailable' && s.state !== 'unknown');
+      if (!ents.length) return;
+    }
+
     const sec  = document.createElement('div');
     sec.className = 'tile-section';
     sec.innerHTML = `<div class="section-label">${DOMAIN_LABEL[domain] || domain}</div>`;
     const wrap = document.createElement('div');
     wrap.className = 'section-tiles';
-    ents.forEach(s => { const t = buildTile(s); if (t) wrap.appendChild(t); });
+
+    const visible = (domain === 'sensor' && ents.length > SENSOR_MAX) ? ents.slice(0, SENSOR_MAX) : ents;
+    const hidden  = (domain === 'sensor' && ents.length > SENSOR_MAX) ? ents.slice(SENSOR_MAX)    : [];
+
+    visible.forEach(s => { const t = buildTile(s); if (t) wrap.appendChild(t); });
     sec.appendChild(wrap);
+
+    if (hidden.length) {
+      const btn = document.createElement('button');
+      btn.className   = 'show-all-btn';
+      btn.textContent = `Alle ${ents.length} Sensoren anzeigen`;
+      btn.onclick = () => {
+        hidden.forEach(s => { const t = buildTile(s); if (t) wrap.appendChild(t); });
+        btn.remove();
+      };
+      sec.appendChild(btn);
+    }
+
     grid.appendChild(sec);
   });
 }
@@ -865,104 +1012,277 @@ function tickClock() {
   document.getElementById('clockDate').textContent = n.toLocaleDateString('de-DE',{weekday:'long',day:'numeric',month:'long'});
 }
 
-// ── Weather ───────────────────────────────────────────────────────────────────
+// ── Weather / Topbar Temperature ──────────────────────────────────────────────
 async function fetchWeather() {
-  if (!cfg.lat || !cfg.lon) return;
+  const lat = cfg.lat || '46.9480';
+  const lon = cfg.lon || '7.4474';
   try {
-    const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${cfg.lat}&longitude=${cfg.lon}&current=temperature_2m,weathercode,windspeed_10m`);
+    const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weathercode,windspeed_10m`);
     const d = await r.json();
     const c = d.current;
-    document.getElementById('wTemp').textContent = c.temperature_2m + '°C';
-    document.getElementById('wIcon').textContent = WEATHER_ICONS[c.weathercode] || '🌡️';
-    document.getElementById('wWind').textContent = c.windspeed_10m + ' km/h';
+    weatherCache = { temp: c.temperature_2m, icon: WEATHER_ICONS[c.weathercode] || '🌡️', wind: c.windspeed_10m };
+    updateTopbarTemp();
   } catch {}
+}
+
+function updateTopbarTemp() {
+  // Prefer a local Hub temperature sensor from HA states
+  const hubSensor = Object.values(haStates).find(s => {
+    if (s.entity_id.split('.')[0] !== 'sensor') return false;
+    if (s.state === 'unavailable' || s.state === 'unknown') return false;
+    const eid = s.entity_id.toLowerCase();
+    return eid.includes('hub') && (eid.includes('temp') || eid.includes('temperature'));
+  });
+
+  if (hubSensor) {
+    const unit = hubSensor.attributes.unit_of_measurement || '°C';
+    document.getElementById('wTemp').textContent = hubSensor.state + unit;
+    document.getElementById('wIcon').textContent = '🌡️';
+    document.getElementById('wWind').textContent = '';
+    return;
+  }
+
+  // Fallback: Open-Meteo weather
+  if (weatherCache) {
+    document.getElementById('wTemp').textContent = weatherCache.temp + '°C';
+    document.getElementById('wIcon').textContent = weatherCache.icon;
+    document.getElementById('wWind').textContent = weatherCache.wind + ' km/h';
+  }
 }
 
 // ── Voice Assistant ───────────────────────────────────────────────────────────
 function toggleVoice() { voiceActive ? stopVoice() : startWake(); }
 function stopVoice() {
-  voiceActive = false; clearTimeout(cmdTimer);
-  try{wakeRec?.abort()}catch{} try{cmdRec?.abort()}catch{}
-  wakeRec = cmdRec = null;
-  window.speechSynthesis?.cancel();
+  voiceActive = false;  // set first so onend/onerror handlers don't restart
+  clearTimeout(cmdTimer);
+  const wr = wakeRec; wakeRec = null;
+  const cr = cmdRec;  cmdRec  = null;
+  try { wr?.abort(); } catch {}
+  try { cr?.abort(); } catch {}
+  if (_ttsAudio) { try { _ttsAudio.pause(); } catch {} _ttsAudio = null; }
   setVState('idle');
+  console.log('[JARVIS] Gestoppt');
 }
-
 function setVState(s) {
   vState = s;
-  const wrap = document.getElementById('vWrap');
-  const icon = document.getElementById('vIcon');
   const WRAPS = {idle:'',wake:'vwrap-wake',cmd:'vwrap-cmd',process:'',speak:'vwrap-speak'};
-  wrap.className = 'voice-mic-wrap ' + (WRAPS[s]||'');
   const ICONS = {idle:'ti-microphone',wake:'ti-microphone',cmd:'ti-microphone',process:'ti-loader-2 spin',speak:'ti-volume'};
-  icon.className = 'ti ' + (ICONS[s]||'ti-microphone');
   const TEXTS = {idle:'Tippen zum Starten',wake:`Sage „${cfg.assName}"`,cmd:'Ich höre…',process:'Verarbeite…',speak:'Spricht…'};
-  document.getElementById('vStatus').textContent = TEXTS[s]||'';
+
+  const wrap = document.getElementById('vWrap'); if (wrap) wrap.className = 'voice-mic-wrap ' + (WRAPS[s]||'');
+  const icon = document.getElementById('vIcon'); if (icon) icon.className = 'ti ' + (ICONS[s]||'ti-microphone');
+  const vs   = document.getElementById('vStatus'); if (vs) vs.textContent = TEXTS[s]||'';
+
+  const fab = document.getElementById('voiceFab');
+  if (fab) { fab.classList.toggle('fab-wake',s==='wake'); fab.classList.toggle('fab-cmd',s==='cmd'); fab.classList.toggle('fab-speak',s==='speak'); }
+  const dot = document.getElementById('voiceFabDot');
+  if (dot) dot.classList.toggle('active', voiceActive && s !== 'idle');
+
   document.getElementById('voiceStateBar').textContent = voiceActive ? (TEXTS[s]||'') : 'Assistent inaktiv';
 }
 
 function startWake() {
+  voiceActive = true;
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SR) { addVMsg('system','Web Speech API nicht verfügbar (Chrome/Edge benötigt)'); return; }
-  voiceActive = true; setVState('wake');
-  wakeRec = new SR(); wakeRec.continuous=true; wakeRec.interimResults=true; wakeRec.lang='de-DE';
+  setVState('wake');
+  console.log('[JARVIS] Warte auf Wake-Word...');
+
+  wakeRec = new SR();
+  wakeRec.continuous = true;
+  wakeRec.interimResults = true;
+  wakeRec.lang = 'en-GB';
+
   wakeRec.onresult = e => {
-    for (let i=e.resultIndex; i<e.results.length; i++) {
-      if (e.results[i][0].transcript.toLowerCase().includes(cfg.assName.toLowerCase())) {
-        try{wakeRec.abort()}catch{} beep(880,.15); setTimeout(startCmd, 220); return;
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      const t = e.results[i][0].transcript;
+      console.log('[JARVIS] Gehört:', t);
+      if (t.toLowerCase().includes(cfg.assName.toLowerCase())) {
+        console.log('[JARVIS] Wake-Word erkannt!');
+        // Null out first so onend restart guard fails immediately
+        const wr = wakeRec;
+        wakeRec = null;
+        try { wr.abort(); } catch {}
+        beep(880, .15);
+        // Give browser ~400ms to fully release mic before starting cmdRec
+        setTimeout(startCmd, 400);
+        return;
       }
     }
   };
-  wakeRec.onend = () => { if (voiceActive&&vState==='wake') setTimeout(()=>{if(voiceActive&&vState==='wake')startWake();},250); };
-  wakeRec.onerror = e => { if (e.error==='not-allowed') { addVMsg('system','Mikrofon-Zugriff verweigert'); stopVoice(); } };
-  try{wakeRec.start()}catch{}
+
+  wakeRec.onend = () => {
+    // Only auto-restart if we're still in wake state and wakeRec wasn't nulled by onresult
+    if (voiceActive && vState === 'wake' && wakeRec === null) {
+      // wakeRec was nulled by onresult handler — startCmd is scheduled, don't restart
+      return;
+    }
+    if (voiceActive && vState === 'wake') {
+      console.log('[JARVIS] Wake-Word Erkennung neu gestartet');
+      setTimeout(() => { if (voiceActive && vState === 'wake') startWake(); }, 250);
+    }
+  };
+
+  wakeRec.onerror = e => {
+    console.warn('[JARVIS] Wake-Word Fehler:', e.error);
+    if (e.error === 'not-allowed') { addVMsg('system', 'Mikrofon-Zugriff verweigert'); stopVoice(); }
+  };
+
+  try { wakeRec.start(); } catch(err) { console.error('[JARVIS] Wake start error:', err); }
 }
+
 function startCmd() {
   if (!voiceActive) return;
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  setVState('cmd'); beep(660,.10);
-  cmdRec = new SR(); cmdRec.lang='de-DE'; cmdRec.continuous=false; cmdRec.interimResults=false;
-  cmdTimer = setTimeout(()=>{try{cmdRec?.abort()}catch{}if(voiceActive)startWake();},7000);
-  cmdRec.onresult = e => { clearTimeout(cmdTimer); const t=e.results[0][0].transcript.trim(); if(t) voiceCmd(t); else if(voiceActive) startWake(); };
-  cmdRec.onerror  = e => { clearTimeout(cmdTimer); if(voiceActive) setTimeout(startWake,200); };
-  cmdRec.onend    = ()=> clearTimeout(cmdTimer);
-  try{cmdRec.start()}catch{if(voiceActive)startWake();}
-}
-async function voiceCmd(text) {
-  setVState('process'); addVMsg('user', text);
-  if (!cfg.gemini) { voiceSpeak('Kein Gemini API-Key konfiguriert.'); return; }
+  if (!SR) return;
+  console.log('[JARVIS] Höre auf Befehl...');
+  setVState('cmd');
+  beep(660, .10);
+
+  let commandReceived = false;
+  cmdRec = new SR();
+  cmdRec.lang = 'en-GB';
+  cmdRec.continuous = false;
+  cmdRec.interimResults = false;
+  cmdRec.maxAlternatives = 1;
+
+  cmdTimer = setTimeout(() => {
+    console.log('[JARVIS] Timeout — zurück zu Wake-Word');
+    try { cmdRec?.abort(); } catch {}
+    if (voiceActive) startWake();
+  }, 7000);
+
+  cmdRec.onresult = e => {
+    clearTimeout(cmdTimer);
+    commandReceived = true;
+    const t = e.results[0][0].transcript.trim();
+    console.log('[JARVIS] Befehl:', t);
+    if (t) voiceCmd(t);
+    else if (voiceActive) startWake();
+  };
+
+  cmdRec.onerror = e => {
+    clearTimeout(cmdTimer);
+    console.warn('[JARVIS] Befehl Fehler:', e.error);
+    if (voiceActive) setTimeout(startWake, 300);
+  };
+
+  cmdRec.onend = () => {
+    clearTimeout(cmdTimer);
+    if (!commandReceived && voiceActive) {
+      console.log('[JARVIS] Kein Befehl gehört — zurück zu Wake-Word');
+      setTimeout(startWake, 300);
+    }
+  };
+
   try {
-    const r = await fetch('/apps/voice-assistant/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({message:text,history:[],haUrl:cfg.haUrl,haToken:cfg.haToken,apiKey:cfg.gemini,assistantName:cfg.assName,userName:cfg.userName})});
-    const d = await r.json();
-    if (!r.ok) throw new Error(d.error||'Fehler');
-    addVMsg('assistant', d.reply);
-    voiceSpeak(d.reply);
-    setTimeout(()=>fetchStates().then(s=>processStates(s,false)).catch(()=>{}),1500);
-  } catch { voiceSpeak('Entschuldigung, da ist ein Fehler aufgetreten.'); }
+    cmdRec.start();
+    console.log('[JARVIS] Command-Erkennung gestartet');
+  } catch(err) {
+    console.error('[JARVIS] Command start error:', err);
+    if (voiceActive) setTimeout(startWake, 400);
+  }
 }
-function voiceSpeak(text) {
-  setVState('speak'); window.speechSynthesis.cancel();
-  const utt = new SpeechSynthesisUtterance(text); utt.lang='de-DE'; utt.rate=1.05;
-  const voices = window.speechSynthesis.getVoices();
-  const v = voices.find(v=>v.lang==='de-DE') || voices.find(v=>v.lang.startsWith('de'));
-  if (v) utt.voice = v;
-  utt.onend = utt.onerror = ()=>{ if(voiceActive) startWake(); else setVState('idle'); };
-  window.speechSynthesis.speak(utt);
+
+async function voiceCmd(text) {
+  setVState('process');
+  addVMsg('user', text);
+  console.log('[JARVIS] Verarbeite:', text);
+  if (!cfg.gemini) { voiceSpeak('No Gemini API key configured.'); return; }
+  try {
+    const r = await fetch('/apps/voice-assistant/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: text, history: [], haUrl: cfg.haUrl, haToken: cfg.haToken,
+        apiKey: cfg.gemini, assistantName: cfg.assName, userName: cfg.userName
+      })
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'Fehler');
+    const { text: reply, actions } = parseActions(d.reply);
+    console.log('[JARVIS] Antworte:', reply);
+    addVMsg('assistant', reply);
+    executeSpotifyActions(actions);
+    voiceSpeak(reply);
+    setTimeout(() => fetchStates().then(s => processStates(s, false)).catch(() => {}), 1500);
+  } catch(err) {
+    console.error('[JARVIS] Fehler:', err);
+    voiceSpeak('Sorry, something went wrong.');
+  }
+}
+// ── Spotify Action Parsing ────────────────────────────────────────────────────
+function parseActions(raw) {
+  const actions = [];
+  const text = raw.replace(/<action>([\s\S]*?)<\/action>/g, (_, json) => {
+    try { actions.push(JSON.parse(json.trim())); } catch {}
+    return '';
+  }).replace(/\s{2,}/g, ' ').trim();
+  return { text: text || raw.trim(), actions };
+}
+
+async function executeSpotifyActions(actions) {
+  for (const a of actions) {
+    if (a.type !== 'spotify') continue;
+    try {
+      const r = await fetch('/apps/smarthome-zentrale/api/spotify/control', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(a),
+      });
+      const d = await r.json();
+      if (!r.ok) showToast('Spotify: ' + (d.error || r.status));
+      else if (a.action === 'play' && d.played) showToast('▶ ' + d.played);
+      setTimeout(fetchSpotifyPlayer, 800);
+    } catch (e) { showToast('Spotify Fehler: ' + e.message); }
+  }
+}
+
+// iOS: unlock speech synthesis synchronously within a user-gesture handler
+let _ttsAudio = null;
+
+async function voiceSpeak(text) {
+  setVState('speak');
+  if (_ttsAudio) { try { _ttsAudio.pause(); } catch {} _ttsAudio = null; }
+  const voice = cfg.voiceName || 'en-GB-RyanNeural';
+  try {
+    const res = await fetch('/apps/voice-assistant/api/tts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text, voice })
+    });
+    if (!res.ok) throw new Error(await res.text());
+    const blob = await res.blob();
+    const url  = URL.createObjectURL(blob);
+    _ttsAudio  = new Audio(url);
+    _ttsAudio.onended = () => { URL.revokeObjectURL(url); _ttsAudio = null; if (voiceActive) startWake(); else setVState('idle'); };
+    _ttsAudio.onerror = () => { URL.revokeObjectURL(url); _ttsAudio = null; if (voiceActive) startWake(); else setVState('idle'); };
+    await _ttsAudio.play();
+  } catch (err) {
+    console.error('[TTS]', err);
+    if (voiceActive) startWake(); else setVState('idle');
+  }
 }
 function addVMsg(role, text) {
-  const h = document.getElementById('vHistory');
+  const h = document.getElementById('vHistory'); if (!h) return;
+  const label = role==='user'?(cfg.userName||'Du'):role==='assistant'?(cfg.assName||'Assistent'):'⚙';
   const el = document.createElement('div');
   el.className = 'vmsg vmsg-'+role;
-  const label = role==='user'?(cfg.userName||'Du'):role==='assistant'?(cfg.assName||'Assistent'):'⚙';
   el.innerHTML = `<span class="vmeta">${esc(label)}</span>${esc(text)}`;
   h.appendChild(el);
   h.scrollTop = h.scrollHeight;
   while (h.children.length > 5) h.removeChild(h.firstChild);
 }
-function toggleVoiceSidebar() {
-  document.getElementById('voiceSidebar').classList.toggle('mobile-open');
+function openVoiceModal() {
+  document.getElementById('voiceModal').classList.add('open');
+  document.getElementById('voiceModalBackdrop').classList.add('open');
 }
+function closeVoiceModal() {
+  document.getElementById('voiceModal').classList.remove('open');
+  document.getElementById('voiceModalBackdrop').classList.remove('open');
+}
+function toggleVoiceSidebar() { openVoiceModal(); }
+
 
 // ── Utilities ─────────────────────────────────────────────────────────────────
 function beep(freq, vol) {
@@ -981,6 +1301,128 @@ function showToast(msg) {
 }
 function show(id, visible) { document.getElementById(id).style.display = visible ? '' : 'none'; }
 function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// ── Audio Output Switcher ─────────────────────────────────────────────────────
+let audCurrentOut = 'cable';
+
+async function loadAudioSettings() {
+  try {
+    const r = await fetch('/apps/smarthome-zentrale/api/audio/settings');
+    if (!r.ok) return;
+    const d = await r.json();
+    document.getElementById('cfgBtMac').value    = d.bt_mac    || '';
+    document.getElementById('cfgBtName').value   = d.bt_name   || 'Bluetooth';
+    document.getElementById('cfgCableName').value= d.cable_name|| 'Kabel';
+    document.getElementById('cfgBtSink').value   = d.bt_sink   || '';
+    document.getElementById('cfgCableSink').value= d.cable_sink|| '';
+    document.getElementById('audBtName').textContent    = d.bt_name    || 'Bluetooth';
+    document.getElementById('audCableName').textContent = d.cable_name || 'Kabel';
+  } catch {}
+}
+
+async function refreshAudioStatus() {
+  try {
+    const r = await fetch('/apps/smarthome-zentrale/api/audio/status');
+    if (!r.ok) return;
+    const d = await r.json();
+    audCurrentOut = d.currentOut;
+    document.getElementById('audBtName').textContent    = d.btName    || 'Bluetooth';
+    document.getElementById('audCableName').textContent = d.cableName || 'Kabel';
+
+    const cableBtn = document.getElementById('audCableBtn');
+    const btBtn    = document.getElementById('audBtBtn');
+    cableBtn.classList.toggle('active', d.currentOut === 'cable');
+    btBtn.classList.toggle('active',    d.currentOut === 'bluetooth');
+
+    const icon = document.getElementById('audTopbarIcon');
+    icon.className = d.currentOut === 'bluetooth' ? 'ti ti-bluetooth bt-active' : 'ti ti-antenna';
+
+    const statusEl = document.getElementById('audStatus');
+    if (d.currentOut === 'bluetooth') {
+      const dot = `<span class="aud-dot ${d.btConnected ? 'on' : ''}"></span>`;
+      statusEl.innerHTML = `${dot}${esc(d.btName || 'Bluetooth')} — ${d.btConnected ? 'Verbunden' : 'Nicht verbunden'}`;
+    } else {
+      statusEl.innerHTML = `<span class="aud-dot on"></span>${esc(d.cableName || 'Kabel')} aktiv`;
+    }
+  } catch {}
+}
+
+async function switchAudio(output) {
+  const cableBtn = document.getElementById('audCableBtn');
+  const btBtn    = document.getElementById('audBtBtn');
+  cableBtn.disabled = true; btBtn.disabled = true;
+  document.getElementById('audStatus').textContent = output === 'bluetooth' ? 'Verbinde…' : 'Wechsle auf Kabel…';
+
+  try {
+    const r = await fetch('/apps/smarthome-zentrale/api/audio/switch', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ output }),
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || r.status);
+    showToast(output === 'bluetooth' ? '🔵 Bluetooth aktiv' : '🔌 Kabel aktiv');
+    await refreshAudioStatus();
+  } catch (e) {
+    showToast('Fehler: ' + e.message);
+    await refreshAudioStatus();
+  } finally {
+    cableBtn.disabled = false; btBtn.disabled = false;
+  }
+}
+
+function toggleAudioPanel() {
+  const panel = document.getElementById('audPanel');
+  const isHidden = panel.classList.contains('hidden');
+  // close other dropdowns
+  document.getElementById('spDevList')?.classList.add('hidden');
+  document.getElementById('spPlList')?.classList.add('hidden');
+  panel.classList.toggle('hidden', !isHidden);
+  if (isHidden) refreshAudioStatus();
+}
+
+async function saveAudioSettings() {
+  const body = {
+    bt_mac:     document.getElementById('cfgBtMac').value.trim().toUpperCase(),
+    bt_name:    document.getElementById('cfgBtName').value.trim() || 'Bluetooth',
+    cable_name: document.getElementById('cfgCableName').value.trim() || 'Kabel',
+    bt_sink:    document.getElementById('cfgBtSink').value.trim(),
+    cable_sink: document.getElementById('cfgCableSink').value.trim(),
+  };
+  try {
+    const r = await fetch('/apps/smarthome-zentrale/api/audio/settings', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!r.ok) throw new Error((await r.json()).error);
+    showToast('Audio-Einstellungen gespeichert');
+    document.getElementById('audBtName').textContent    = body.bt_name;
+    document.getElementById('audCableName').textContent = body.cable_name;
+  } catch (e) { showToast('Fehler: ' + e.message); }
+}
+
+async function showAvailableSinks() {
+  try {
+    const r = await fetch('/apps/smarthome-zentrale/api/audio/sinks');
+    const d = await r.json();
+    if (d.error) { showToast(d.error); return; }
+    const names = (d.sinks || []).map(s => s.name).join('\n') || '(keine)';
+    alert('Verfügbare Sinks:\n\n' + names);
+  } catch (e) { showToast('Fehler: ' + e.message); }
+}
+
+async function showBtDevices() {
+  try {
+    const r = await fetch('/apps/smarthome-zentrale/api/audio/bluetooth-devices');
+    const d = await r.json();
+    const list = (d.devices || []).map(x => `${x.name}  —  ${x.mac}`).join('\n') || '(keine gekoppelten Geräte)';
+    alert('Gekoppelte Bluetooth-Geräte:\n\n' + list);
+  } catch (e) { showToast('Fehler: ' + e.message); }
+}
+
+// Close audio panel on outside click
+document.addEventListener('click', e => {
+  if (!e.target.closest('.aud-wrap')) document.getElementById('audPanel')?.classList.add('hidden');
+});
 
 // ── Spotify ────────────────────────────────────────────────────────────────────
 let spConnected   = false;
@@ -1226,18 +1668,19 @@ document.addEventListener('click', e => {
     }
   } catch {}
 
-  window.speechSynthesis.getVoices();
-  if ('onvoiceschanged' in window.speechSynthesis) window.speechSynthesis.onvoiceschanged = ()=>window.speechSynthesis.getVoices();
-
   tickClock(); setInterval(tickClock, 1000);
   fetchWeather(); setInterval(fetchWeather, WEATHER_MS);
 
-  if (window.innerWidth <= 900) document.getElementById('voiceFab').style.display = 'flex';
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeVoiceModal(); });
 
   if (cfg.haUrl && cfg.haToken) await connect();
   else { show('loadingOverlay',false); show('noConfigOverlay',true); }
 
-  // Spotify init
+  // Audio + Spotify init
+  await loadAudioSettings();
+  refreshAudioStatus().catch(() => {});
+  setInterval(refreshAudioStatus, 30_000);
+
   await loadSpotifySettings();
   const _sp = new URLSearchParams(window.location.search);
   if (_sp.get('spotify_connected') === '1') {

@@ -152,6 +152,17 @@ db.serialize(() => {
     client_secret_enc TEXT    NOT NULL DEFAULT '',
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
   )`);
+
+  db.run(`CREATE TABLE IF NOT EXISTS audio_settings (
+    user_id     INTEGER PRIMARY KEY,
+    bt_mac      TEXT    NOT NULL DEFAULT '',
+    bt_name     TEXT    NOT NULL DEFAULT 'Bluetooth',
+    cable_name  TEXT    NOT NULL DEFAULT 'Kabel',
+    bt_sink     TEXT    NOT NULL DEFAULT '',
+    cable_sink  TEXT    NOT NULL DEFAULT '',
+    current_out TEXT    NOT NULL DEFAULT 'cable',
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  )`);
 });
 
 // Migration: medication_schedules → user_id entfernen (globale Tabelle)
@@ -1728,7 +1739,28 @@ app.post('/apps/voice-assistant/api/chat', checkAuth, checkAppAccess('voice-assi
     ]
   }];
 
-  const systemInstruction = `Du bist ${assistantName || 'Jarvis'}, ein freundlicher Heimassistent. Antworte immer auf Deutsch, kurz und präzise (maximal 2-3 Sätze). Du kannst Home Assistant steuern. Der Benutzer heisst ${userName || 'der Benutzer'}.`;
+  const systemInstruction = `You are ${assistantName || 'JARVIS'}, a smart home assistant. Respond in English, concisely (1–3 sentences). Address the user as ${userName || 'sir'}.
+
+You can control:
+- Home Assistant (lights, switches, scenes, climate) via function calls
+- Spotify on the Miniserver via action tags in your response
+
+For Spotify commands append exactly one action tag at the end of your reply:
+<action>{"type":"spotify","action":"play","query":"artist or song"}</action>
+<action>{"type":"spotify","action":"pause"}</action>
+<action>{"type":"spotify","action":"next"}</action>
+<action>{"type":"spotify","action":"prev"}</action>
+<action>{"type":"spotify","action":"volume","value":80}</action>
+<action>{"type":"spotify","action":"volume_delta","value":20}</action>
+<action>{"type":"spotify","action":"transfer","device":"Miniserver"}</action>
+
+Spotify rules:
+- "Play [artist/song]" → play with query
+- "Louder" → volume_delta value:20, "Quieter/lower" → volume_delta value:-20
+- "Next/previous track" → next / prev
+- "Pause" / "Stop" → pause
+- "Play on Miniserver" → transfer device:"Miniserver" then play without query
+The action tag is executed by the system — never read it aloud.`;
 
   const model = genAI.getGenerativeModel({
     model: 'gemini-3-flash-preview',
@@ -1842,6 +1874,77 @@ app.post('/apps/smarthome-zentrale/api/ha-service', checkAuth, checkAppAccess('s
     res.json({ ok: true });
   } catch (err) {
     res.status(502).json({ error: err.message });
+  }
+});
+
+// ── Spotify Control (unified — used by voice assistant) ──────────────────────
+app.post('/apps/smarthome-zentrale/api/spotify/control', checkAuth, checkAppAccess('smarthome-zentrale'), async (req, res) => {
+  const { action, query, value, device, delta } = req.body;
+  const uid = req.session.userId;
+  try {
+    switch (action) {
+      case 'play': {
+        if (query) {
+          const sr  = await spotifyFetch(uid, `/search?q=${encodeURIComponent(query)}&type=artist,track&limit=5`);
+          const sd  = await sr.json();
+          const artist = sd.artists?.items?.[0];
+          const track  = sd.tracks?.items?.[0];
+          // Prefer artist context (plays discography) over single track
+          const body = artist
+            ? { context_uri: artist.uri }
+            : track ? { uris: [track.uri] } : null;
+          if (!body) return res.status(404).json({ error: 'Nichts gefunden für: ' + query });
+          await spotifyFetch(uid, '/me/player/play', { method: 'PUT', body: JSON.stringify(body) });
+          res.json({ ok: true, played: artist?.name || track?.name });
+        } else {
+          await spotifyFetch(uid, '/me/player/play', { method: 'PUT' });
+          res.json({ ok: true });
+        }
+        break;
+      }
+      case 'pause':
+        await spotifyFetch(uid, '/me/player/pause', { method: 'PUT' });
+        res.json({ ok: true });
+        break;
+      case 'next':
+        await spotifyFetch(uid, '/me/player/next', { method: 'POST' });
+        res.json({ ok: true });
+        break;
+      case 'prev':
+        await spotifyFetch(uid, '/me/player/previous', { method: 'POST' });
+        res.json({ ok: true });
+        break;
+      case 'volume': {
+        const vol = Math.max(0, Math.min(100, parseInt(value) || 50));
+        await spotifyFetch(uid, `/me/player/volume?volume_percent=${vol}`, { method: 'PUT' });
+        res.json({ ok: true, volume: vol });
+        break;
+      }
+      case 'volume_delta': {
+        const step = parseInt(value ?? delta) || 0;
+        const pr   = await spotifyFetch(uid, '/me/player');
+        const cur  = pr.status === 204 ? null : await pr.json();
+        const now  = cur?.device?.volume_percent ?? 50;
+        const nv   = Math.max(0, Math.min(100, now + step));
+        await spotifyFetch(uid, `/me/player/volume?volume_percent=${nv}`, { method: 'PUT' });
+        res.json({ ok: true, volume: nv });
+        break;
+      }
+      case 'transfer': {
+        const dr   = await spotifyFetch(uid, '/me/player/devices');
+        const dd   = await dr.json();
+        const key  = (device || '').toLowerCase();
+        const dev  = (dd.devices || []).find(d => d.name.toLowerCase().includes(key));
+        if (!dev) return res.status(404).json({ error: 'Gerät nicht gefunden: ' + device, devices: (dd.devices||[]).map(d=>d.name) });
+        await spotifyFetch(uid, '/me/player', { method: 'PUT', body: JSON.stringify({ device_ids: [dev.id], play: true }) });
+        res.json({ ok: true, device: dev.name });
+        break;
+      }
+      default:
+        res.status(400).json({ error: 'Unbekannte Aktion: ' + action });
+    }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 
@@ -2046,6 +2149,192 @@ app.post('/apps/smarthome-zentrale/api/spotifyd/config', ...spAuth, (req, res) =
     if (err) return res.status(500).json({ error: err.message });
     exec('systemctl --user restart spotifyd', () => res.json({ ok: true }));
   });
+});
+
+// ── Audio Output Switcher ────────────────────────────────────────────────────
+const AUDIO_BASE = '/apps/smarthome-zentrale/api/audio';
+
+function execP(cmd, opts = {}) {
+  return new Promise((res, rej) =>
+    exec(cmd, { timeout: 12000, ...opts }, (err, stdout, stderr) =>
+      err ? rej(Object.assign(err, { stdout, stderr })) : res(stdout)));
+}
+
+function getAudioSettings(userId) {
+  return spDbGet('SELECT * FROM audio_settings WHERE user_id = ?', [userId])
+    .then(r => r || { user_id: userId, bt_mac:'', bt_name:'Bluetooth', cable_name:'Kabel', bt_sink:'', cable_sink:'', current_out:'cable' });
+}
+
+async function detectSinks(btMac) {
+  let btSink = '', cableSink = '';
+  try {
+    const out = await execP('pactl list sinks short');
+    for (const line of out.trim().split('\n')) {
+      const parts = line.split('\t');
+      const name  = (parts[1] || '').trim();
+      if (!btSink    && name.toLowerCase().includes('bluez')) btSink    = name;
+      if (!cableSink && !name.toLowerCase().includes('bluez') && name.startsWith('alsa')) cableSink = name;
+    }
+  } catch {}
+  // Derive BT sink from MAC if pactl found nothing
+  if (!btSink && btMac) {
+    const macU = btMac.replace(/:/g, '_');
+    btSink = `bluez_output.${macU}.1`;
+  }
+  return { btSink, cableSink };
+}
+
+// GET settings
+app.get(AUDIO_BASE + '/settings', ...spAuth, async (req, res) => {
+  try { res.json(await getAudioSettings(req.session.userId)); }
+  catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// POST save settings
+app.post(AUDIO_BASE + '/settings', ...spAuth, async (req, res) => {
+  const { bt_mac, bt_name, cable_name, bt_sink, cable_sink } = req.body;
+  try {
+    await spDbRun(
+      `INSERT INTO audio_settings (user_id, bt_mac, bt_name, cable_name, bt_sink, cable_sink)
+       VALUES (?,?,?,?,?,?)
+       ON CONFLICT(user_id) DO UPDATE SET
+         bt_mac=excluded.bt_mac, bt_name=excluded.bt_name,
+         cable_name=excluded.cable_name, bt_sink=excluded.bt_sink,
+         cable_sink=excluded.cable_sink`,
+      [req.session.userId,
+       (bt_mac || '').trim().toUpperCase(),
+       (bt_name || 'Bluetooth').trim(),
+       (cable_name || 'Kabel').trim(),
+       (bt_sink || '').trim(),
+       (cable_sink || '').trim()]);
+    res.json({ ok: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// GET current status
+app.get(AUDIO_BASE + '/status', ...spAuth, async (req, res) => {
+  try {
+    const s = await getAudioSettings(req.session.userId);
+    let btConnected = false;
+    let currentOut  = s.current_out;
+
+    if (s.bt_mac) {
+      try {
+        const info = await execP(`bluetoothctl info ${s.bt_mac}`);
+        btConnected = info.includes('Connected: yes');
+      } catch {}
+    }
+
+    try {
+      const info = await execP('pactl info');
+      const m = info.match(/Default Sink:\s*(.+)/);
+      if (m) currentOut = m[1].trim().toLowerCase().includes('bluez') ? 'bluetooth' : 'cable';
+    } catch {}
+
+    res.json({ currentOut, btConnected, btName: s.bt_name, cableName: s.cable_name, btMac: s.bt_mac });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// POST switch output
+app.post(AUDIO_BASE + '/switch', ...spAuth, async (req, res) => {
+  const { output } = req.body;
+  if (output !== 'cable' && output !== 'bluetooth')
+    return res.status(400).json({ error: 'output muss "cable" oder "bluetooth" sein' });
+
+  try {
+    const s = await getAudioSettings(req.session.userId);
+    const { btSink, cableSink } = await detectSinks(s.bt_mac);
+    const effectiveBtSink    = s.bt_sink    || btSink;
+    const effectiveCableSink = s.cable_sink || cableSink;
+
+    if (output === 'bluetooth') {
+      if (!s.bt_mac) return res.status(400).json({ error: 'Keine Bluetooth MAC-Adresse konfiguriert' });
+
+      // Connect BT (10 s Timeout)
+      await new Promise((resolve, reject) => {
+        const proc  = exec(`bluetoothctl connect ${s.bt_mac}`, { timeout: 12000 });
+        const timer = setTimeout(() => { proc.kill(); reject(new Error('Bluetooth Verbindung Timeout (10 s)')); }, 10000);
+        let out = '';
+        proc.stdout?.on('data', d => {
+          out += d;
+          if (out.includes('Connection successful') || out.includes('already connected')) {
+            clearTimeout(timer); resolve();
+          }
+        });
+        proc.on('close', () => { clearTimeout(timer); resolve(); });
+        proc.on('error', err => { clearTimeout(timer); reject(err); });
+      });
+
+      // Wait briefly for sink to appear, then set default
+      await new Promise(r => setTimeout(r, 1500));
+      if (effectiveBtSink) await execP(`pactl set-default-sink "${effectiveBtSink}"`).catch(() => {});
+
+    } else {
+      // Disconnect BT and switch to cable
+      if (s.bt_mac) await execP(`bluetoothctl disconnect ${s.bt_mac}`).catch(() => {});
+      if (effectiveCableSink) await execP(`pactl set-default-sink "${effectiveCableSink}"`).catch(() => {});
+    }
+
+    // Restart spotifyd so it picks up the new sink
+    await execP('systemctl --user restart spotifyd').catch(() => {});
+
+    // Persist chosen output
+    await spDbRun('UPDATE audio_settings SET current_out=? WHERE user_id=?', [output, req.session.userId])
+      .catch(() => spDbRun('INSERT INTO audio_settings (user_id, current_out) VALUES(?,?)', [req.session.userId, output]));
+
+    res.json({ ok: true, currentOut: output });
+  } catch (err) {
+    // On BT failure, fall back to cable automatically
+    if (output === 'bluetooth') {
+      exec('bluetoothctl disconnect', () => {});
+      exec('systemctl --user restart spotifyd', () => {});
+    }
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET paired BT devices
+app.get(AUDIO_BASE + '/bluetooth-devices', ...spAuth, async (req, res) => {
+  try {
+    const out = await execP('bluetoothctl devices');
+    const devices = out.trim().split('\n')
+      .map(l => { const m = l.match(/Device\s+([0-9A-F:]{17})\s+(.+)/i); return m ? { mac: m[1].toUpperCase(), name: m[2].trim() } : null; })
+      .filter(Boolean);
+    res.json({ devices });
+  } catch (err) { res.json({ devices: [] }); }
+});
+
+// GET available PulseAudio sinks
+app.get(AUDIO_BASE + '/sinks', ...spAuth, async (req, res) => {
+  try {
+    const out = await execP('pactl list sinks short');
+    const sinks = out.trim().split('\n')
+      .map(l => { const p = l.split('\t'); return p[1] ? { name: p[1].trim(), state: (p[4]||'').trim() } : null; })
+      .filter(Boolean);
+    res.json({ sinks });
+  } catch (err) { res.status(500).json({ error: 'pactl nicht verfügbar: ' + err.message, sinks: [] }); }
+});
+
+// ── Edge TTS ───────────────────────────────────────────────────────────────
+app.post('/apps/voice-assistant/api/tts', checkAuth, (req, res) => {
+  const { text, voice = 'en-GB-RyanNeural' } = req.body;
+  if (!text || !text.trim()) return res.status(400).json({ error: 'text required' });
+  const tmpFile = path.join(os.tmpdir(), `tts_${Date.now()}_${Math.random().toString(36).slice(2)}.mp3`);
+  execFile('/home/miniserver/.local/bin/edge-tts',
+    ['--voice', voice, '--text', text, '--write-media', tmpFile],
+    { timeout: 30000 },
+    (err) => {
+      if (err) {
+        try { fs.unlinkSync(tmpFile); } catch {}
+        console.error('[edge-tts]', err.message);
+        return res.status(500).json({ error: err.message });
+      }
+      res.setHeader('Content-Type', 'audio/mpeg');
+      const stream = fs.createReadStream(tmpFile);
+      stream.pipe(res);
+      stream.on('end',   () => { try { fs.unlinkSync(tmpFile); } catch {} });
+      stream.on('error', () => { try { fs.unlinkSync(tmpFile); } catch {} });
+    });
 });
 
 // ── Start ──────────────────────────────────────────────────────────────────

@@ -160,7 +160,7 @@
       "label": "TECTONIC",
       "file_type": "code",
       "source_file": "server.js",
-      "source_location": "L19",
+      "source_location": "L20",
       "id": "dashboard_server_tectonic",
       "community": 0,
       "norm_label": "tectonic"
@@ -169,7 +169,7 @@
       "label": "APP_SLUGS",
       "file_type": "code",
       "source_file": "server.js",
-      "source_location": "L20",
+      "source_location": "L21",
       "id": "dashboard_server_app_slugs",
       "community": 0,
       "norm_label": "app_slugs"
@@ -178,7 +178,7 @@
       "label": "petMedsLastUpdated",
       "file_type": "code",
       "source_file": "server.js",
-      "source_location": "L22",
+      "source_location": "L23",
       "id": "dashboard_server_petmedslastupdated",
       "community": 0,
       "norm_label": "petmedslastupdated"
@@ -187,7 +187,7 @@
       "label": "db",
       "file_type": "code",
       "source_file": "server.js",
-      "source_location": "L29",
+      "source_location": "L30",
       "id": "dashboard_server_db",
       "community": 0,
       "norm_label": "db"
@@ -196,7 +196,7 @@
       "label": "VAULT_KEY_PATH",
       "file_type": "code",
       "source_file": "server.js",
-      "source_location": "L199",
+      "source_location": "L211",
       "id": "dashboard_server_vault_key_path",
       "community": 0,
       "norm_label": "vault_key_path"
@@ -205,7 +205,7 @@
       "label": "raw",
       "file_type": "code",
       "source_file": "server.js",
-      "source_location": "L202",
+      "source_location": "L214",
       "id": "dashboard_server_raw",
       "community": 0,
       "norm_label": "raw"
@@ -214,7 +214,7 @@
       "label": "userVaultKey()",
       "file_type": "code",
       "source_file": "server.js",
-      "source_location": "L213",
+      "source_location": "L225",
       "id": "dashboard_server_uservaultkey",
       "community": 3,
       "norm_label": "uservaultkey()"
@@ -223,7 +223,7 @@
       "label": "vaultEncrypt()",
       "file_type": "code",
       "source_file": "server.js",
-      "source_location": "L217",
+      "source_location": "L229",
       "id": "dashboard_server_vaultencrypt",
       "community": 3,
       "norm_label": "vaultencrypt()"
@@ -232,7 +232,7 @@
       "label": "vaultDecrypt()",
       "file_type": "code",
       "source_file": "server.js",
-      "source_location": "L226",
+      "source_location": "L238",
       "id": "dashboard_server_vaultdecrypt",
       "community": 3,
       "norm_label": "vaultdecrypt()"
@@ -241,7 +241,7 @@
       "label": "SPOTIFY_SCOPES",
       "file_type": "code",
       "source_file": "server.js",
-      "source_location": "L235",
+      "source_location": "L247",
       "id": "dashboard_server_spotify_scopes",
       "community": 0,
       "norm_label": "spotify_scopes"
@@ -250,7 +250,7 @@
       "label": "SPOTIFYD_CONF",
       "file_type": "code",
       "source_file": "server.js",
-      "source_location": "L240",
+      "source_location": "L252",
       "id": "dashboard_server_spotifyd_conf",
       "community": 0,
       "norm_label": "spotifyd_conf"
@@ -259,7 +259,7 @@
       "label": "spDbGet()",
       "file_type": "code",
       "source_file": "server.js",
-      "source_location": "L242",
+      "source_location": "L254",
       "id": "dashboard_server_spdbget",
       "community": 3,
       "norm_label": "spdbget()"
@@ -268,7 +268,7 @@
       "label": "spDbRun()",
       "file_type": "code",
       "source_file": "server.js",
-      "source_location": "L245",
+      "source_location": "L257",
       "id": "dashboard_server_spdbrun",
       "community": 3,
       "norm_label": "spdbrun()"
@@ -277,7 +277,7 @@
       "label": "getSpotifyTokens()",
       "file_type": "code",
       "source_file": "server.js",
-      "source_location": "L249",
+      "source_location": "L261",
       "id": "dashboard_server_getspotifytokens",
       "community": 3,
       "norm_label": "getspotifytokens()"
@@ -286,7 +286,7 @@
       "label": "saveSpotifyTokens()",
       "file_type": "code",
       "source_file": "server.js",
-      "source_location": "L263",
+      "source_location": "L275",
       "id": "dashboard_server_savespotifytokens",
       "community": 3,
       "norm_label": "savespotifytokens()"
@@ -295,7 +295,7 @@
       "label": "refreshSpotifyToken()",
       "file_type": "code",
       "source_file": "server.js",
-      "source_location": "L280",
+      "source_location": "L292",
       "id": "dashboard_server_refreshspotifytoken",
       "community": 3,
       "norm_label": "refreshspotifytoken()"
@@ -304,7 +304,7 @@
       "label": "spotifyFetch()",
       "file_type": "code",
       "source_file": "server.js",
-      "source_location": "L302",
+      "source_location": "L314",
       "id": "dashboard_server_spotifyfetch",
       "community": 3,
       "norm_label": "spotifyfetch()"
@@ -313,25 +313,25 @@
       "label": "checkAuth()",
       "file_type": "code",
       "source_file": "server.js",
-      "source_location": "L329",
+      "source_location": "L341",
       "id": "dashboard_server_checkauth",
-      "community": 8,
+      "community": 7,
       "norm_label": "checkauth()"
     },
     {
       "label": "checkAdmin()",
       "file_type": "code",
       "source_file": "server.js",
-      "source_location": "L344",
+      "source_location": "L356",
       "id": "dashboard_server_checkadmin",
-      "community": 8,
+      "community": 7,
       "norm_label": "checkadmin()"
     },
     {
       "label": "checkAppAccess()",
       "file_type": "code",
       "source_file": "server.js",
-      "source_location": "L351",
+      "source_location": "L363",
       "id": "dashboard_server_checkappaccess",
       "community": 0,
       "norm_label": "checkappaccess()"
@@ -340,7 +340,7 @@
       "label": "result",
       "file_type": "code",
       "source_file": "server.js",
-      "source_location": "L437",
+      "source_location": "L449",
       "id": "dashboard_server_result",
       "community": 0,
       "norm_label": "result"
@@ -349,25 +349,25 @@
       "label": "findLatexCompiler()",
       "file_type": "code",
       "source_file": "server.js",
-      "source_location": "L547",
+      "source_location": "L559",
       "id": "dashboard_server_findlatexcompiler",
-      "community": 7,
+      "community": 8,
       "norm_label": "findlatexcompiler()"
     },
     {
       "label": "runLatexCompiler()",
       "file_type": "code",
       "source_file": "server.js",
-      "source_location": "L555",
+      "source_location": "L567",
       "id": "dashboard_server_runlatexcompiler",
-      "community": 7,
+      "community": 8,
       "norm_label": "runlatexcompiler()"
     },
     {
       "label": "tmpDir",
       "file_type": "code",
       "source_file": "server.js",
-      "source_location": "L576",
+      "source_location": "L588",
       "id": "dashboard_server_tmpdir",
       "community": 0,
       "norm_label": "tmpdir"
@@ -376,7 +376,7 @@
       "label": "texFile",
       "file_type": "code",
       "source_file": "server.js",
-      "source_location": "L577",
+      "source_location": "L589",
       "id": "dashboard_server_texfile",
       "community": 0,
       "norm_label": "texfile"
@@ -385,7 +385,7 @@
       "label": "pdfFile",
       "file_type": "code",
       "source_file": "server.js",
-      "source_location": "L578",
+      "source_location": "L590",
       "id": "dashboard_server_pdffile",
       "community": 0,
       "norm_label": "pdffile"
@@ -394,7 +394,7 @@
       "label": "logFile",
       "file_type": "code",
       "source_file": "server.js",
-      "source_location": "L579",
+      "source_location": "L591",
       "id": "dashboard_server_logfile",
       "community": 0,
       "norm_label": "logfile"
@@ -403,7 +403,7 @@
       "label": "pdfBuffer",
       "file_type": "code",
       "source_file": "server.js",
-      "source_location": "L591",
+      "source_location": "L603",
       "id": "dashboard_server_pdfbuffer",
       "community": 0,
       "norm_label": "pdfbuffer"
@@ -412,7 +412,7 @@
       "label": "safeName",
       "file_type": "code",
       "source_file": "server.js",
-      "source_location": "L593",
+      "source_location": "L605",
       "id": "dashboard_server_safename",
       "community": 0,
       "norm_label": "safename"
@@ -421,7 +421,7 @@
       "label": "upload",
       "file_type": "code",
       "source_file": "server.js",
-      "source_location": "L611",
+      "source_location": "L623",
       "id": "dashboard_server_upload",
       "community": 0,
       "norm_label": "upload"
@@ -430,7 +430,7 @@
       "label": "getOAuth2Client()",
       "file_type": "code",
       "source_file": "server.js",
-      "source_location": "L623",
+      "source_location": "L635",
       "id": "dashboard_server_getoauth2client",
       "community": 4,
       "norm_label": "getoauth2client()"
@@ -439,7 +439,7 @@
       "label": "getDriveAccessToken()",
       "file_type": "code",
       "source_file": "server.js",
-      "source_location": "L631",
+      "source_location": "L643",
       "id": "dashboard_server_getdriveaccesstoken",
       "community": 4,
       "norm_label": "getdriveaccesstoken()"
@@ -448,7 +448,7 @@
       "label": "PODCAST_TMP",
       "file_type": "code",
       "source_file": "server.js",
-      "source_location": "L642",
+      "source_location": "L654",
       "id": "dashboard_server_podcast_tmp",
       "community": 0,
       "norm_label": "podcast_tmp"
@@ -457,7 +457,7 @@
       "label": "podcastUpload",
       "file_type": "code",
       "source_file": "server.js",
-      "source_location": "L645",
+      "source_location": "L657",
       "id": "dashboard_server_podcastupload",
       "community": 0,
       "norm_label": "podcastupload"
@@ -466,7 +466,7 @@
       "label": "buildLatexDocument()",
       "file_type": "code",
       "source_file": "server.js",
-      "source_location": "L653",
+      "source_location": "L665",
       "id": "dashboard_server_buildlatexdocument",
       "community": 0,
       "norm_label": "buildlatexdocument()"
@@ -475,7 +475,7 @@
       "label": "summarizeWithGemini()",
       "file_type": "code",
       "source_file": "server.js",
-      "source_location": "L742",
+      "source_location": "L754",
       "id": "dashboard_server_summarizewithgemini",
       "community": 0,
       "norm_label": "summarizewithgemini()"
@@ -484,16 +484,16 @@
       "label": "compileLaTeX()",
       "file_type": "code",
       "source_file": "server.js",
-      "source_location": "L774",
+      "source_location": "L786",
       "id": "dashboard_server_compilelatex",
-      "community": 7,
+      "community": 8,
       "norm_label": "compilelatex()"
     },
     {
       "label": "date",
       "file_type": "code",
       "source_file": "server.js",
-      "source_location": "L805",
+      "source_location": "L817",
       "id": "dashboard_server_date",
       "community": 0,
       "norm_label": "date"
@@ -502,7 +502,7 @@
       "label": "latexDoc",
       "file_type": "code",
       "source_file": "server.js",
-      "source_location": "L809",
+      "source_location": "L821",
       "id": "dashboard_server_latexdoc",
       "community": 0,
       "norm_label": "latexdoc"
@@ -511,7 +511,7 @@
       "label": "responseData",
       "file_type": "code",
       "source_file": "server.js",
-      "source_location": "L814",
+      "source_location": "L826",
       "id": "dashboard_server_responsedata",
       "community": 0,
       "norm_label": "responsedata"
@@ -520,7 +520,7 @@
       "label": "podcastDbSet()",
       "file_type": "code",
       "source_file": "server.js",
-      "source_location": "L864",
+      "source_location": "L876",
       "id": "dashboard_server_podcastdbset",
       "community": 4,
       "norm_label": "podcastdbset()"
@@ -529,7 +529,7 @@
       "label": "getVideoDurationSec()",
       "file_type": "code",
       "source_file": "server.js",
-      "source_location": "L871",
+      "source_location": "L883",
       "id": "dashboard_server_getvideodurationsec",
       "community": 4,
       "norm_label": "getvideodurationsec()"
@@ -538,7 +538,7 @@
       "label": "runFFmpeg()",
       "file_type": "code",
       "source_file": "server.js",
-      "source_location": "L882",
+      "source_location": "L894",
       "id": "dashboard_server_runffmpeg",
       "community": 4,
       "norm_label": "runffmpeg()"
@@ -547,7 +547,7 @@
       "label": "driveGetOrCreateFolder()",
       "file_type": "code",
       "source_file": "server.js",
-      "source_location": "L938",
+      "source_location": "L950",
       "id": "dashboard_server_drivegetorcreatefolder",
       "community": 4,
       "norm_label": "drivegetorcreatefolder()"
@@ -556,7 +556,7 @@
       "label": "driveUploadFile()",
       "file_type": "code",
       "source_file": "server.js",
-      "source_location": "L962",
+      "source_location": "L974",
       "id": "dashboard_server_driveuploadfile",
       "community": 4,
       "norm_label": "driveuploadfile()"
@@ -565,7 +565,7 @@
       "label": "runPodcastJob()",
       "file_type": "code",
       "source_file": "server.js",
-      "source_location": "L991",
+      "source_location": "L1003",
       "id": "dashboard_server_runpodcastjob",
       "community": 4,
       "norm_label": "runpodcastjob()"
@@ -574,7 +574,7 @@
       "label": "id",
       "file_type": "code",
       "source_file": "server.js",
-      "source_location": "L1080",
+      "source_location": "L1092",
       "id": "dashboard_server_id",
       "community": 0,
       "norm_label": "id"
@@ -583,7 +583,7 @@
       "label": "localDate()",
       "file_type": "code",
       "source_file": "server.js",
-      "source_location": "L1190",
+      "source_location": "L1202",
       "id": "dashboard_server_localdate",
       "community": 0,
       "norm_label": "localdate()"
@@ -592,7 +592,7 @@
       "label": "today",
       "file_type": "code",
       "source_file": "server.js",
-      "source_location": "L1202",
+      "source_location": "L1214",
       "id": "dashboard_server_today",
       "community": 0,
       "norm_label": "today"
@@ -601,7 +601,7 @@
       "label": "getSecret()",
       "file_type": "code",
       "source_file": "server.js",
-      "source_location": "L1299",
+      "source_location": "L1311",
       "id": "dashboard_server_getsecret",
       "community": 4,
       "norm_label": "getsecret()"
@@ -610,7 +610,7 @@
       "label": "haRequest()",
       "file_type": "code",
       "source_file": "server.js",
-      "source_location": "L1320",
+      "source_location": "L1332",
       "id": "dashboard_server_harequest",
       "community": 0,
       "norm_label": "harequest()"
@@ -619,7 +619,7 @@
       "label": "RELEVANT",
       "file_type": "code",
       "source_file": "server.js",
-      "source_location": "L1351",
+      "source_location": "L1363",
       "id": "dashboard_server_relevant",
       "community": 0,
       "norm_label": "relevant"
@@ -628,7 +628,7 @@
       "label": "SEN_CLASS",
       "file_type": "code",
       "source_file": "server.js",
-      "source_location": "L1352",
+      "source_location": "L1364",
       "id": "dashboard_server_sen_class",
       "community": 0,
       "norm_label": "sen_class"
@@ -637,7 +637,7 @@
       "label": "entities",
       "file_type": "code",
       "source_file": "server.js",
-      "source_location": "L1359",
+      "source_location": "L1371",
       "id": "dashboard_server_entities",
       "community": 0,
       "norm_label": "entities"
@@ -646,7 +646,7 @@
       "label": "areas",
       "file_type": "code",
       "source_file": "server.js",
-      "source_location": "L1380",
+      "source_location": "L1392",
       "id": "dashboard_server_areas",
       "community": 0,
       "norm_label": "areas"
@@ -655,7 +655,7 @@
       "label": "ALLOWED",
       "file_type": "code",
       "source_file": "server.js",
-      "source_location": "L1408",
+      "source_location": "L1420",
       "id": "dashboard_server_allowed",
       "community": 0,
       "norm_label": "allowed"
@@ -664,7 +664,7 @@
       "label": "body",
       "file_type": "code",
       "source_file": "server.js",
-      "source_location": "L1415",
+      "source_location": "L1427",
       "id": "dashboard_server_body",
       "community": 0,
       "norm_label": "body"
@@ -673,7 +673,7 @@
       "label": "b",
       "file_type": "code",
       "source_file": "server.js",
-      "source_location": "L1417",
+      "source_location": "L1429",
       "id": "dashboard_server_b",
       "community": 0,
       "norm_label": "b"
@@ -682,7 +682,7 @@
       "label": "stmt",
       "file_type": "code",
       "source_file": "server.js",
-      "source_location": "L1473",
+      "source_location": "L1485",
       "id": "dashboard_server_stmt",
       "community": 0,
       "norm_label": "stmt"
@@ -691,7 +691,7 @@
       "label": "safeEmoji",
       "file_type": "code",
       "source_file": "server.js",
-      "source_location": "L1492",
+      "source_location": "L1504",
       "id": "dashboard_server_safeemoji",
       "community": 0,
       "norm_label": "safeemoji"
@@ -700,7 +700,7 @@
       "label": "readProcStat()",
       "file_type": "code",
       "source_file": "server.js",
-      "source_location": "L1541",
+      "source_location": "L1553",
       "id": "dashboard_server_readprocstat",
       "community": 0,
       "norm_label": "readprocstat()"
@@ -709,7 +709,7 @@
       "label": "stat1",
       "file_type": "code",
       "source_file": "server.js",
-      "source_location": "L1558",
+      "source_location": "L1570",
       "id": "dashboard_server_stat1",
       "community": 0,
       "norm_label": "stat1"
@@ -718,7 +718,7 @@
       "label": "stat2",
       "file_type": "code",
       "source_file": "server.js",
-      "source_location": "L1560",
+      "source_location": "L1572",
       "id": "dashboard_server_stat2",
       "community": 0,
       "norm_label": "stat2"
@@ -727,7 +727,7 @@
       "label": "cpuList",
       "file_type": "code",
       "source_file": "server.js",
-      "source_location": "L1562",
+      "source_location": "L1574",
       "id": "dashboard_server_cpulist",
       "community": 0,
       "norm_label": "cpulist"
@@ -736,7 +736,7 @@
       "label": "totalMem",
       "file_type": "code",
       "source_file": "server.js",
-      "source_location": "L1570",
+      "source_location": "L1582",
       "id": "dashboard_server_totalmem",
       "community": 0,
       "norm_label": "totalmem"
@@ -745,7 +745,7 @@
       "label": "freeMem",
       "file_type": "code",
       "source_file": "server.js",
-      "source_location": "L1571",
+      "source_location": "L1583",
       "id": "dashboard_server_freemem",
       "community": 0,
       "norm_label": "freemem"
@@ -754,7 +754,7 @@
       "label": "uptime",
       "file_type": "code",
       "source_file": "server.js",
-      "source_location": "L1574",
+      "source_location": "L1586",
       "id": "dashboard_server_uptime",
       "community": 0,
       "norm_label": "uptime"
@@ -763,7 +763,7 @@
       "label": "loadAvg",
       "file_type": "code",
       "source_file": "server.js",
-      "source_location": "L1575",
+      "source_location": "L1587",
       "id": "dashboard_server_loadavg",
       "community": 0,
       "norm_label": "loadavg"
@@ -772,7 +772,7 @@
       "label": "dfParts",
       "file_type": "code",
       "source_file": "server.js",
-      "source_location": "L1581",
+      "source_location": "L1593",
       "id": "dashboard_server_dfparts",
       "community": 0,
       "norm_label": "dfparts"
@@ -781,7 +781,7 @@
       "label": "disk",
       "file_type": "code",
       "source_file": "server.js",
-      "source_location": "L1582",
+      "source_location": "L1594",
       "id": "dashboard_server_disk",
       "community": 0,
       "norm_label": "disk"
@@ -790,7 +790,7 @@
       "label": "tailscale",
       "file_type": "code",
       "source_file": "server.js",
-      "source_location": "L1585",
+      "source_location": "L1597",
       "id": "dashboard_server_tailscale",
       "community": 0,
       "norm_label": "tailscale"
@@ -799,7 +799,7 @@
       "label": "network",
       "file_type": "code",
       "source_file": "server.js",
-      "source_location": "L1601",
+      "source_location": "L1613",
       "id": "dashboard_server_network",
       "community": 0,
       "norm_label": "network"
@@ -808,7 +808,7 @@
       "label": "[iface, stats]",
       "file_type": "code",
       "source_file": "server.js",
-      "source_location": "L1605",
+      "source_location": "L1617",
       "id": "dashboard_server_iface_stats",
       "community": 0,
       "norm_label": "[iface, stats]"
@@ -817,7 +817,7 @@
       "label": "vals",
       "file_type": "code",
       "source_file": "server.js",
-      "source_location": "L1606",
+      "source_location": "L1618",
       "id": "dashboard_server_vals",
       "community": 0,
       "norm_label": "vals"
@@ -826,7 +826,7 @@
       "label": "processes",
       "file_type": "code",
       "source_file": "server.js",
-      "source_location": "L1613",
+      "source_location": "L1625",
       "id": "dashboard_server_processes",
       "community": 0,
       "norm_label": "processes"
@@ -835,7 +835,7 @@
       "label": "p",
       "file_type": "code",
       "source_file": "server.js",
-      "source_location": "L1620",
+      "source_location": "L1632",
       "id": "dashboard_server_p",
       "community": 0,
       "norm_label": "p"
@@ -844,7 +844,7 @@
       "label": "genAI",
       "file_type": "code",
       "source_file": "server.js",
-      "source_location": "L1692",
+      "source_location": "L1704",
       "id": "dashboard_server_genai",
       "community": 0,
       "norm_label": "genai"
@@ -853,7 +853,7 @@
       "label": "haTools",
       "file_type": "code",
       "source_file": "server.js",
-      "source_location": "L1694",
+      "source_location": "L1706",
       "id": "dashboard_server_hatools",
       "community": 0,
       "norm_label": "hatools"
@@ -862,7 +862,7 @@
       "label": "model",
       "file_type": "code",
       "source_file": "server.js",
-      "source_location": "L1732",
+      "source_location": "L1765",
       "id": "dashboard_server_model",
       "community": 0,
       "norm_label": "model"
@@ -871,7 +871,7 @@
       "label": "chatHistory",
       "file_type": "code",
       "source_file": "server.js",
-      "source_location": "L1738",
+      "source_location": "L1771",
       "id": "dashboard_server_chathistory",
       "community": 0,
       "norm_label": "chathistory"
@@ -880,7 +880,7 @@
       "label": "chat",
       "file_type": "code",
       "source_file": "server.js",
-      "source_location": "L1744",
+      "source_location": "L1777",
       "id": "dashboard_server_chat",
       "community": 0,
       "norm_label": "chat"
@@ -889,7 +889,7 @@
       "label": "callHA()",
       "file_type": "code",
       "source_file": "server.js",
-      "source_location": "L1746",
+      "source_location": "L1779",
       "id": "dashboard_server_callha",
       "community": 0,
       "norm_label": "callha()"
@@ -898,7 +898,7 @@
       "label": "sendMsg()",
       "file_type": "code",
       "source_file": "server.js",
-      "source_location": "L1756",
+      "source_location": "L1789",
       "id": "dashboard_server_sendmsg",
       "community": 0,
       "norm_label": "sendmsg()"
@@ -907,7 +907,7 @@
       "label": "parts",
       "file_type": "code",
       "source_file": "server.js",
-      "source_location": "L1773",
+      "source_location": "L1806",
       "id": "dashboard_server_parts",
       "community": 0,
       "norm_label": "parts"
@@ -916,16 +916,52 @@
       "label": "start",
       "file_type": "code",
       "source_file": "server.js",
-      "source_location": "L1792",
+      "source_location": "L1825",
       "id": "dashboard_server_start",
       "community": 0,
       "norm_label": "start"
     },
     {
+      "label": "vol",
+      "file_type": "code",
+      "source_file": "server.js",
+      "source_location": "L1918",
+      "id": "dashboard_server_vol",
+      "community": 0,
+      "norm_label": "vol"
+    },
+    {
+      "label": "nv",
+      "file_type": "code",
+      "source_file": "server.js",
+      "source_location": "L1928",
+      "id": "dashboard_server_nv",
+      "community": 0,
+      "norm_label": "nv"
+    },
+    {
+      "label": "key",
+      "file_type": "code",
+      "source_file": "server.js",
+      "source_location": "L1936",
+      "id": "dashboard_server_key",
+      "community": 0,
+      "norm_label": "key"
+    },
+    {
+      "label": "dev",
+      "file_type": "code",
+      "source_file": "server.js",
+      "source_location": "L1937",
+      "id": "dashboard_server_dev",
+      "community": 0,
+      "norm_label": "dev"
+    },
+    {
       "label": "spAuth",
       "file_type": "code",
       "source_file": "server.js",
-      "source_location": "L1849",
+      "source_location": "L1953",
       "id": "dashboard_server_spauth",
       "community": 0,
       "norm_label": "spauth"
@@ -934,7 +970,7 @@
       "label": "update",
       "file_type": "code",
       "source_file": "server.js",
-      "source_location": "L1870",
+      "source_location": "L1974",
       "id": "dashboard_server_update",
       "community": 3,
       "norm_label": "update"
@@ -943,28 +979,109 @@
       "label": "params",
       "file_type": "code",
       "source_file": "server.js",
-      "source_location": "L1883",
+      "source_location": "L1987",
       "id": "dashboard_server_params",
       "community": 0,
       "norm_label": "params"
     },
     {
-      "label": "vol",
-      "file_type": "code",
-      "source_file": "server.js",
-      "source_location": "L1992",
-      "id": "dashboard_server_vol",
-      "community": 0,
-      "norm_label": "vol"
-    },
-    {
       "label": "status",
       "file_type": "code",
       "source_file": "server.js",
-      "source_location": "L2029",
+      "source_location": "L2133",
       "id": "dashboard_server_status",
-      "community": 8,
+      "community": 7,
       "norm_label": "status"
+    },
+    {
+      "label": "execP()",
+      "file_type": "code",
+      "source_file": "server.js",
+      "source_location": "L2157",
+      "id": "dashboard_server_execp",
+      "community": 10,
+      "norm_label": "execp()"
+    },
+    {
+      "label": "getAudioSettings()",
+      "file_type": "code",
+      "source_file": "server.js",
+      "source_location": "L2163",
+      "id": "dashboard_server_getaudiosettings",
+      "community": 3,
+      "norm_label": "getaudiosettings()"
+    },
+    {
+      "label": "detectSinks()",
+      "file_type": "code",
+      "source_file": "server.js",
+      "source_location": "L2168",
+      "id": "dashboard_server_detectsinks",
+      "community": 10,
+      "norm_label": "detectsinks()"
+    },
+    {
+      "label": "m",
+      "file_type": "code",
+      "source_file": "server.js",
+      "source_location": "L2230",
+      "id": "dashboard_server_m",
+      "community": 0,
+      "norm_label": "m"
+    },
+    {
+      "label": "proc",
+      "file_type": "code",
+      "source_file": "server.js",
+      "source_location": "L2255",
+      "id": "dashboard_server_proc",
+      "community": 0,
+      "norm_label": "proc"
+    },
+    {
+      "label": "timer",
+      "file_type": "code",
+      "source_file": "server.js",
+      "source_location": "L2256",
+      "id": "dashboard_server_timer",
+      "community": 0,
+      "norm_label": "timer"
+    },
+    {
+      "label": "devices",
+      "file_type": "code",
+      "source_file": "server.js",
+      "source_location": "L2300",
+      "id": "dashboard_server_devices",
+      "community": 0,
+      "norm_label": "devices"
+    },
+    {
+      "label": "sinks",
+      "file_type": "code",
+      "source_file": "server.js",
+      "source_location": "L2311",
+      "id": "dashboard_server_sinks",
+      "community": 0,
+      "norm_label": "sinks"
+    },
+    {
+      "label": "tmpFile",
+      "file_type": "code",
+      "source_file": "server.js",
+      "source_location": "L2322",
+      "id": "dashboard_server_tmpfile",
+      "community": 0,
+      "norm_label": "tmpfile"
+    },
+    {
+      "label": "stream",
+      "file_type": "code",
+      "source_file": "server.js",
+      "source_location": "L2333",
+      "id": "dashboard_server_stream",
+      "community": 0,
+      "norm_label": "stream"
     },
     {
       "label": "sw.js",
@@ -972,7 +1089,7 @@
       "source_file": "public/sw.js",
       "source_location": "L1",
       "id": "public_sw_js",
-      "community": 14,
+      "community": 15,
       "norm_label": "sw.js"
     },
     {
@@ -1476,7 +1593,7 @@
       "source_file": "README.md",
       "source_location": "L1",
       "id": "readme_md",
-      "community": 10,
+      "community": 11,
       "norm_label": "readme.md"
     },
     {
@@ -1485,7 +1602,7 @@
       "source_file": "README.md",
       "source_location": "L1",
       "id": "dashboard_readme_app",
-      "community": 10,
+      "community": 11,
       "norm_label": "app"
     },
     {
@@ -1494,7 +1611,7 @@
       "source_file": "CLAUDE.md",
       "source_location": "L1",
       "id": "claude_md",
-      "community": 11,
+      "community": 12,
       "norm_label": "claude.md"
     },
     {
@@ -1503,7 +1620,7 @@
       "source_file": "CLAUDE.md",
       "source_location": "L1",
       "id": "dashboard_claude_graphify",
-      "community": 11,
+      "community": 12,
       "norm_label": "graphify"
     },
     {
@@ -1512,7 +1629,7 @@
       "source_file": "latexConverter/README.md",
       "source_location": "L1",
       "id": "latexconverter_readme_md",
-      "community": 12,
+      "community": 13,
       "norm_label": "readme.md"
     },
     {
@@ -1521,7 +1638,7 @@
       "source_file": "latexConverter/README.md",
       "source_location": "L1",
       "id": "latexconverter_readme_latexconverter",
-      "community": 12,
+      "community": 13,
       "norm_label": "latexconverter"
     },
     {
@@ -1557,7 +1674,7 @@
       "source_file": "latexStudy/README.md",
       "source_location": "L1",
       "id": "latexstudy_readme_md",
-      "community": 13,
+      "community": 14,
       "norm_label": "readme.md"
     },
     {
@@ -1566,7 +1683,7 @@
       "source_file": "latexStudy/README.md",
       "source_location": "L1",
       "id": "latexstudy_readme_latexstudy",
-      "community": 13,
+      "community": 14,
       "norm_label": "latexstudy"
     },
     {
@@ -1881,9 +1998,9 @@
       "source_file": "server.js",
       "source_location": "L235",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "server_js",
-      "target": "dashboard_server_spotify_scopes",
-      "confidence_score": 1.0
+      "target": "dashboard_server_spotify_scopes"
     },
     {
       "relation": "contains",
@@ -1891,9 +2008,9 @@
       "source_file": "server.js",
       "source_location": "L240",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "server_js",
-      "target": "dashboard_server_spotifyd_conf",
-      "confidence_score": 1.0
+      "target": "dashboard_server_spotifyd_conf"
     },
     {
       "relation": "contains",
@@ -1901,9 +2018,9 @@
       "source_file": "server.js",
       "source_location": "L242",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "server_js",
-      "target": "dashboard_server_spdbget",
-      "confidence_score": 1.0
+      "target": "dashboard_server_spdbget"
     },
     {
       "relation": "contains",
@@ -1911,9 +2028,9 @@
       "source_file": "server.js",
       "source_location": "L245",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "server_js",
-      "target": "dashboard_server_spdbrun",
-      "confidence_score": 1.0
+      "target": "dashboard_server_spdbrun"
     },
     {
       "relation": "contains",
@@ -1921,9 +2038,9 @@
       "source_file": "server.js",
       "source_location": "L249",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "server_js",
-      "target": "dashboard_server_getspotifytokens",
-      "confidence_score": 1.0
+      "target": "dashboard_server_getspotifytokens"
     },
     {
       "relation": "contains",
@@ -1931,9 +2048,9 @@
       "source_file": "server.js",
       "source_location": "L263",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "server_js",
-      "target": "dashboard_server_savespotifytokens",
-      "confidence_score": 1.0
+      "target": "dashboard_server_savespotifytokens"
     },
     {
       "relation": "contains",
@@ -1941,9 +2058,9 @@
       "source_file": "server.js",
       "source_location": "L280",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "server_js",
-      "target": "dashboard_server_refreshspotifytoken",
-      "confidence_score": 1.0
+      "target": "dashboard_server_refreshspotifytoken"
     },
     {
       "relation": "contains",
@@ -1951,9 +2068,9 @@
       "source_file": "server.js",
       "source_location": "L302",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "server_js",
-      "target": "dashboard_server_spotifyfetch",
-      "confidence_score": 1.0
+      "target": "dashboard_server_spotifyfetch"
     },
     {
       "relation": "contains",
@@ -2639,11 +2756,51 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "server.js",
+      "source_location": "L1992",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "server_js",
+      "target": "dashboard_server_vol"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "server.js",
+      "source_location": "L1928",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "server_js",
+      "target": "dashboard_server_nv"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "server.js",
+      "source_location": "L1936",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "server_js",
+      "target": "dashboard_server_key"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "server.js",
+      "source_location": "L1937",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "server_js",
+      "target": "dashboard_server_dev"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "server.js",
       "source_location": "L1849",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "server_js",
-      "target": "dashboard_server_spauth",
-      "confidence_score": 1.0
+      "target": "dashboard_server_spauth"
     },
     {
       "relation": "contains",
@@ -2651,9 +2808,9 @@
       "source_file": "server.js",
       "source_location": "L1870",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "server_js",
-      "target": "dashboard_server_update",
-      "confidence_score": 1.0
+      "target": "dashboard_server_update"
     },
     {
       "relation": "contains",
@@ -2661,19 +2818,9 @@
       "source_file": "server.js",
       "source_location": "L1883",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "server_js",
-      "target": "dashboard_server_params",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "server.js",
-      "source_location": "L1992",
-      "weight": 1.0,
-      "source": "server_js",
-      "target": "dashboard_server_vol",
-      "confidence_score": 1.0
+      "target": "dashboard_server_params"
     },
     {
       "relation": "contains",
@@ -2681,9 +2828,109 @@
       "source_file": "server.js",
       "source_location": "L2029",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "server_js",
-      "target": "dashboard_server_status",
-      "confidence_score": 1.0
+      "target": "dashboard_server_status"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "server.js",
+      "source_location": "L2065",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "server_js",
+      "target": "dashboard_server_execp"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "server.js",
+      "source_location": "L2071",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "server_js",
+      "target": "dashboard_server_getaudiosettings"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "server.js",
+      "source_location": "L2076",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "server_js",
+      "target": "dashboard_server_detectsinks"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "server.js",
+      "source_location": "L2138",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "server_js",
+      "target": "dashboard_server_m"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "server.js",
+      "source_location": "L2163",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "server_js",
+      "target": "dashboard_server_proc"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "server.js",
+      "source_location": "L2164",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "server_js",
+      "target": "dashboard_server_timer"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "server.js",
+      "source_location": "L2208",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "server_js",
+      "target": "dashboard_server_devices"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "server.js",
+      "source_location": "L2219",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "server_js",
+      "target": "dashboard_server_sinks"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "server.js",
+      "source_location": "L2322",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "server_js",
+      "target": "dashboard_server_tmpfile"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "server.js",
+      "source_location": "L2333",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "server_js",
+      "target": "dashboard_server_stream"
     },
     {
       "relation": "contains",
@@ -2774,9 +3021,9 @@
       "source_file": "server.js",
       "source_location": "L221",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "dashboard_server_vaultencrypt",
-      "target": "dashboard_server_update",
-      "confidence_score": 1.0
+      "target": "dashboard_server_update"
     },
     {
       "relation": "calls",
@@ -2785,9 +3032,9 @@
       "source_file": "server.js",
       "source_location": "L265",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "dashboard_server_savespotifytokens",
-      "target": "dashboard_server_vaultencrypt",
-      "confidence_score": 1.0
+      "target": "dashboard_server_vaultencrypt"
     },
     {
       "relation": "calls",
@@ -2796,9 +3043,9 @@
       "source_file": "server.js",
       "source_location": "L231",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "dashboard_server_vaultdecrypt",
-      "target": "dashboard_server_update",
-      "confidence_score": 1.0
+      "target": "dashboard_server_update"
     },
     {
       "relation": "calls",
@@ -2807,9 +3054,9 @@
       "source_file": "server.js",
       "source_location": "L254",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "dashboard_server_getspotifytokens",
-      "target": "dashboard_server_vaultdecrypt",
-      "confidence_score": 1.0
+      "target": "dashboard_server_vaultdecrypt"
     },
     {
       "relation": "calls",
@@ -2818,9 +3065,9 @@
       "source_file": "server.js",
       "source_location": "L250",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "dashboard_server_getspotifytokens",
-      "target": "dashboard_server_spdbget",
-      "confidence_score": 1.0
+      "target": "dashboard_server_spdbget"
     },
     {
       "relation": "calls",
@@ -2829,9 +3076,20 @@
       "source_file": "server.js",
       "source_location": "L264",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "dashboard_server_savespotifytokens",
-      "target": "dashboard_server_spdbget",
-      "confidence_score": 1.0
+      "target": "dashboard_server_spdbget"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "server.js",
+      "source_location": "L2072",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "dashboard_server_getaudiosettings",
+      "target": "dashboard_server_spdbget"
     },
     {
       "relation": "calls",
@@ -2840,9 +3098,9 @@
       "source_file": "server.js",
       "source_location": "L270",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "dashboard_server_savespotifytokens",
-      "target": "dashboard_server_spdbrun",
-      "confidence_score": 1.0
+      "target": "dashboard_server_spdbrun"
     },
     {
       "relation": "calls",
@@ -2851,9 +3109,9 @@
       "source_file": "server.js",
       "source_location": "L281",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "dashboard_server_refreshspotifytoken",
-      "target": "dashboard_server_getspotifytokens",
-      "confidence_score": 1.0
+      "target": "dashboard_server_getspotifytokens"
     },
     {
       "relation": "calls",
@@ -2862,9 +3120,9 @@
       "source_file": "server.js",
       "source_location": "L303",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "dashboard_server_spotifyfetch",
-      "target": "dashboard_server_getspotifytokens",
-      "confidence_score": 1.0
+      "target": "dashboard_server_getspotifytokens"
     },
     {
       "relation": "calls",
@@ -2873,9 +3131,9 @@
       "source_file": "server.js",
       "source_location": "L294",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "dashboard_server_refreshspotifytoken",
-      "target": "dashboard_server_savespotifytokens",
-      "confidence_score": 1.0
+      "target": "dashboard_server_savespotifytokens"
     },
     {
       "relation": "calls",
@@ -2884,9 +3142,9 @@
       "source_file": "server.js",
       "source_location": "L306",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "dashboard_server_spotifyfetch",
-      "target": "dashboard_server_refreshspotifytoken",
-      "confidence_score": 1.0
+      "target": "dashboard_server_refreshspotifytoken"
     },
     {
       "relation": "calls",
@@ -2895,9 +3153,9 @@
       "source_file": "server.js",
       "source_location": "L340",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "dashboard_server_checkauth",
-      "target": "dashboard_server_status",
-      "confidence_score": 1.0
+      "target": "dashboard_server_status"
     },
     {
       "relation": "calls",
@@ -2906,9 +3164,9 @@
       "source_file": "server.js",
       "source_location": "L347",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "dashboard_server_checkadmin",
-      "target": "dashboard_server_status",
-      "confidence_score": 1.0
+      "target": "dashboard_server_status"
     },
     {
       "relation": "calls",
@@ -3030,6 +3288,17 @@
       "confidence_score": 1.0,
       "source": "dashboard_server_runpodcastjob",
       "target": "dashboard_server_driveuploadfile"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "server.js",
+      "source_location": "L2079",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "dashboard_server_detectsinks",
+      "target": "dashboard_server_execp"
     },
     {
       "relation": "contains",
@@ -3701,5 +3970,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "7010c8a5ad7ac61e534a454b68891cc7cd857286"
+  "built_at_commit": "67094cbe05d92bd39b06f2b798d2c977355be24a"
 }

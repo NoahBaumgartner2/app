@@ -55,7 +55,7 @@
   input:focus { border-color: var(--accent-dim); }
 
   /* Drop zone */
-  .drop-zone { border: 1.5px dashed var(--border2); border-radius: var(--radius); padding: 2.5rem 2rem; text-align: center; cursor: pointer; transition: all .15s; position: relative; }
+  .drop-zone { border: 1.5px dashed var(--border2); border-radius: var(--radius); padding: 2rem 2rem; text-align: center; cursor: pointer; transition: all .15s; position: relative; }
   .drop-zone:hover, .drop-zone.drag-over { border-color: var(--accent-dim); background: var(--accent-bg); }
   .drop-zone input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
   .drop-icon { width: 44px; height: 44px; background: var(--bg3); border-radius: 10px; display: flex; align-items: center; justify-content: center; margin: 0 auto 10px; border: 1px solid var(--border); }
@@ -63,22 +63,31 @@
   .drop-title { font-size: 14px; font-weight: 500; margin-bottom: 4px; }
   .drop-sub { font-size: 11px; color: var(--text3); font-family: var(--mono); }
 
-  /* File selected */
-  .file-selected { display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: var(--bg3); border-radius: var(--radius-sm); border: 1px solid var(--border); }
-  .file-selected svg { width: 18px; height: 18px; color: var(--text3); flex-shrink: 0; }
-  .file-selected-info { flex: 1; min-width: 0; }
-  .file-selected-name { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .file-selected-meta { font-family: var(--mono); font-size: 11px; color: var(--text3); margin-top: 2px; }
-  .file-clear { background: none; border: none; color: var(--text3); cursor: pointer; padding: 4px; border-radius: 4px; font-size: 16px; line-height: 1; }
-  .file-clear:hover { color: var(--red); }
+  /* Queue */
+  .queue-list { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; }
+  .queue-item { display: flex; align-items: center; gap: 12px; padding: 10px 12px; background: var(--bg3); border-radius: var(--radius-sm); border: 1px solid var(--border); transition: border-color .2s; }
+  .queue-item.uploading  { border-color: var(--blue); }
+  .queue-item.processing { border-color: var(--amber); }
+  .queue-item.done       { border-color: var(--accent-dim); }
+  .queue-item.error      { border-color: var(--red); }
+  .qi-icon { width: 28px; height: 28px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 12px; flex-shrink: 0; }
+  .qi-icon.pending    { background: var(--bg4); color: var(--text3); }
+  .qi-icon.uploading  { background: var(--blue-bg); color: var(--blue); }
+  .qi-icon.processing { background: var(--amber-bg); color: var(--amber); }
+  .qi-icon.done       { background: var(--accent-bg); color: var(--accent); }
+  .qi-icon.error      { background: var(--red-bg); color: var(--red); }
+  .qi-body { flex: 1; min-width: 0; }
+  .qi-name { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .qi-meta { font-family: var(--mono); font-size: 10px; color: var(--text3); margin-top: 2px; display: flex; gap: 8px; flex-wrap: wrap; }
+  .qi-prog { margin-top: 5px; }
+  .qi-remove { background: none; border: none; color: var(--text3); cursor: pointer; padding: 4px; border-radius: 4px; font-size: 14px; line-height: 1; flex-shrink: 0; }
+  .qi-remove:hover { color: var(--red); }
 
-  /* Upload progress */
-  .upload-progress { margin-top: 14px; }
+  /* Progress bar */
   .progress-bar { height: 4px; background: var(--bg4); border-radius: 2px; overflow: hidden; }
   .progress-fill { height: 100%; border-radius: 2px; transition: width .2s; }
   .progress-fill.blue  { background: var(--blue); }
   .progress-fill.green { background: var(--accent); }
-  .progress-label { font-family: var(--mono); font-size: 11px; color: var(--text3); margin-top: 5px; }
 
   /* Buttons */
   .btn { display: inline-flex; align-items: center; gap: 7px; padding: 9px 18px; border-radius: var(--radius-sm); font-size: 14px; font-weight: 500; font-family: var(--sans); cursor: pointer; transition: all .15s; border: none; }
@@ -176,27 +185,27 @@
     </div>
   </div>
 
-  <!-- 2. Datei & Einstellungen -->
+  <!-- 2. Dateien & Einstellungen -->
   <div class="section">
     <div class="section-header">
       <div class="section-num" id="num2">2</div>
-      <span class="section-title">Video & Einstellungen</span>
+      <span class="section-title">Videos & Einstellungen</span>
     </div>
     <div class="section-body">
       <div class="form-group">
-        <label>Videodatei</label>
+        <label>Videodateien</label>
         <div class="drop-zone" id="dropZone">
-          <input type="file" id="fileInput" accept="video/*,.mp4,.mkv,.avi,.mov,.webm" onchange="handleFile(this.files[0])">
+          <input type="file" id="fileInput" accept="video/*,.mp4,.mkv,.avi,.mov,.webm" multiple onchange="handleFiles(this.files)">
           <div class="drop-icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
               <rect x="3" y="3" width="7" height="5" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/>
               <path d="M3 11v4a1 1 0 001 1h3m10-5v4a1 1 0 01-1 1h-3m-4 4v6m0 0l-2-2m2 2l2-2"/>
             </svg>
           </div>
-          <div class="drop-title">Datei ablegen oder klicken</div>
-          <div class="drop-sub">MP4 · MKV · AVI · MOV · WEBM</div>
+          <div class="drop-title">Dateien ablegen oder klicken</div>
+          <div class="drop-sub">MP4 · MKV · AVI · MOV · WEBM · Mehrere Dateien möglich</div>
         </div>
-        <div id="fileSelected" style="display:none;margin-top:10px"></div>
+        <div id="queueList" class="queue-list"></div>
       </div>
       <div class="form-row">
         <div class="form-group">
@@ -208,14 +217,10 @@
           <input type="text" id="driveFolder" placeholder="z.B. Vorlesungen/HS25">
         </div>
       </div>
-      <div id="uploadProgress" style="display:none" class="upload-progress">
-        <div class="progress-bar"><div class="progress-fill blue" id="uploadFill" style="width:0%"></div></div>
-        <div class="progress-label" id="uploadLabel">Hochladen…</div>
-      </div>
       <div style="margin-top:14px">
-        <button class="btn btn-primary" id="startBtn" onclick="startJob()" disabled>
+        <button class="btn btn-primary" id="startBtn" onclick="startQueue()" disabled>
           <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-          Komprimieren &amp; Hochladen
+          Queue starten
         </button>
       </div>
     </div>
@@ -240,8 +245,10 @@
 <script>
 // ── State ──────────────────────────────────────────────────────────────────
 let driveConnected = false;
-let selectedFile   = null;
+let files          = [];   // { id, file, status, progress, label }
+let queueRunning   = false;
 let pollTimer      = null;
+let _nextId        = 0;
 
 // ── Drive Auth ─────────────────────────────────────────────────────────────
 function connectDrive() {
@@ -291,107 +298,172 @@ async function disconnectDrive() {
   checkStartable();
 }
 
-// ── File handling ──────────────────────────────────────────────────────────
-function handleFile(file) {
-  if (!file) return;
-  selectedFile = file;
-  const mb = (file.size / 1024 / 1024).toFixed(1);
-  document.getElementById('fileSelected').style.display = 'block';
-  document.getElementById('fileSelected').innerHTML = `
-    <div class="file-selected">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="20" height="20" rx="2"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
-      <div class="file-selected-info">
-        <div class="file-selected-name">${esc(file.name)}</div>
-        <div class="file-selected-meta">${mb} MB</div>
-      </div>
-      <button class="file-clear" onclick="clearFile()">✕</button>
-    </div>`;
-  document.getElementById('dropZone').style.display = 'none';
-  checkStartable();
-}
-
-function clearFile() {
-  selectedFile = null;
-  document.getElementById('fileSelected').style.display = 'none';
-  document.getElementById('fileSelected').innerHTML = '';
-  document.getElementById('dropZone').style.display = 'block';
+// ── File / queue handling ──────────────────────────────────────────────────
+function handleFiles(fileList) {
+  for (const f of fileList) {
+    files.push({ id: _nextId++, file: f, status: 'pending', progress: 0, label: '' });
+  }
   document.getElementById('fileInput').value = '';
+  renderQueue();
   checkStartable();
 }
 
+function removeFromQueue(id) {
+  files = files.filter(f => f.id !== id);
+  renderQueue();
+  checkStartable();
+}
+
+function renderQueue() {
+  const list = document.getElementById('queueList');
+  if (!files.length) { list.innerHTML = ''; return; }
+
+  const statusLabel = {
+    pending:    () => 'Wartend',
+    uploading:  item => item.label || `Hochladen ${item.progress}%`,
+    processing: item => item.label || 'Verarbeiten…',
+    done:       () => 'Fertig ✓',
+    error:      item => item.label || 'Fehler',
+  };
+  const statusColor = {
+    pending: 'var(--text3)', uploading: 'var(--blue)',
+    processing: 'var(--amber)', done: 'var(--accent)', error: 'var(--red)',
+  };
+  const iconHtml = {
+    pending:    '⏳',
+    uploading:  '<span class="spin">↑</span>',
+    processing: '<span class="spin">↻</span>',
+    done:       '✓',
+    error:      '✕',
+  };
+
+  list.innerHTML = files.map(item => {
+    const mb       = (item.file.size / 1024 / 1024).toFixed(1);
+    const canDel   = item.status === 'pending' || item.status === 'done' || item.status === 'error';
+    const showProg = item.status === 'uploading';
+    return `
+      <div class="queue-item ${item.status}">
+        <div class="qi-icon ${item.status}">${iconHtml[item.status]}</div>
+        <div class="qi-body">
+          <div class="qi-name">${esc(item.file.name)}</div>
+          <div class="qi-meta">
+            <span>${mb} MB</span>
+            <span style="color:${statusColor[item.status]}">${esc(statusLabel[item.status](item))}</span>
+          </div>
+          ${showProg ? `<div class="qi-prog"><div class="progress-bar"><div class="progress-fill blue" style="width:${item.progress}%"></div></div></div>` : ''}
+        </div>
+        ${canDel ? `<button class="qi-remove" onclick="removeFromQueue(${item.id})" title="Entfernen">✕</button>` : ''}
+      </div>`;
+  }).join('');
+}
+
+function checkStartable() {
+  const hasPending = files.some(f => f.status === 'pending');
+  document.getElementById('startBtn').disabled = !(driveConnected && hasPending && !queueRunning);
+}
+
+// ── Drag & Drop ────────────────────────────────────────────────────────────
 const dz = document.getElementById('dropZone');
 dz.addEventListener('dragover',  e => { e.preventDefault(); dz.classList.add('drag-over'); });
 dz.addEventListener('dragleave', e => { if (!dz.contains(e.relatedTarget)) dz.classList.remove('drag-over'); });
 dz.addEventListener('drop', e => {
   e.preventDefault(); dz.classList.remove('drag-over');
-  const f = e.dataTransfer.files[0];
-  if (f) handleFile(f);
+  if (e.dataTransfer.files.length) handleFiles(e.dataTransfer.files);
 });
 
-function checkStartable() {
-  document.getElementById('startBtn').disabled = !(driveConnected && selectedFile);
-}
+// ── Queue processing ───────────────────────────────────────────────────────
+async function startQueue() {
+  if (queueRunning || !driveConnected) return;
+  queueRunning = true;
+  checkStartable();
 
-// ── Upload & start job ─────────────────────────────────────────────────────
-async function startJob() {
-  if (!driveConnected || !selectedFile) return;
-  const btn = document.getElementById('startBtn');
-  btn.disabled = true;
-
-  const targetMb   = parseInt(document.getElementById('targetMb').value) || 195;
+  const targetMb    = parseInt(document.getElementById('targetMb').value) || 195;
   const driveFolder = document.getElementById('driveFolder').value.trim();
 
-  const fd = new FormData();
-  fd.append('video',        selectedFile);
-  fd.append('target_mb',    targetMb);
-  fd.append('drive_folder', driveFolder);
+  for (const item of files) {
+    if (item.status !== 'pending') continue;
+    await processQueueItem(item, targetMb, driveFolder);
+  }
 
-  const progWrap = document.getElementById('uploadProgress');
-  const fill     = document.getElementById('uploadFill');
-  const lbl      = document.getElementById('uploadLabel');
-  progWrap.style.display = 'block';
+  queueRunning = false;
+  checkStartable();
+  loadJobs();
+}
+
+async function processQueueItem(item, targetMb, driveFolder) {
+  item.status   = 'uploading';
+  item.progress = 0;
+  item.label    = '';
+  renderQueue();
 
   try {
-    const jobId = await new Promise((resolve, reject) => {
-      const xhr = new XMLHttpRequest();
-      xhr.upload.addEventListener('progress', e => {
-        if (e.lengthComputable) {
-          const pct = Math.round(e.loaded / e.total * 100);
-          fill.style.width = pct + '%';
-          lbl.textContent  = `Hochladen… ${pct}% (${(e.loaded/1024/1024).toFixed(0)} / ${(e.total/1024/1024).toFixed(0)} MB)`;
-        }
-      });
-      xhr.addEventListener('load', () => {
-        if (xhr.status >= 200 && xhr.status < 300) {
-          const d = JSON.parse(xhr.responseText);
-          if (d.error) reject(new Error(d.error));
-          else resolve(d.jobId);
-        } else {
-          try { reject(new Error(JSON.parse(xhr.responseText).error || 'Upload fehlgeschlagen')); }
-          catch { reject(new Error('HTTP ' + xhr.status)); }
-        }
-      });
-      xhr.addEventListener('error', () => reject(new Error('Netzwerkfehler')));
-      xhr.open('POST', '/apps/podcast-compressor/api/upload');
-      xhr.send(fd);
-    });
+    const jobId = await uploadFile(item, targetMb, driveFolder);
+    item.status = 'processing';
+    item.label  = `Job #${jobId} – Komprimieren…`;
+    renderQueue();
 
-    fill.style.width = '100%';
-    fill.classList.replace('blue', 'green');
-    lbl.textContent = `✓ Hochgeladen — Job #${jobId} läuft auf dem Server`;
-    clearFile();
-    loadJobs();
-    startPolling();
-
+    await pollJobUntilDone(jobId, item);
+    item.status = 'done';
+    item.label  = '';
+    renderQueue();
   } catch (err) {
-    lbl.textContent = '✕ Fehler: ' + err.message;
-    fill.style.width = '100%';
-    fill.style.background = 'var(--red)';
-    btn.disabled = false;
+    item.status = 'error';
+    item.label  = err.message;
+    renderQueue();
   }
 }
 
-// ── Job polling ────────────────────────────────────────────────────────────
+function uploadFile(item, targetMb, driveFolder) {
+  return new Promise((resolve, reject) => {
+    const fd = new FormData();
+    fd.append('video',        item.file);
+    fd.append('target_mb',    targetMb);
+    fd.append('drive_folder', driveFolder);
+
+    const xhr = new XMLHttpRequest();
+    xhr.upload.addEventListener('progress', e => {
+      if (!e.lengthComputable) return;
+      item.progress = Math.round(e.loaded / e.total * 100);
+      item.label    = `Hochladen ${item.progress}% (${(e.loaded/1024/1024).toFixed(0)} / ${(e.total/1024/1024).toFixed(0)} MB)`;
+      renderQueue();
+    });
+    xhr.addEventListener('load', () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        try {
+          const d = JSON.parse(xhr.responseText);
+          if (d.error) reject(new Error(d.error));
+          else resolve(d.jobId);
+        } catch { reject(new Error('Ungültige Server-Antwort')); }
+      } else {
+        try { reject(new Error(JSON.parse(xhr.responseText).error || 'Upload fehlgeschlagen')); }
+        catch { reject(new Error('HTTP ' + xhr.status)); }
+      }
+    });
+    xhr.addEventListener('error', () => reject(new Error('Netzwerkfehler')));
+    xhr.open('POST', '/apps/podcast-compressor/api/upload');
+    xhr.send(fd);
+  });
+}
+
+function pollJobUntilDone(jobId, item) {
+  return new Promise((resolve, reject) => {
+    const timer = setInterval(async () => {
+      const res = await fetch('/apps/podcast-compressor/api/jobs').catch(() => null);
+      if (!res?.ok) return;
+      const jobs = await res.json();
+      const job  = jobs.find(j => j.id == jobId);
+      if (!job) return;
+      if (job.progress_msg) {
+        item.label = `Job #${jobId} – ${job.progress_msg}`;
+        renderQueue();
+      }
+      if (job.status === 'done')  { clearInterval(timer); resolve(); }
+      if (job.status === 'error') { clearInterval(timer); reject(new Error(job.error_msg || 'Server-Fehler')); }
+    }, 3000);
+  });
+}
+
+// ── Job list (completed jobs panel) ───────────────────────────────────────
 async function loadJobs() {
   const res  = await fetch('/apps/podcast-compressor/api/jobs').catch(() => null);
   if (!res?.ok) return;
@@ -413,11 +485,11 @@ function renderJobs(jobs) {
   const list = document.getElementById('jobList');
   if (!jobs.length) { list.innerHTML = '<div class="empty-jobs">Noch keine Aufträge</div>'; return; }
   list.innerHTML = jobs.map(job => {
-    const isActive = job.status === 'compressing' || job.status === 'uploading' || job.status === 'pending';
-    const iconMap  = { pending: '⏳', compressing: '<span class="spin">↻</span>', uploading: '<span class="spin">↑</span>', done: '✓', error: '✕' };
-    const icon     = iconMap[job.status] || '?';
-    const sizeMeta = job.original_mb ? `${job.original_mb.toFixed(0)} MB` + (job.output_mb ? ` → ${job.output_mb.toFixed(0)} MB` : '') : '';
-    const time     = new Date(job.created_at + ' UTC').toLocaleString('de-DE', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
+    const isActive  = job.status === 'compressing' || job.status === 'uploading' || job.status === 'pending';
+    const iconMap   = { pending: '⏳', compressing: '<span class="spin">↻</span>', uploading: '<span class="spin">↑</span>', done: '✓', error: '✕' };
+    const icon      = iconMap[job.status] || '?';
+    const sizeMeta  = job.original_mb ? `${job.original_mb.toFixed(0)} MB` + (job.output_mb ? ` → ${job.output_mb.toFixed(0)} MB` : '') : '';
+    const time      = new Date(job.created_at + ' UTC').toLocaleString('de-DE', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
     const driveLink = job.drive_file_id
       ? `<a class="job-drive-link" href="https://drive.google.com/file/d/${job.drive_file_id}/view" target="_blank">↗ Drive öffnen</a>`
       : '';
@@ -450,18 +522,15 @@ function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').re
 
 // ── Init ───────────────────────────────────────────────────────────────────
 (async () => {
-  // Restore client_id
   const saved = await fetch('/api/secrets').then(r => r.ok ? r.json() : {}).catch(() => ({}));
   const cid   = saved.google_client_id || localStorage.getItem('gdrive_client_id') || '';
   if (cid) document.getElementById('clientId').value = cid;
 
-  // Restore driveFolder + targetMb
   const folder = localStorage.getItem('podcast_drive_folder');
   const mbVal  = localStorage.getItem('podcast_target_mb');
   if (folder) document.getElementById('driveFolder').value = folder;
   if (mbVal)  document.getElementById('targetMb').value   = mbVal;
 
-  // Auto-save client_id to secrets
   let _t;
   document.getElementById('clientId').addEventListener('input', function() {
     clearTimeout(_t);
@@ -471,7 +540,6 @@ function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').re
     }, 700);
   });
 
-  // Auto-save driveFolder + targetMb to localStorage
   document.getElementById('driveFolder').addEventListener('input', function() {
     localStorage.setItem('podcast_drive_folder', this.value.trim());
   });
@@ -479,7 +547,6 @@ function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').re
     localStorage.setItem('podcast_target_mb', this.value);
   });
 
-  // Zurückgekehrt von OAuth? → Code eintauschen
   const urlParams = new URLSearchParams(window.location.search);
   const code = urlParams.get('code');
   if (code) {
@@ -500,7 +567,6 @@ function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').re
       if (st) st.textContent = '✕ ' + err.message;
     }
   } else {
-    // Bestehende Verbindung prüfen (gespeichertes Refresh Token)
     const s = await fetch('/apps/podcast-compressor/api/drive-status').then(r => r.ok ? r.json() : {}).catch(() => ({}));
     if (s.connected) setDriveConnected();
   }

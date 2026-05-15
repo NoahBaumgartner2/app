@@ -68,7 +68,14 @@
       "Bash(/home/miniserver/.local/bin/spotifyd --version)",
       "Bash(systemctl --user daemon-reload)",
       "Bash(systemctl --user enable spotifyd)",
-      "Bash(pm2 logs *)"
+      "Bash(pm2 logs *)",
+      "Bash(pactl info *)",
+      "Bash(bluetoothctl --version)",
+      "Bash(pactl list *)",
+      "Bash(bluetoothctl devices *)",
+      "Bash(pip install *)",
+      "Read(//usr/local/bin/**)",
+      "Bash(pip show *)"
     ]
   }
 }
