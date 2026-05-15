@@ -284,8 +284,8 @@ body { font-family: 'EB Garamond', Georgia, serif; background: var(--bg-tertiary
 
 /* ─── AUDIO SWITCHER ─── */
 .aud-wrap { position: relative; }
-.aud-panel { min-width: 200px; padding: 12px; right: 0; }
-.aud-panel-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-tertiary); letter-spacing: .08em; margin-bottom: 8px; }
+.aud-panel { top: calc(100% + 8px); bottom: auto; min-width: 200px; padding: 12px; right: 0; }
+.sp-dropdown.aud-panel { top: calc(100% + 8px); bottom: auto; min-width: 200px; padding: 12px; right: 0; }
 .aud-toggle { display: flex; gap: 6px; }
 .aud-btn { flex: 1; padding: 6px 10px; border-radius: 20px; border: 0.5px solid var(--border-medium); background: none; color: var(--text-secondary); font-size: 12px; font-family: 'EB Garamond', serif; cursor: pointer; transition: all .15s; display: flex; align-items: center; justify-content: center; gap: 5px; }
 .aud-btn.active { background: var(--bg-success); color: var(--text-success); border-color: transparent; font-weight: 500; }
