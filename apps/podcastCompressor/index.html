@@ -44,6 +44,7 @@
   /* Drive status */
   .drive-status { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: var(--bg3); border-radius: var(--radius-sm); border: 1px solid var(--border); font-size: 13px; color: var(--text2); }
   .drive-status.connected { background: var(--accent-bg); border-color: var(--accent-dim); color: var(--accent); }
+  .drive-status.warning   { background: var(--amber-bg); border-color: var(--amber); color: var(--amber); }
   .drive-status svg { width: 16px; height: 16px; flex-shrink: 0; }
 
   /* Form */
@@ -298,6 +299,23 @@ async function disconnectDrive() {
   checkStartable();
 }
 
+async function handleInvalidGrant() {
+  await fetch('/apps/podcast-compressor/api/drive-disconnect', { method: 'POST' }).catch(() => {});
+  driveConnected = false;
+  const status = document.getElementById('driveStatus');
+  status.className = 'drive-status warning';
+  status.innerHTML = `
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+    <span>Google Drive Verbindung abgelaufen — bitte neu verbinden</span>
+    <button class="btn btn-ghost btn-sm" style="margin-left:auto;border-color:var(--amber);color:var(--amber)" onclick="connectDrive()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4M10 17l5-5-5-5M15 12H3"/></svg>
+      Neu verbinden
+    </button>`;
+  document.getElementById('driveBadge').textContent = 'Drive: abgelaufen';
+  document.getElementById('driveBadge').classList.remove('green');
+  checkStartable();
+}
+
 // ── File / queue handling ──────────────────────────────────────────────────
 function handleFiles(fileList) {
   for (const f of fileList) {
@@ -410,6 +428,7 @@ async function processQueueItem(item, targetMb, driveFolder) {
     item.status = 'error';
     item.label  = err.message;
     renderQueue();
+    if (err.message.includes('invalid_grant')) handleInvalidGrant();
   }
 }
 

@@ -1,7 +1,7 @@
 {
   "/home/miniserver/development/dashboard/server.js": {
-    "mtime": 1778935268.7102458,
-    "hash": "9777a354d6f2982f18130b1ecbb8d101"
+    "mtime": 1779463963.4539497,
+    "hash": "6036ad525f61eca9dbfb95957c2436e9"
   },
   "/home/miniserver/development/dashboard/public/sw.js": {
     "mtime": 1778329325.7067266,
@@ -92,8 +92,8 @@
     "hash": "c5d61d82a2eef124370f118e125aa8ab"
   },
   "/home/miniserver/development/dashboard/apps/podcastCompressor/index.html": {
-    "mtime": 1778826849.3663652,
-    "hash": "ca7d18df41dfd89e60b39851b3045072"
+    "mtime": 1779463985.130036,
+    "hash": "328590c991c2477cfb43761dd8c80902"
   },
   "/home/miniserver/development/dashboard/apps/voiceAssistant/index.html": {
     "mtime": 1778769430.562164,

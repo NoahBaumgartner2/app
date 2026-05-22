@@ -681,9 +681,16 @@ async function getDriveAccessToken(userId) {
   if (!refreshToken) throw new Error('Kein Google Drive Token gespeichert. Bitte Drive verbinden.');
   const client = await getOAuth2Client(userId);
   client.setCredentials({ refresh_token: refreshToken });
-  const { token } = await client.getAccessToken();
-  if (!token) throw new Error('Access Token konnte nicht erneuert werden.');
-  return token;
+  try {
+    const { token } = await client.getAccessToken();
+    if (!token) throw new Error('Access Token konnte nicht erneuert werden.');
+    return token;
+  } catch (err) {
+    if (String(err.message || err).includes('invalid_grant')) {
+      throw new Error('[invalid_grant] Google Drive Verbindung abgelaufen. Bitte neu verbinden.');
+    }
+    throw err;
+  }
 }
 
 // ── Podcast Compressor — server-side FFmpeg ─────────────────────────────────
