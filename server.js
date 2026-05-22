@@ -789,7 +789,7 @@ ${summary}
 
 async function summarizeWithGemini(apiKey, pdfBuffer, fileName, subjectHint) {
   const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({ model: 'gemini-3-flash-preview' });
+  const model = genAI.getGenerativeModel({ model: 'gemini-3.5-flash' });
 
   const pdfBase64 = pdfBuffer.toString('base64');
   const prompt = `Du bist ein Experte für BWL-Fächer (Wirtschaftsinformatik, Marketing, Controlling, Rechnungswesen, Management, etc.).
@@ -1799,7 +1799,7 @@ Spotify rules:
 The action tag is executed by the system — never read it aloud.`;
 
   const model = genAI.getGenerativeModel({
-    model: 'gemini-3-flash-preview',
+    model: 'gemini-3.5-flash',
     systemInstruction,
     tools: (haUrl && haToken) ? haTools : undefined
   });
