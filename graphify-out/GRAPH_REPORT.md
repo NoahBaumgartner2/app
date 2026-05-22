@@ -1,16 +1,16 @@
 # Graph Report - dashboard  (2026-05-16)
 
 ## Corpus Check
-- 14 files · ~65,791 words
+- 14 files · ~66,437 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 193 nodes · 219 edges · 16 communities (9 shown, 7 thin omitted)
+- 195 nodes · 221 edges · 16 communities (9 shown, 7 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `7eed3f5b`
+- Built from commit: `1d26e50b`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -50,7 +50,7 @@
 
 ### Community 0 - "Community 0"
 Cohesion: 0.02
-Nodes (86): ALLOWED, app, APP_SLUGS, areas, b, bcrypt, body, chat (+78 more)
+Nodes (88): ALLOWED, app, APP_SLUGS, areas, b, bcrypt, body, chat (+80 more)
 
 ### Community 1 - "Community 1"
 Cohesion: 0.08
@@ -81,7 +81,7 @@ Cohesion: 0.67
 Nodes (3): compileLaTeX(), findLatexCompiler(), runLatexCompiler()
 
 ## Knowledge Gaps
-- **127 isolated node(s):** `express`, `{ execFile, exec, spawn }`, `fs`, `os`, `path` (+122 more)
+- **129 isolated node(s):** `express`, `{ execFile, exec, spawn }`, `fs`, `os`, `path` (+124 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **7 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
@@ -89,7 +89,7 @@ Nodes (3): compileLaTeX(), findLatexCompiler(), runLatexCompiler()
 _Questions this graph is uniquely positioned to answer:_
 
 - **What connects `express`, `{ execFile, exec, spawn }`, `fs` to the rest of the system?**
-  _127 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _129 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Community 0` be split into smaller, more focused modules?**
   _Cohesion score 0.02 - nodes in this community are weakly interconnected._
 - **Should `Community 1` be split into smaller, more focused modules?**

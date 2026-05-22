@@ -479,24 +479,100 @@ textarea { resize: vertical; min-height: 100px; line-height: 1.5; }
 <div id="imgFullscreen" onclick="closeFullscreen()"><img src="" alt=""></div>
 
 <script>
-// ── System prompts ────────────────────────────────────────────────────────
-const CONCEPT_SYSTEM_PROMPT = `Du bist ein Prüfungsexperte. Analysiere die hochgeladenen Vorlesungsunterlagen genau. Generiere ausschliesslich Fragen die direkt aus dem Inhalt dieser Unterlagen ableitbar sind. Beziehe dich auf spezifische Konzepte, Formeln, Definitionen und Beispiele die in den Dokumenten vorkommen. Antworte NUR mit einem JSON Array, kein anderer Text.
+// ── Subject detection & dynamic prompts ──────────────────────────────────
+const SUBJECT_PROFILES = {
+  math:     { keywords: ['awi','algorithmen','wahrscheinlichkeit','mathematik','analysis','lineare algebra','statistik','diskrete','numerik','kryptographie','kombinatorik'], profile: 'MATH_HEAVY' },
+  cs:       { keywords: ['informatik','programmierung','software','datenbanken','netzwerke','betriebssysteme','compilerbau'], profile: 'MATH_HEAVY' },
+  business: { keywords: ['wirtschaftsinformatik','bwl','marketing','controlling','management','buchhaltung','rechnungswesen','finanzierung','mikroökonomie','makroökonomie','entrepreneurship','logistik','vwl','strategie'], profile: 'BUSINESS' },
+  law:      { keywords: ['recht','jus','obligationen','gesetz','privatrecht','öffentlich','strafrecht','vertragsrecht'], profile: 'LAW' },
+  science:  { keywords: ['medizin','anatomie','physiologie','pharmakologie','biologie','chemie','physik','biochemie'], profile: 'SCIENCE' },
+};
 
-Regeln für correct_answer:
-- multiple_choice: muss exakt mit einem Eintrag in options[] übereinstimmen
-- true_false: genau "Wahr" oder "Falsch"
-- open: vollständige Musterlösung als Satz`;
+function detectSubjectProfile(subject) {
+  const s = subject.toLowerCase();
+  for (const val of Object.values(SUBJECT_PROFILES)) {
+    if (val.keywords.some(k => s.includes(k))) return val.profile;
+  }
+  return 'GENERAL';
+}
 
-const MATH_SYSTEM_PROMPT = `Du bist ein Mathematik-Prüfungsexperte der Universität Bern. Analysiere die hochgeladenen Prüfungsaufgaben und Vorlesungsunterlagen. Generiere Rechenaufgaben vom selben Schwierigkeitsgrad und Stil wie in den Unterlagen. Wichtig: - Erstelle konkrete Rechenaufgaben mit spezifischen Zahlen (nicht nur Konzeptfragen) - Aufgaben sollen lösbar sein mit den in den Unterlagen gezeigten Methoden - Gib 3 abgestufte Hints: Hint 1 = Welches Theorem, Hint 2 = Ansatz, Hint 3 = Erste Rechenschritte - Gib eine vollständige Schritt-für-Schritt Musterlösung - Beziehe dich auf spezifische Aufgaben aus den Unterlagen als Vorlage - Antworte NUR mit JSON Array, kein anderer Text.
-WICHTIG: Da deine Antwort striktes JSON sein muss, musst du alle Backslashes für LaTeX zwingend doppelt escapen! Schreibe also z.B. "\\\\gamma" statt "\\gamma" und "\\\\frac" statt "\\frac". Antworte NUR mit JSON Array, kein anderer Text.`;
+function buildSystemPrompt(subject, format) {
+  const profile = detectSubjectProfile(subject);
 
-const MIXED_SYSTEM_PROMPT = `Du bist ein Prüfungsexperte. Analysiere die hochgeladenen Vorlesungsunterlagen. Generiere eine ausgewogene Mischung aus Konzeptfragen und Rechenaufgaben. Antworte NUR mit einem JSON Array, kein anderer Text.
+  const JSON_RULES = `\nPflicht-JSON-Regeln:
+- type "multiple_choice": options[] mit 4 Einträgen, correct_answer EXAKT gleich wie ein options[]-Eintrag
+- type "true_false": correct_answer genau "Wahr" oder "Falsch"
+- type "open": correct_answer = vollständige Musterlösung
+- type "math": Pflichtfelder solution_steps [{step,title,content}], hints [3 Strings], correct_answer, points
+- LaTeX in JSON: Backslashes DOPPELT escapen — "\\\\frac" statt "\\frac", "\\\\gamma" statt "\\gamma"
+- Antworte NUR mit dem JSON Array. Kein Markdown, kein erklärender Text.`;
 
-Regeln:
-- multiple_choice: correct_answer muss exakt mit einem Eintrag in options[] übereinstimmen
-- true_false: correct_answer genau "Wahr" oder "Falsch"
-- open: correct_answer vollständige Musterlösung als Satz
-- math: Gib zusätzlich solution_steps (Array mit step/title/content Objekten) und hints (Array mit 3 Strings) an`;
+  const UNIVERSAL = `\nQualitätsregeln:
+- Analysiere NUR den Inhalt der hochgeladenen Dokumente
+- Variiere die Fragen — nie zweimal dieselbe Struktur oder dasselbe Konzept
+- Schwierigkeit: Mix aus einfach (Reproduktion) und schwer (Anwendung/Transfer)
+- Referenziere spezifische Beispiele, Definitionen und Konzepte aus den Unterlagen`;
+
+  if (profile === 'MATH_HEAVY') {
+    if (format === 'math') return `Du bist ein Mathematik-/Informatik-Prüfungsexperte. Erstelle konkrete Rechenaufgaben und Beweise basierend auf den hochgeladenen Unterlagen.
+
+Anforderungen:
+- Konkrete Zahlen und spezifische Werte — keine rein abstrakten Fragen
+- Nenne das verwendete Theorem oder die Methode explizit (z.B. "Satz von Bayes", "Master-Theorem", "Dijkstra")
+- Teilaufgaben a)/b)/c) wenn sinnvoll → sub_questions Array
+- 3 abgestufte Hints: Hint 1 = Welches Theorem/Konzept, Hint 2 = Lösungsansatz, Hint 3 = Erste konkrete Rechenschritte
+- Vollständige Schritt-für-Schritt Musterlösung in solution_steps
+- Variiere die Themengebiete — nicht mehrere Aufgaben zum selben Konzept${UNIVERSAL}${JSON_RULES}`;
+
+    if (format === 'concept') return `Du bist ein Prüfungsexperte für mathematisch-technische Fächer. Erstelle Konzeptfragen basierend auf den hochgeladenen Unterlagen.
+
+Schwerpunkte:
+- Definitionen und Eigenschaften von Algorithmen, Theoremen und Strukturen
+- "Wann verwendet man X statt Y?" — Entscheidungs- und Vergleichsfragen
+- Komplexitätsanalyse, Korrektheitsbedingungen, Vor-/Nachteile
+- True/False über häufige Missverständnisse und Randfälle${UNIVERSAL}${JSON_RULES}`;
+
+    return `Du bist ein Prüfungsexperte für mathematisch-technische Fächer. Mische Konzeptfragen und Rechenaufgaben basierend auf den hochgeladenen Unterlagen.
+
+Konzeptfragen: Definitionen, Eigenschaften, Entscheidungslogik, Vergleiche
+Rechenaufgaben (type "math"): Konkrete Zahlen, Theorem nennen, solution_steps + hints Pflicht${UNIVERSAL}${JSON_RULES}`;
+  }
+
+  if (profile === 'BUSINESS') return `Du bist ein Prüfungsexperte für Wirtschafts- und Managementfächer. Erstelle praxisnahe Fragen basierend auf den hochgeladenen Unterlagen.
+
+Schwerpunkte:
+- Definitionen und Konzepte präzise erklären (Was ist X? Wozu dient Y?)
+- Fallanalysen: "Erkläre anhand eines konkreten Unternehmensbeispiels aus der Praxis"
+- Vergleichsfragen: "Vergleiche X mit Y — Gemeinsamkeiten, Unterschiede, Vor-/Nachteile"
+- Entscheidungssituationen: "Welche Strategie wählt das Unternehmen und warum?"
+- Bei Controlling/Rechnungswesen: Berechnungen als type "open" mit Rechenweg in correct_answer
+- Keine abstrakten Wissensfragen — Anwendung und Transfer bevorzugen${UNIVERSAL}${JSON_RULES}`;
+
+  if (profile === 'LAW') return `Du bist ein Rechtsprüfungsexperte. Erstelle juristische Prüfungsfragen basierend auf den hochgeladenen Unterlagen.
+
+Schwerpunkte:
+- Fallsubsumtion: Sachverhalt schildern → Rechtsfrage stellen → Gesetzesartikel nennen → Lösung
+- Tatbestandsmerkmale identifizieren und prüfen
+- True/False über Gesetzes- und Auslegungsfragen
+- Offene Fragen: "Liegt Tatbestandsmerkmal X vor? Begründe."
+- Nenne relevante Artikel und Gesetze aus den Unterlagen${UNIVERSAL}${JSON_RULES}`;
+
+  if (profile === 'SCIENCE') return `Du bist ein naturwissenschaftlicher Prüfungsexperte. Erstelle Fragen basierend auf den hochgeladenen Unterlagen.
+
+Schwerpunkte:
+- Mechanismen und Prozesse erklären (Wie funktioniert X auf molekularer/zellulärer Ebene?)
+- Formeln anwenden und Berechnungen (type "open" oder "math")
+- Vergleiche zwischen ähnlichen Konzepten, Strukturen oder Substanzen
+- Klinische oder praktische Anwendungen der Grundlagenkonzepte${UNIVERSAL}${JSON_RULES}`;
+
+  // GENERAL fallback
+  return `Du bist ein Prüfungsexperte. Erstelle Prüfungsfragen ausschliesslich basierend auf den hochgeladenen Unterlagen.
+
+Vorgehensweise:
+- Identifiziere die wichtigsten Konzepte, Definitionen und Zusammenhänge in den Dokumenten
+- Prüfe echtes Verständnis — nicht nur Auswendiglernen
+- Decke verschiedene Themen und Abschnitte der Unterlagen ab${UNIVERSAL}${JSON_RULES}`;
+}
 
 // ── State ─────────────────────────────────────────────────────────────────
 let geminiApiKey  = '';
@@ -776,54 +852,18 @@ async function downloadDriveFile(fileId) {
   });
 }
 
-// ── Gemini Files API upload ───────────────────────────────────────────────
+// ── Gemini Files API upload (via Server-Proxy wegen CORS) ────────────────
 async function uploadFileToGemini(base64Data, mimeType, displayName, apiKey) {
-  const byteChars = atob(base64Data);
-  const byteArray = new Uint8Array(byteChars.length);
-  for (let i = 0; i < byteChars.length; i++) byteArray[i] = byteChars.charCodeAt(i);
-  const blob = new Blob([byteArray], { type: mimeType });
-
-  console.log(`[GeminiFiles] Upload "${displayName}" (${(blob.size/1024).toFixed(0)} KB, ${mimeType})`);
-
-  const startResp = await fetch(
-    `https://generativelanguage.googleapis.com/upload/v1beta/files?key=${apiKey}`,
-    {
-      method: 'POST',
-      headers: {
-        'X-Goog-Upload-Protocol': 'resumable',
-        'X-Goog-Upload-Command': 'start',
-        'X-Goog-Upload-Header-Content-Length': blob.size,
-        'X-Goog-Upload-Header-Content-Type': mimeType,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ file: { display_name: displayName } }),
-    }
-  );
-  if (!startResp.ok) {
-    const txt = await startResp.text().catch(() => '');
-    throw new Error(`Files API Init fehlgeschlagen: HTTP ${startResp.status} – ${txt.slice(0, 200)}`);
-  }
-  const uploadUrl = startResp.headers.get('X-Goog-Upload-URL');
-  if (!uploadUrl) throw new Error('Kein Upload-URL erhalten von Gemini Files API');
-
-  const uploadResp = await fetch(uploadUrl, {
+  console.log(`[GeminiFiles] Upload via Proxy: "${displayName}" (${(base64Data.length * 0.75 / 1024).toFixed(0)} KB, ${mimeType})`);
+  const resp = await fetch('/apps/exam-trainer/api/gemini-upload', {
     method: 'POST',
-    headers: {
-      'X-Goog-Upload-Command': 'upload, finalize',
-      'X-Goog-Upload-Offset': '0',
-      'Content-Type': mimeType,
-    },
-    body: blob,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ base64: base64Data, mimeType, displayName, apiKey }),
   });
-  if (!uploadResp.ok) {
-    const txt = await uploadResp.text().catch(() => '');
-    throw new Error(`File Upload fehlgeschlagen: HTTP ${uploadResp.status} – ${txt.slice(0, 200)}`);
-  }
-  const fileData = await uploadResp.json();
-  const uri = fileData.file?.uri;
-  if (!uri) throw new Error('Keine file URI in der Gemini-Antwort');
-  console.log(`[GeminiFiles] Hochgeladen → ${uri}`);
-  return uri;
+  const data = await resp.json();
+  if (!resp.ok) throw new Error(data.error + (data.detail ? '\n' + data.detail : ''));
+  console.log(`[GeminiFiles] Upload OK → ${data.fileUri}`);
+  return data.fileUri;
 }
 
 // ── Generate ──────────────────────────────────────────────────────────────
@@ -832,25 +872,29 @@ async function generate() {
   if (!geminiKey) { alert('Kein Gemini API Key gesetzt. Bitte im Dashboard unter Einstellungen setzen.'); return; }
   if (!selectedFiles.length) { alert('Bitte mindestens eine Datei aus Google Drive auswählen.'); return; }
 
-  let types, systemPrompt, userPromptSuffix;
   const subject = document.getElementById('subject').value.trim() || 'Allgemein';
   const count   = parseInt(document.querySelector('[data-count].active').dataset.count);
+  const profile = detectSubjectProfile(subject);
+  const systemPrompt = buildSystemPrompt(subject, examFormat);
+
+  let types, userPromptSuffix;
+  const profileHint = profile === 'BUSINESS' ? ' Verwende praxisnahe Beispiele und Unternehmenskontext.' :
+                      profile === 'LAW'      ? ' Baue Fallsubsumtionen mit konkretem Sachverhalt auf.'    : '';
 
   if (examFormat === 'math') {
     types = ['math'];
-    systemPrompt = MATH_SYSTEM_PROMPT;
-    userPromptSuffix = `Generiere genau ${count} Rechenaufgaben zum Thema "${subject}". Alle Aufgaben müssen vom Typ "math" sein mit den Feldern: type, question, sub_questions (optional), solution_steps (Array), hints (Array mit 3 Einträgen), points, correct_answer, explanation.`;
+    userPromptSuffix = `Generiere genau ${count} Rechenaufgaben zum Thema "${subject}". Alle Aufgaben Typ "math" mit Pflichtfeldern: type, question, sub_questions (optional), solution_steps [{step,title,content}], hints [3 Strings], points, correct_answer, explanation.`;
   } else if (examFormat === 'concept') {
     types = [...document.querySelectorAll('.type-cb:checked')].map(cb => cb.value);
     if (!types.length) { alert('Bitte mindestens einen Fragentyp auswählen.'); return; }
-    systemPrompt = CONCEPT_SYSTEM_PROMPT;
-    userPromptSuffix = `Generiere genau ${count} Prüfungsfragen zum Thema "${subject}". Fragentypen (gleichmässig verteilen): ${types.join(', ')}.`;
+    userPromptSuffix = `Generiere genau ${count} Prüfungsfragen zum Thema "${subject}". Fragentypen (gleichmässig verteilen): ${types.join(', ')}.${profileHint}`;
   } else {
     const conceptTypes = [...document.querySelectorAll('.type-cb:checked')].map(cb => cb.value);
     types = [...conceptTypes, 'math'];
-    systemPrompt = MIXED_SYSTEM_PROMPT;
-    userPromptSuffix = `Generiere genau ${count} Prüfungsfragen zum Thema "${subject}". Verteile gleichmässig auf: ${types.join(', ')}. Für Typ "math": solution_steps und hints (3 Einträge) angeben.`;
+    userPromptSuffix = `Generiere genau ${count} Prüfungsfragen zum Thema "${subject}". Verteile auf: ${types.join(', ')}. Für Typ "math": solution_steps und hints (3 Einträge) Pflicht.${profileHint}`;
   }
+
+  console.log(`[ExamTrainer] Profil: ${profile} | Format: ${examFormat} | Fach: ${subject}`);
 
   setLoading(true, 'Lade Unterlagen von Google Drive…');
 
@@ -863,10 +907,21 @@ async function generate() {
         : (['image/jpeg','image/png','image/webp','image/gif'].includes(f.mimeType) ? f.mimeType : 'image/jpeg');
 
       setLoading(true, `Lade Datei ${fi + 1}/${total} von Drive: ${f.name}…`);
-      const base64 = await downloadDriveFile(f.id);
+      let base64;
+      try {
+        base64 = await downloadDriveFile(f.id);
+      } catch (driveErr) {
+        if (driveErr.message === 'AUTH_EXPIRED') throw driveErr;
+        throw new Error(`[Drive-Download ${fi + 1}/${total} "${f.name}"] ${driveErr.name}: ${driveErr.message}`);
+      }
 
       setLoading(true, `Lade Datei ${fi + 1}/${total} zu Gemini hoch: ${f.name}…`);
-      const fileUri = await uploadFileToGemini(base64, mimeType, f.name, geminiKey);
+      let fileUri;
+      try {
+        fileUri = await uploadFileToGemini(base64, mimeType, f.name, geminiKey);
+      } catch (uploadErr) {
+        throw new Error(`[Gemini-Upload ${fi + 1}/${total} "${f.name}"] ${uploadErr.name}: ${uploadErr.message}`);
+      }
       parts.push({ file_data: { mime_type: mimeType, file_uri: fileUri } });
     }
 
@@ -875,36 +930,15 @@ async function generate() {
     setLoading(true, 'Generiere Prüfungsfragen…');
     console.log('API Key:', geminiKey?.slice(0, 8), 'Dateien:', total, 'via Files API');
 
-    const genCtrl    = new AbortController();
-    const genTimeout = setTimeout(() => genCtrl.abort(), 300_000);
-    let resp;
-    try {
-      resp = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${encodeURIComponent(geminiKey)}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ parts }],
-            generationConfig: { responseMimeType: 'application/json' },
-          }),
-          signal: genCtrl.signal,
-        }
-      );
-    } finally {
-      clearTimeout(genTimeout);
-    }
+    const genResp = await fetch('/apps/exam-trainer/api/gemini-generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ parts, apiKey: geminiKey }),
+    });
+    const genData = await genResp.json();
+    if (!genResp.ok) throw new Error(genData.error + (genData.detail ? '\n' + genData.detail : ''));
 
-    if (!resp.ok) {
-      const bodyText = await resp.text().catch(() => '');
-      let msg = `HTTP ${resp.status}`;
-      try { msg = JSON.parse(bodyText).error?.message || msg; } catch {}
-      console.error('Gemini API Fehler', resp.status, bodyText);
-      throw new Error(msg + (bodyText && !msg.includes(bodyText) ? '\n\n' + bodyText.slice(0, 300) : ''));
-    }
-
-    const data    = await resp.json();
-    const raw     = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
+    const raw     = genData.text?.trim() || '';
     const jsonStr = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '');
 // Repariert illegale Backslashes, ignoriert aber bereits korrekt doppelte Backslashes
     const sanitizedJsonStr = jsonStr.replace(/(?<!\\)\\(?!["\\/bfnrt])/g, "\\\\");
@@ -933,10 +967,14 @@ async function generate() {
     renderQuestion();
 
   } catch (err) {
-    console.error('[ExamTrainer] Fehler:', err?.message, err);
+    console.error('[ExamTrainer] Fehler:', err?.name, err?.message, err);
     if (err.message === 'AUTH_EXPIRED') {
       const reauth = confirm('Google OAuth-Token abgelaufen (401).\n\nJetzt neu mit Google Drive verbinden?');
       if (reauth) { disconnectDrive(); connectDrive(); }
+      return;
+    }
+    if (err.name === 'AbortError') {
+      alert('Timeout: Gemini hat nach 5 Minuten nicht geantwortet.\nBitte weniger Dateien auswählen oder es erneut versuchen.');
       return;
     }
     if (err.message?.startsWith('NETWORK:')) {
@@ -951,7 +989,8 @@ async function generate() {
       );
       return;
     }
-    alert('Fehler: ' + err.message);
+    // Zeige Schritt-Kontext falls vorhanden (z.B. "[Drive-Download 1/3 ...]")
+    alert('Fehler (' + (err.name || 'Error') + '):\n\n' + err.message);
   } finally {
     setLoading(false);
   }
@@ -1148,7 +1187,7 @@ async function gradeMathWithGemini(qIdx) {
     `Antworte NUR mit JSON: {"score":0,"feedback":"kurzes Feedback auf Deutsch (2-3 Sätze)","correct_parts":["was richtig war"],"missing_parts":["was fehlte oder falsch war"]}`
   });
   const resp = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${encodeURIComponent(geminiApiKey)}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(geminiApiKey)}`,
     { method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ contents: [{ parts }], generationConfig: { responseMimeType: 'application/json' } }) }
   );
@@ -1204,7 +1243,7 @@ async function checkOpen() {
   btn.disabled = true; btn.textContent = '⏳ Prüfe…';
   try {
     const resp = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${encodeURIComponent(geminiApiKey)}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(geminiApiKey)}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

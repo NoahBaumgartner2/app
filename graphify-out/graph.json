@@ -1084,6 +1084,24 @@
       "norm_label": "stream"
     },
     {
+      "label": "fileBuffer",
+      "file_type": "code",
+      "source_file": "server.js",
+      "source_location": "L2457",
+      "id": "dashboard_server_filebuffer",
+      "community": 0,
+      "norm_label": "filebuffer"
+    },
+    {
+      "label": "uploadUrl",
+      "file_type": "code",
+      "source_file": "server.js",
+      "source_location": "L2479",
+      "id": "dashboard_server_uploadurl",
+      "community": 0,
+      "norm_label": "uploadurl"
+    },
+    {
       "label": "sw.js",
       "file_type": "code",
       "source_file": "public/sw.js",
@@ -2936,6 +2954,26 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "server.js",
+      "source_location": "L2457",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "server_js",
+      "target": "dashboard_server_filebuffer"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "server.js",
+      "source_location": "L2479",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "server_js",
+      "target": "dashboard_server_uploadurl"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "server.js",
       "source_location": "L1556",
       "weight": 1.0,
       "confidence_score": 1.0,
@@ -3970,5 +4008,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "7eed3f5be3a1f85bc501fbc5af1cb1f1a52375eb"
+  "built_at_commit": "1d26e50b813da85a6ff2ccc965a010967bc36a9b"
 }

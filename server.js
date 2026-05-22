@@ -228,7 +228,7 @@ db.all('PRAGMA table_info(medication_schedules)', (err, cols) => {
 // ══════════════════════════════════════════════════════════════════════════════
 //  MIDDLEWARE
 // ══════════════════════════════════════════════════════════════════════════════
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true }));
 
 app.use(session({
@@ -2449,6 +2449,93 @@ app.get('/apps/exam-trainer/api/weak-topics', checkAuth, checkAppAccess('exam-tr
   );
 });
 
+// Gemini Files API proxy — avoids CORS when uploading from the browser
+app.post('/apps/exam-trainer/api/gemini-upload', checkAuth, checkAppAccess('exam-trainer'), async (req, res) => {
+  const { base64, mimeType, displayName, apiKey } = req.body;
+  if (!base64 || !mimeType || !apiKey) return res.status(400).json({ error: 'base64, mimeType und apiKey erforderlich' });
+  try {
+    const fileBuffer = Buffer.from(base64, 'base64');
+    console.log(`[exam-trainer] Gemini Upload: "${displayName}" ${(fileBuffer.length / 1024).toFixed(0)} KB`);
+
+    const startResp = await fetch(
+      `https://generativelanguage.googleapis.com/upload/v1beta/files?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: {
+          'X-Goog-Upload-Protocol': 'resumable',
+          'X-Goog-Upload-Command': 'start',
+          'X-Goog-Upload-Header-Content-Length': fileBuffer.length,
+          'X-Goog-Upload-Header-Content-Type': mimeType,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ file: { display_name: displayName || 'upload' } }),
+      }
+    );
+    if (!startResp.ok) {
+      const txt = await startResp.text().catch(() => '');
+      console.error('[exam-trainer] Files API init error:', startResp.status, txt.slice(0, 300));
+      return res.status(502).json({ error: `Files API Init fehlgeschlagen: HTTP ${startResp.status}`, detail: txt.slice(0, 300) });
+    }
+    const uploadUrl = startResp.headers.get('x-goog-upload-url');
+    if (!uploadUrl) return res.status(502).json({ error: 'Kein Upload-URL von Gemini erhalten' });
+
+    const uploadResp = await fetch(uploadUrl, {
+      method: 'POST',
+      headers: {
+        'X-Goog-Upload-Command': 'upload, finalize',
+        'X-Goog-Upload-Offset': '0',
+        'Content-Type': mimeType,
+      },
+      body: fileBuffer,
+    });
+    if (!uploadResp.ok) {
+      const txt = await uploadResp.text().catch(() => '');
+      console.error('[exam-trainer] Files API upload error:', uploadResp.status, txt.slice(0, 300));
+      return res.status(502).json({ error: `File Upload fehlgeschlagen: HTTP ${uploadResp.status}`, detail: txt.slice(0, 300) });
+    }
+    const fileData = await uploadResp.json();
+    const fileUri  = fileData.file?.uri;
+    if (!fileUri) return res.status(502).json({ error: 'Keine file URI in Gemini-Antwort', detail: JSON.stringify(fileData).slice(0, 200) });
+    console.log(`[exam-trainer] Gemini Upload OK → ${fileUri}`);
+    res.json({ fileUri });
+  } catch (err) {
+    console.error('[exam-trainer] gemini-upload Fehler:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Gemini generateContent proxy — avoids CORS for the generation call
+app.post('/apps/exam-trainer/api/gemini-generate', checkAuth, checkAppAccess('exam-trainer'), async (req, res) => {
+  const { parts, apiKey } = req.body;
+  if (!parts || !apiKey) return res.status(400).json({ error: 'parts und apiKey erforderlich' });
+  try {
+    console.log(`[exam-trainer] Gemini Generate: ${parts.length} parts`);
+    const resp = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts }],
+          generationConfig: { responseMimeType: 'application/json' },
+        }),
+        signal: AbortSignal.timeout(300_000),
+      }
+    );
+    if (!resp.ok) {
+      const txt = await resp.text().catch(() => '');
+      console.error('[exam-trainer] Gemini Generate error:', resp.status, txt.slice(0, 300));
+      return res.status(502).json({ error: `Gemini HTTP ${resp.status}`, detail: txt.slice(0, 300) });
+    }
+    const data = await resp.json();
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+    console.log(`[exam-trainer] Gemini Generate OK, ${text.length} Zeichen`);
+    res.json({ text });
+  } catch (err) {
+    console.error('[exam-trainer] gemini-generate Fehler:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // ── Start ──────────────────────────────────────────────────────────────────
 app.listen(PORT, async () => {
