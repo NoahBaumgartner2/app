@@ -88,6 +88,10 @@ main { flex: 1; }
 .drive-item-arr { color: var(--text3); font-size: 16px; line-height: 1; }
 .drive-item-cb { accent-color: var(--accent); cursor: pointer; width: 15px; height: 15px; flex-shrink: 0; pointer-events: none; }
 .drive-loading { padding: 1.5rem; text-align: center; font-family: var(--mono); font-size: 12px; color: var(--text3); }
+.drive-actions { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.drive-selectall { background: var(--accent-bg); border: 1px solid var(--accent-dim); color: var(--accent); font-family: var(--sans); font-size: 12px; padding: 6px 12px; border-radius: var(--radius-sm); cursor: pointer; transition: all .15s; }
+.drive-selectall:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+.drive-folder-count { font-family: var(--mono); font-size: 11px; color: var(--text3); white-space: nowrap; }
 .selected-wrap { margin-top: 10px; }
 .selected-header { font-size: 10px; color: var(--text3); font-family: var(--mono); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 6px; }
 .file-list { display: flex; flex-direction: column; gap: 4px; }
@@ -358,6 +362,10 @@ textarea { resize: vertical; min-height: 100px; line-height: 1.5; }
           <button class="drive-disconnect" onclick="disconnectDrive()">Drive trennen ✕</button>
         </div>
         <div id="driveBreadcrumb" class="breadcrumb"></div>
+        <div id="driveActions" class="drive-actions" style="display:none">
+          <button class="drive-selectall" onclick="toggleSelectAllVisible()"><span id="selectAllLabel">Alle auswählen</span></button>
+          <span id="driveFolderCount" class="drive-folder-count"></span>
+        </div>
         <div id="driveList" class="drive-list"><div class="drive-loading">Laden…</div></div>
         <div id="selectedWrap" class="selected-wrap" style="display:none">
           <div class="selected-header">Ausgewählt (<span id="selectedCount">0</span>) <span style="color:var(--text3);font-weight:400">— Bis zu 20 Dateien möglich</span></div>
@@ -414,6 +422,10 @@ textarea { resize: vertical; min-height: 100px; line-height: 1.5; }
           <button class="tog"        data-timer="45" onclick="setTog(this,'timer')">45 min</button>
           <button class="tog"        data-timer="60" onclick="setTog(this,'timer')">60 min</button>
         </div>
+      </div>
+      <div class="fg">
+        <label class="lbl">Zusätzliche Anweisung <span style="color:var(--text3);font-weight:400">— optional</span></label>
+        <textarea id="extraInstruction" placeholder="z.B. „Fokus auf Kapitel 3", „eher anspruchsvoll", „Schweizer Rechtschreibung"…" style="min-height:64px"></textarea>
       </div>
     </div>
   </div>
@@ -765,6 +777,7 @@ function disconnectDrive() {
 async function loadDriveFolder(folderId) {
   currentFolder = folderId;
   renderBreadcrumb();
+  document.getElementById('driveActions').style.display = 'none';
   document.getElementById('driveList').innerHTML = '<div class="drive-loading">Laden…</div>';
   const q      = `'${folderId}' in parents and trashed=false and (mimeType='application/pdf' or mimeType contains 'image/' or mimeType='application/vnd.google-apps.folder')`;
   const fields = 'files(id,name,mimeType,size,modifiedTime)';
@@ -793,6 +806,7 @@ function renderBreadcrumb() {
 
 function renderDriveList(list) {
   const el = document.getElementById('driveList');
+  updateDriveActions(list);
   if (!list.length) { el.innerHTML = '<div class="drive-loading">Keine passenden Dateien</div>'; return; }
   el.innerHTML = list.map(f => {
     const isFolder   = f.mimeType === 'application/vnd.google-apps.folder';
@@ -809,7 +823,53 @@ function renderDriveList(list) {
 }
 
 function filterDriveList(term) {
-  renderDriveList(term ? driveFiles.filter(f => f.name.toLowerCase().includes(term.toLowerCase())) : driveFiles);
+  renderDriveList(visibleDriveFiles());
+}
+
+// Dateien, die aktuell sichtbar sind (Ordner gefiltert durch Suchbegriff)
+function visibleDriveFiles() {
+  const term = document.getElementById('driveSearch').value.trim().toLowerCase();
+  return term ? driveFiles.filter(f => f.name.toLowerCase().includes(term)) : driveFiles;
+}
+
+// Nur auswählbare Dateien (keine Ordner) aus einer Liste
+function selectableFiles(list) {
+  return list.filter(f => f.mimeType !== 'application/vnd.google-apps.folder');
+}
+
+// Aktions-Balken (Alle auswählen / abwählen) je nach aktuellem Ordner aktualisieren
+function updateDriveActions(list) {
+  const bar   = document.getElementById('driveActions');
+  const files = selectableFiles(list);
+  if (!files.length) { bar.style.display = 'none'; return; }
+  bar.style.display = 'flex';
+  const allSelected = files.every(f => selectedFiles.some(s => s.id === f.id));
+  document.getElementById('selectAllLabel').textContent =
+    allSelected ? '✓ Alle abwählen' : `Alle ${files.length} auswählen`;
+  document.getElementById('driveFolderCount').textContent =
+    `${files.length} Datei${files.length === 1 ? '' : 'en'} hier`;
+}
+
+// Alle aktuell sichtbaren Dateien auf einmal aus-/abwählen
+function toggleSelectAllVisible() {
+  const files = selectableFiles(visibleDriveFiles());
+  if (!files.length) return;
+  const allSelected = files.every(f => selectedFiles.some(s => s.id === f.id));
+  if (allSelected) {
+    const ids = new Set(files.map(f => f.id));
+    selectedFiles = selectedFiles.filter(s => !ids.has(s.id));
+  } else {
+    let hitLimit = false;
+    for (const f of files) {
+      if (selectedFiles.some(s => s.id === f.id)) continue;
+      if (selectedFiles.length >= 20) { hitLimit = true; break; }
+      selectedFiles.push({ id: f.id, name: f.name, mimeType: f.mimeType });
+    }
+    if (hitLimit) alert('Maximal 20 Dateien auswählbar — es wurden so viele wie möglich übernommen.');
+  }
+  persistSelectedFiles();
+  renderDriveList(visibleDriveFiles());
+  renderSelectedFiles();
 }
 
 function renderSelectedFiles() {
@@ -842,8 +902,7 @@ document.getElementById('driveList').addEventListener('click', function(e) {
     else if (selectedFiles.length >= 20) { alert('Maximal 20 Dateien auswählbar.'); return; }
     else selectedFiles.push({ id: f.id, name: f.name, mimeType: f.mimeType });
     persistSelectedFiles();
-    const term = document.getElementById('driveSearch').value;
-    renderDriveList(term ? driveFiles.filter(f => f.name.toLowerCase().includes(term.toLowerCase())) : driveFiles);
+    renderDriveList(visibleDriveFiles());
     renderSelectedFiles();
   }
 });
@@ -860,8 +919,7 @@ document.getElementById('selectedList').addEventListener('click', function(e) {
   if (!btn) return;
   selectedFiles.splice(parseInt(btn.dataset.deselect), 1);
   persistSelectedFiles();
-  const term = document.getElementById('driveSearch').value;
-  renderDriveList(term ? driveFiles.filter(f => f.name.toLowerCase().includes(term.toLowerCase())) : driveFiles);
+  renderDriveList(visibleDriveFiles());
   renderSelectedFiles();
 });
 
@@ -917,6 +975,7 @@ async function generate() {
   if (!selectedFiles.length) { alert('Bitte mindestens eine Datei aus Google Drive auswählen.'); return; }
 
   const subject = document.getElementById('subject').value.trim() || 'Allgemein';
+  const extra   = document.getElementById('extraInstruction').value.trim();
   const count   = parseInt(document.querySelector('[data-count].active').dataset.count);
   const profile = detectSubjectProfile(subject);
   const systemPrompt = buildSystemPrompt(subject, examFormat);
@@ -990,7 +1049,8 @@ async function generate() {
       parts.push({ file_data: { mime_type: mimeType, file_uri: fileUri } });
     }
 
-    parts.push({ text: `${systemPrompt}\n\n${userPromptSuffix}${pastQuestionsText}\nAntworte NUR mit dem JSON Array. Kein Markdown, kein Text davor/danach.` });
+    const extraText = extra ? `\n\nZUSÄTZLICHE ANWEISUNG DES NUTZERS (unbedingt berücksichtigen, ändert aber NICHT das JSON-Format):\n${extra}` : '';
+    parts.push({ text: `${systemPrompt}\n\n${userPromptSuffix}${pastQuestionsText}${extraText}\nAntworte NUR mit dem JSON Array. Kein Markdown, kein Text davor/danach.` });
 
     setLoading(true, 'Generiere Fragen mit Gemini…');
     console.log('API Key:', geminiKey?.slice(0, 8), 'Dateien:', total, 'via Files API');
@@ -1086,7 +1146,7 @@ function renderQuestion() {
   badge.className   = 'q-badge' + (q.type === 'math' ? ' math-badge' : '');
 
   const qTextEl = document.getElementById('qText');
-  qTextEl.textContent = q.question;
+  qTextEl.innerHTML = esc(q.question);
 
   document.getElementById('nextBtn').disabled = q.type === 'math' ? false : true;
 
@@ -1254,7 +1314,7 @@ async function gradeMathWithGemini(qIdx) {
     `Antworte NUR mit JSON: {"score":0,"feedback":"kurzes Feedback auf Deutsch (2-3 Sätze)","correct_parts":["was richtig war"],"missing_parts":["was fehlte oder falsch war"]}`
   });
   const resp = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(geminiApiKey)}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${encodeURIComponent(geminiApiKey)}`,
     { method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ contents: [{ parts }], generationConfig: { responseMimeType: 'application/json' } }) }
   );
@@ -1323,7 +1383,7 @@ async function checkOpen() {
   btn.disabled = true; btn.textContent = '⏳ Prüfe…';
   try {
     const resp = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(geminiApiKey)}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${encodeURIComponent(geminiApiKey)}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

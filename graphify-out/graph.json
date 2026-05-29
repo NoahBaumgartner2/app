@@ -1084,10 +1084,19 @@
       "norm_label": "stream"
     },
     {
+      "label": "sessionId",
+      "file_type": "code",
+      "source_file": "server.js",
+      "source_location": "L2441",
+      "id": "dashboard_server_sessionid",
+      "community": 0,
+      "norm_label": "sessionid"
+    },
+    {
       "label": "fileBuffer",
       "file_type": "code",
       "source_file": "server.js",
-      "source_location": "L2464",
+      "source_location": "L2500",
       "id": "dashboard_server_filebuffer",
       "community": 0,
       "norm_label": "filebuffer"
@@ -1096,7 +1105,7 @@
       "label": "uploadUrl",
       "file_type": "code",
       "source_file": "server.js",
-      "source_location": "L2486",
+      "source_location": "L2522",
       "id": "dashboard_server_uploadurl",
       "community": 0,
       "norm_label": "uploadurl"
@@ -2954,6 +2963,16 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "server.js",
+      "source_location": "L2441",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "server_js",
+      "target": "dashboard_server_sessionid"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "server.js",
       "source_location": "L2457",
       "weight": 1.0,
       "confidence_score": 1.0,
@@ -4008,5 +4027,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "673227e6e3ea029f0cbb28efcb68827e973010fd"
+  "built_at_commit": "e1acd4e482ff95598c0525eb9403a28f61f3c94e"
 }
