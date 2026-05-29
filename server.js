@@ -2477,6 +2477,21 @@ app.get('/apps/exam-trainer/api/weak-topics', checkAuth, checkAppAccess('exam-tr
   );
 });
 
+app.get('/apps/exam-trainer/api/past-questions', checkAuth, checkAppAccess('exam-trainer'), (req, res) => {
+  const { subject } = req.query;
+  if (!subject) return res.status(400).json({ error: 'subject erforderlich' });
+  db.all(
+    `SELECT DISTINCT q.question
+     FROM exam_questions q
+     JOIN exam_sessions s ON s.id = q.session_id
+     WHERE s.user_id = ? AND LOWER(s.subject) = LOWER(?)
+     ORDER BY q.id DESC
+     LIMIT 150`,
+    [req.session.userId, subject],
+    (err, rows) => err ? res.status(500).json({ error: err.message }) : res.json(rows.map(r => r.question))
+  );
+});
+
 // Gemini Files API proxy — avoids CORS when uploading from the browser
 app.post('/apps/exam-trainer/api/gemini-upload', checkAuth, checkAppAccess('exam-trainer'), async (req, res) => {
   const { base64, mimeType, displayName, apiKey } = req.body;

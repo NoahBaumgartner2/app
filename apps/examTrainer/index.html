@@ -373,6 +373,13 @@ textarea { resize: vertical; min-height: 100px; line-height: 1.5; }
       <div class="fg">
         <label class="lbl">Fach / Thema</label>
         <input type="text" id="subject" placeholder="z.B. Algorithmen & Wahrscheinlichkeit">
+        <div style="margin-top:10px">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--text2)">
+            <input type="checkbox" id="avoidRepeatCb" style="width:15px;height:15px;accent-color:var(--accent);cursor:pointer">
+            Bereits gestellte Fragen zu diesem Fach vermeiden
+            <span id="pastQCount" style="font-family:var(--mono);font-size:11px;color:var(--text3);margin-left:4px"></span>
+          </label>
+        </div>
       </div>
       <div class="fg">
         <label class="lbl">Prüfungsformat</label>
@@ -934,6 +941,19 @@ async function generate() {
   console.log(`[ExamTrainer] Profil: ${profile} | Format: ${examFormat} | Fach: ${subject}`);
 
   document.getElementById('generateError').style.display = 'none';
+
+  let pastQuestionsText = '';
+  if (document.getElementById('avoidRepeatCb').checked) {
+    try {
+      setLoading(true, 'Lade bereits gestellte Fragen…');
+      const pRes = await fetch(`/apps/exam-trainer/api/past-questions?subject=${encodeURIComponent(subject)}`);
+      const pastQs = await pRes.json();
+      if (pastQs.length) {
+        pastQuestionsText = `\n\nBEREITS GESTELLTE FRAGEN (diese NICHT wiederholen, keine ähnlichen Formulierungen, andere Konzepte wählen):\n${pastQs.map((q, i) => `${i + 1}. ${q}`).join('\n')}`;
+      }
+    } catch { /* ignorieren */ }
+  }
+
   setLoading(true, 'Lade Unterlagen von Google Drive…');
 
   try {
@@ -970,7 +990,7 @@ async function generate() {
       parts.push({ file_data: { mime_type: mimeType, file_uri: fileUri } });
     }
 
-    parts.push({ text: `${systemPrompt}\n\n${userPromptSuffix}\nAntworte NUR mit dem JSON Array. Kein Markdown, kein Text davor/danach.` });
+    parts.push({ text: `${systemPrompt}\n\n${userPromptSuffix}${pastQuestionsText}\nAntworte NUR mit dem JSON Array. Kein Markdown, kein Text davor/danach.` });
 
     setLoading(true, 'Generiere Fragen mit Gemini…');
     console.log('API Key:', geminiKey?.slice(0, 8), 'Dateien:', total, 'via Files API');
@@ -1764,6 +1784,28 @@ function renderSessionReviewItem(q, i) {
     <div class="rev-body">${bodyHtml}</div>
   </div>`;
 }
+
+// ── Past-questions counter ────────────────────────────────────────────────
+function debounce(fn, ms) {
+  let t; return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
+}
+
+async function updatePastQCount() {
+  const subject = document.getElementById('subject').value.trim();
+  const el = document.getElementById('pastQCount');
+  if (!subject || !document.getElementById('avoidRepeatCb').checked) { el.textContent = ''; return; }
+  try {
+    const res = await fetch(`/apps/exam-trainer/api/past-questions?subject=${encodeURIComponent(subject)}`);
+    const qs  = await res.json();
+    el.textContent = qs.length ? `(${qs.length} gespeichert)` : '(noch keine)';
+  } catch { el.textContent = ''; }
+}
+
+document.getElementById('subject').addEventListener('input', debounce(() => {
+  if (document.getElementById('avoidRepeatCb').checked) updatePastQCount();
+}, 600));
+
+document.getElementById('avoidRepeatCb').addEventListener('change', updatePastQCount);
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 function esc(s)    { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
