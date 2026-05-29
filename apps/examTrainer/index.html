@@ -1008,7 +1008,15 @@ async function generate() {
       const pRes = await fetch(`/apps/exam-trainer/api/past-questions?subject=${encodeURIComponent(subject)}`);
       const pastQs = await pRes.json();
       if (pastQs.length) {
-        pastQuestionsText = `\n\nBEREITS GESTELLTE FRAGEN (diese NICHT wiederholen, keine ähnlichen Formulierungen, andere Konzepte wählen):\n${pastQs.map((q, i) => `${i + 1}. ${q}`).join('\n')}`;
+        const mathHint = (examFormat === 'math' || examFormat === 'mixed')
+          ? ' Bei mathematischen Aufgaben und Beweisen: derselbe Aufgabentyp und Schwierigkeitsgrad sind ausdrücklich erwünscht, aber variiere die konkreten Zahlen, Angaben, Funktionen und die zu zeigende/beweisende Aussage — übernimm NICHT denselben Rechenweg oder Beweisgang.'
+          : '';
+        pastQuestionsText = `\n\nFRÜHER GESTELLTE FRAGEN — WICHTIG, RICHTIG INTERPRETIEREN:\n` +
+          `Die folgende Liste ist KEINE Vorlage und KEINE inhaltliche Quelle. Nimm sie NICHT als Vorbild für neue Fragen. ` +
+          `Verwende sie ausschliesslich als Negativ-Referenz: Stelle KEINE dieser Fragen erneut und auch keine inhaltlich gleichwertige Variante (gleiches Konzept, gleicher Sachverhalt, gleiche Lösung). ` +
+          `Wähle bewusst ANDERE Aspekte, Teilthemen und Konzepte des Fachs, die hier noch nicht vorkommen.\n` +
+          `Was du hingegen ÜBERNEHMEN sollst, ist nur der STIL: Formulierung, Ton, Aufbau und Schwierigkeitsgrad dürfen ähnlich sein, damit sich die Prüfung konsistent anfühlt.${mathHint}\n\n` +
+          `Liste der bereits gestellten Fragen:\n${pastQs.map((q, i) => `${i + 1}. ${q}`).join('\n')}`;
       }
     } catch { /* ignorieren */ }
   }
