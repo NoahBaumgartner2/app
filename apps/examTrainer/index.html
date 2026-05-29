@@ -541,7 +541,7 @@ function buildSystemPrompt(subject, format) {
 - type "true_false": correct_answer genau "Wahr" oder "Falsch"
 - type "open": correct_answer = vollständige Musterlösung
 - type "kprim": options[] mit genau 4 Aussagen, correct_answer als Komma-String "+,+,-,+" (+ = richtig, - = falsch, eine Antwort pro Option)
-- type "math": Pflichtfelder solution_steps [{step,title,content}], hints [3 Strings], correct_answer, points
+- type "math": Pflichtfelder solution_steps [{step,title,content}], hints [3 Strings], correct_answer, points — sub_questions und hints MÜSSEN einfache Strings sein, KEINE Objekte
 - LaTeX in JSON: Backslashes DOPPELT escapen — "\\\\frac" statt "\\frac", "\\\\gamma" statt "\\gamma"
 - Antworte NUR mit dem JSON Array. Kein Markdown, kein erklärender Text.`;
 
@@ -1119,14 +1119,18 @@ function renderQuestion() {
 
   } else if (q.type === 'math') {
     const subQsHtml = (q.sub_questions || []).length
-      ? `<div class="math-sub-qs">${q.sub_questions.map(sq => `<div class="math-sub-q">${esc(sq)}</div>`).join('')}</div>`
+      ? `<div class="math-sub-qs">${q.sub_questions.map(sq => {
+          const text = typeof sq === 'string' ? sq : (sq.text || sq.question || sq.content || JSON.stringify(sq));
+          return `<div class="math-sub-q">${esc(text)}</div>`;
+        }).join('')}</div>`
       : '';
     const shown          = hintsShown[currentQ] || 0;
     const hintsTotal     = (q.hints || []).length;
     const uploads        = mathUploads[currentQ] || [];
-    const shownHintsHtml = (q.hints || []).slice(0, shown).map((h, hi) =>
-      `<div class="hint-item"><span class="hint-num-badge">Hint ${hi + 1}</span>${esc(h)}<div class="hint-penalty">−${(hi + 1) * 10}% Punktabzug</div></div>`
-    ).join('');
+    const shownHintsHtml = (q.hints || []).slice(0, shown).map((h, hi) => {
+      const hText = typeof h === 'string' ? h : (h.text || h.hint || JSON.stringify(h));
+      return `<div class="hint-item"><span class="hint-num-badge">Hint ${hi + 1}</span>${esc(hText)}<div class="hint-penalty">−${(hi + 1) * 10}% Punktabzug</div></div>`;
+    }).join('');
     const uploadPreviewHtml = uploads.map((u, ui) =>
       u.mimeType.startsWith('image/')
         ? `<div class="math-thumb-wrap"><img class="math-thumb" src="${u.dataUrl}" onclick="openFullscreen('${u.dataUrl}')" title="${esc(u.name)}"><button class="math-thumb-del" onclick="removeMathUpload(${ui})">✕</button></div>`
@@ -1548,15 +1552,17 @@ function renderMathReviewItem(q, i) {
       : `<div class="math-pdf-item">📄 <span>${esc(u.name)}</span></div>`
   ).join('');
 
-  const stepsHtml = (q.solution_steps || []).map((s, si) =>
-    `<div class="step-item" id="step-${i}-${si}">
+  const stepsHtml = (q.solution_steps || []).map((s, si) => {
+    const title   = typeof s.title   === 'string' ? s.title   : (s.title?.text   || String(s.title   || ''));
+    const content = typeof s.content === 'string' ? s.content : (s.content?.text || String(s.content || ''));
+    return `<div class="step-item" id="step-${i}-${si}">
       <div class="step-head" onclick="toggleStep(${i},${si})">
-        <span>Schritt ${s.step}: ${esc(s.title || '')}</span>
+        <span>Schritt ${s.step}: ${esc(title)}</span>
         <span class="step-chev">▼</span>
       </div>
-      <div class="step-body">${esc(s.content || '')}</div>
-    </div>`
-  ).join('');
+      <div class="step-body">${esc(content)}</div>
+    </div>`;
+  }).join('');
 
   const correctHtml = (gemResult.correct_parts || []).map(p => `<li>${esc(p)}</li>`).join('');
   const missingHtml = (gemResult.missing_parts || []).map(p => `<li>${esc(p)}</li>`).join('');
