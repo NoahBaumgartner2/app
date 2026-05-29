@@ -167,6 +167,18 @@ textarea { resize: vertical; min-height: 100px; line-height: 1.5; }
 .open-feedback.ok  { display: block; background: var(--green-bg); border: 1px solid var(--green-dim); color: var(--green); }
 .open-feedback.bad { display: block; background: var(--red-bg);   border: 1px solid var(--red-dim);   color: var(--red); }
 
+/* ── KPrim ───────────────────────────────────────────────────────────── */
+.kprim-opts { display: flex; flex-direction: column; gap: 8px; }
+.kprim-row { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 10px; padding: 10px 14px; background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius-sm); }
+.kprim-text { font-size: 14px; line-height: 1.45; }
+.kprim-btns { display: flex; gap: 6px; flex-shrink: 0; }
+.kprim-btn { width: 38px; height: 38px; border-radius: var(--radius-sm); font-size: 16px; font-weight: 700; cursor: pointer; border: 2px solid var(--border); background: var(--bg4); color: var(--text2); transition: all .15s; font-family: var(--mono); display: flex; align-items: center; justify-content: center; }
+.kprim-btn:hover:not([disabled]).kprim-plus  { border-color: var(--green-dim); background: var(--green-bg); color: var(--green); }
+.kprim-btn:hover:not([disabled]).kprim-minus { border-color: var(--red-dim);   background: var(--red-bg);   color: var(--red); }
+.kprim-btn.sel.kprim-plus  { border-color: var(--green-dim); background: var(--green-bg); color: var(--green); }
+.kprim-btn.sel.kprim-minus { border-color: var(--red-dim);   background: var(--red-bg);   color: var(--red); }
+.kprim-btn[disabled] { opacity: 0.5; cursor: not-allowed; }
+
 /* ── Math exam ───────────────────────────────────────────────────────── */
 .math-sub-qs { margin-bottom: 16px; padding: 12px 16px; background: var(--bg3); border-radius: var(--radius-sm); border: 1px solid var(--border); display: flex; flex-direction: column; gap: 6px; }
 .math-sub-q { font-size: 14px; line-height: 1.7; color: var(--text2); }
@@ -374,6 +386,7 @@ textarea { resize: vertical; min-height: 100px; line-height: 1.5; }
           <label class="cb-item"><input type="checkbox" class="type-cb" value="multiple_choice" checked><span>Multiple Choice (4 Optionen, Keyboard 1–4)</span></label>
           <label class="cb-item"><input type="checkbox" class="type-cb" value="true_false"><span>Wahr / Falsch</span></label>
           <label class="cb-item"><input type="checkbox" class="type-cb" value="open"><span>Offene Frage (Gemini-Bewertung 0–100%)</span></label>
+          <label class="cb-item"><input type="checkbox" class="type-cb" value="kprim"><span>KPrim (4 Aussagen je +/–, alle oder keine Punkte)</span></label>
         </div>
       </div>
       <div class="fg">
@@ -503,6 +516,7 @@ function buildSystemPrompt(subject, format) {
 - type "multiple_choice": options[] mit 4 Einträgen, correct_answer EXAKT gleich wie ein options[]-Eintrag
 - type "true_false": correct_answer genau "Wahr" oder "Falsch"
 - type "open": correct_answer = vollständige Musterlösung
+- type "kprim": options[] mit genau 4 Aussagen, correct_answer als Komma-String "+,+,-,+" (+ = richtig, - = falsch, eine Antwort pro Option)
 - type "math": Pflichtfelder solution_steps [{step,title,content}], hints [3 Strings], correct_answer, points
 - LaTeX in JSON: Backslashes DOPPELT escapen — "\\\\frac" statt "\\frac", "\\\\gamma" statt "\\gamma"
 - Antworte NUR mit dem JSON Array. Kein Markdown, kein erklärender Text.`;
@@ -1021,7 +1035,7 @@ function stopTimer() {
 }
 
 // ── Exam rendering ────────────────────────────────────────────────────────
-const TYPE_LABELS = { multiple_choice: 'Multiple Choice', true_false: 'Wahr / Falsch', open: 'Offene Frage', math: 'Rechenaufgabe' };
+const TYPE_LABELS = { multiple_choice: 'Multiple Choice', true_false: 'Wahr / Falsch', open: 'Offene Frage', math: 'Rechenaufgabe', kprim: 'KPrim' };
 
 function renderQuestion() {
   const q   = questions[currentQ];
@@ -1053,6 +1067,17 @@ function renderQuestion() {
       <button class="tf-btn tf-true"  onclick="selectTF(this,'Wahr')">✓ Wahr</button>
       <button class="tf-btn tf-false" onclick="selectTF(this,'Falsch')">✗ Falsch</button>
     </div>`;
+
+  } else if (q.type === 'kprim') {
+    const opts = (q.options || []).slice(0, 4);
+    area.innerHTML = `<div class="kprim-opts">${opts.map((opt, i) =>
+      `<div class="kprim-row" id="kprim-row-${i}">
+        <span class="kprim-text">${esc(opt)}</span>
+        <div class="kprim-btns">
+          <button class="kprim-btn kprim-plus"  data-row="${i}" data-val="+" onclick="selectKprim(this,${i})">+</button>
+          <button class="kprim-btn kprim-minus" data-row="${i}" data-val="-" onclick="selectKprim(this,${i})">−</button>
+        </div>
+      </div>`).join('')}</div>`;
 
   } else if (q.type === 'math') {
     const subQsHtml = (q.sub_questions || []).length
@@ -1234,6 +1259,18 @@ function selectTF(btn, answer) {
   document.getElementById('nextBtn').disabled = false;
 }
 
+function selectKprim(btn, rowIdx) {
+  const row = document.getElementById(`kprim-row-${rowIdx}`);
+  row.querySelectorAll('.kprim-btn').forEach(b => b.classList.remove('sel'));
+  btn.classList.add('sel');
+  const opts = (questions[currentQ].options || []).slice(0, 4);
+  const allAnswered = opts.every((_, i) => {
+    const r = document.getElementById(`kprim-row-${i}`);
+    return r && r.querySelector('.kprim-btn.sel');
+  });
+  if (allAnswered) document.getElementById('nextBtn').disabled = false;
+}
+
 async function checkOpen() {
   const ta = document.getElementById('openTA');
   const ua = ta.value.trim();
@@ -1306,6 +1343,19 @@ async function nextQuestion() {
       geminiScore:   gemScore,
       effectiveScore,
       hintsUsed,
+    };
+  }
+
+  if (q.type === 'kprim') {
+    const opts = (q.options || []).slice(0, 4);
+    const userVals = opts.map((_, i) => {
+      const row = document.getElementById(`kprim-row-${i}`);
+      return row?.querySelector('.kprim-btn.sel')?.dataset.val || '?';
+    });
+    const correctVals = (q.correct_answer || '').split(',').map(v => v.trim());
+    answers[currentQ] = {
+      userAnswer: userVals.join(','),
+      isCorrect:  userVals.every((v, i) => v === correctVals[i]),
     };
   }
 
@@ -1399,24 +1449,47 @@ function renderConceptReviewItem(q, i) {
   const a  = answers[i] || {};
   const ok = !!a.isCorrect;
   const ua = a.userAnswer || '(keine Antwort)';
+
+  let bodyHtml;
+  if (q.type === 'kprim') {
+    const userVals    = ua.split(',');
+    const correctVals = (q.correct_answer || '').split(',').map(v => v.trim());
+    const rowsHtml    = (q.options || []).slice(0, 4).map((opt, ri) => {
+      const uv    = (userVals[ri] || '?').trim();
+      const cv    = correctVals[ri] || '?';
+      const rowOk = uv === cv;
+      return `<div style="display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;padding:7px 10px;background:var(--bg3);border-radius:var(--radius-sm);border:1px solid ${rowOk ? 'var(--green-dim)' : 'var(--red-dim)'}">
+        <span style="font-size:13px">${esc(opt)}</span>
+        <span style="font-family:var(--mono);font-size:13px;font-weight:700;color:${uv === '+' ? 'var(--green)' : 'var(--red)'}">${esc(uv)}</span>
+        <span style="font-size:11px;color:${rowOk ? 'var(--green)' : 'var(--red)'}">${rowOk ? '✓' : `✗ (${esc(cv)})`}</span>
+      </div>`;
+    }).join('');
+    bodyHtml = `<div>
+      <div class="rev-row-lbl">Deine Antworten</div>
+      <div style="display:flex;flex-direction:column;gap:4px;margin-top:4px">${rowsHtml}</div>
+    </div>
+    ${q.explanation ? `<div><div class="rev-row-lbl">Erklärung</div><div class="rev-row-val">${esc(q.explanation)}</div></div>` : ''}
+    ${q.source_hint ? `<div><span class="src-hint">📍 ${esc(q.source_hint)}</span></div>` : ''}`;
+  } else {
+    bodyHtml = `<div>
+      <div class="rev-row-lbl">Deine Antwort</div>
+      <div class="rev-row-val ${ok?'green':'red'}">${esc(ua)}${a.openScore != null ? ` (${a.openScore}/100)` : ''}</div>
+    </div>
+    ${!ok ? `<div>
+      <div class="rev-row-lbl">Richtige Antwort</div>
+      <div class="rev-row-val green">${esc(q.correct_answer || '')}</div>
+    </div>` : ''}
+    ${q.explanation ? `<div><div class="rev-row-lbl">Erklärung</div><div class="rev-row-val">${esc(q.explanation)}</div></div>` : ''}
+    ${q.source_hint ? `<div><span class="src-hint">📍 ${esc(q.source_hint)}</span></div>` : ''}`;
+  }
+
   return `<div class="rev-item ${ok?'ok':'bad'}" id="ri${i}">
     <div class="rev-head" onclick="toggleRev(${i})">
       <span class="rev-icon">${ok ? '✓' : '✗'}</span>
       <span class="rev-q">${esc(q.question)}</span>
       <span class="rev-chev">▼</span>
     </div>
-    <div class="rev-body">
-      <div>
-        <div class="rev-row-lbl">Deine Antwort</div>
-        <div class="rev-row-val ${ok?'green':'red'}">${esc(ua)}${a.openScore != null ? ` (${a.openScore}/100)` : ''}</div>
-      </div>
-      ${!ok ? `<div>
-        <div class="rev-row-lbl">Richtige Antwort</div>
-        <div class="rev-row-val green">${esc(q.correct_answer || '')}</div>
-      </div>` : ''}
-      ${q.explanation ? `<div><div class="rev-row-lbl">Erklärung</div><div class="rev-row-val">${esc(q.explanation)}</div></div>` : ''}
-      ${q.source_hint ? `<div><span class="src-hint">📍 ${esc(q.source_hint)}</span></div>` : ''}
-    </div>
+    <div class="rev-body">${bodyHtml}</div>
   </div>`;
 }
 
