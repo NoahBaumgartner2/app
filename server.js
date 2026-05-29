@@ -2437,6 +2437,27 @@ app.get('/apps/exam-trainer/api/history', checkAuth, checkAppAccess('exam-traine
   );
 });
 
+app.get('/apps/exam-trainer/api/session/:id', checkAuth, checkAppAccess('exam-trainer'), (req, res) => {
+  const sessionId = parseInt(req.params.id);
+  const userId = req.session.userId;
+  db.get('SELECT * FROM exam_sessions WHERE id = ? AND user_id = ?', [sessionId, userId], (err, session) => {
+    if (err) return res.status(500).json({ error: err.message });
+    if (!session) return res.status(404).json({ error: 'Nicht gefunden' });
+    db.all(
+      `SELECT q.*, a.user_answer, a.is_correct
+       FROM exam_questions q
+       LEFT JOIN user_answers a ON a.question_id = q.id AND a.session_id = ?
+       WHERE q.session_id = ?
+       ORDER BY q.id`,
+      [sessionId, sessionId],
+      (err2, rows) => {
+        if (err2) return res.status(500).json({ error: err2.message });
+        res.json({ session, questions: rows });
+      }
+    );
+  });
+});
+
 app.get('/apps/exam-trainer/api/weak-topics', checkAuth, checkAppAccess('exam-trainer'), (req, res) => {
   db.all(
     `SELECT q.question, q.type, q.correct_answer, q.explanation, q.source_hint,
