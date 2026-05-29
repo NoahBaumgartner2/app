@@ -1057,7 +1057,7 @@ function renderQuestion() {
   if (q.type === 'multiple_choice') {
     const opts = (q.options || []).slice(0, 4);
     area.innerHTML = `<div class="mc-opts">${opts.map((opt, i) =>
-      `<button class="mc-opt" onclick="selectMC(this,${JSON.stringify(opt)})">
+      `<button class="mc-opt" data-opt="${esc(opt)}" onclick="selectMC(this)">
         <span class="mc-key">${String.fromCharCode(65 + i)}</span>
         <span class="mc-text">${esc(opt)}</span>
       </button>`).join('')}</div>`;
@@ -1241,8 +1241,9 @@ function closeFullscreen() {
   document.getElementById('imgFullscreen').classList.remove('on');
 }
 
-function selectMC(btn, answer) {
+function selectMC(btn) {
   if (answers[currentQ]) return;
+  const answer = btn.dataset.opt;
   document.querySelectorAll('.mc-opt').forEach(b => { b.classList.remove('sel'); b.disabled = true; });
   btn.classList.add('sel'); btn.disabled = false;
   answers[currentQ] = { userAnswer: answer, isCorrect: norm(answer) === norm(questions[currentQ].correct_answer) };
