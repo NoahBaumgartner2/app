@@ -18,7 +18,7 @@ const app      = express();
 app.set('trust proxy', 1);
 const PORT     = process.env.PORT || 3000;
 const TECTONIC  = path.join(os.homedir(), '.local', 'bin', 'tectonic');
-const APP_SLUGS = ['latex-converter', 'latex-study', 'podcast-compressor', 'pet-meds', 'smart-home', 'vault', 'server-monitor', 'stremio', 'voice-assistant', 'smarthome-zentrale', 'exam-trainer'];
+const APP_SLUGS = ['latex-converter', 'latex-study', 'podcast-compressor', 'pet-meds', 'smart-home', 'vault', 'server-monitor', 'stremio', 'voice-assistant', 'smarthome-zentrale', 'exam-trainer', 'focus-timer'];
 
 let petMedsLastUpdated = Date.now();
 
@@ -198,6 +198,25 @@ db.serialize(() => {
     timestamp   TEXT    NOT NULL DEFAULT (datetime('now')),
     FOREIGN KEY (session_id)  REFERENCES exam_sessions(id)  ON DELETE CASCADE,
     FOREIGN KEY (question_id) REFERENCES exam_questions(id) ON DELETE CASCADE
+  )`);
+
+  db.run(`CREATE TABLE IF NOT EXISTS focus_timer_settings (
+    id                 INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id            INTEGER NOT NULL UNIQUE,
+    work_minutes       INTEGER NOT NULL DEFAULT 25,
+    short_break        INTEGER NOT NULL DEFAULT 5,
+    long_break         INTEGER NOT NULL DEFAULT 15,
+    cycles_before_long INTEGER NOT NULL DEFAULT 4,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  )`);
+
+  db.run(`CREATE TABLE IF NOT EXISTS focus_timer_log (
+    id               INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id          INTEGER NOT NULL,
+    type             TEXT    NOT NULL,
+    duration_minutes INTEGER NOT NULL,
+    completed_at     TEXT    NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
   )`);
 });
 
@@ -2578,6 +2597,84 @@ app.post('/apps/exam-trainer/api/gemini-generate', checkAuth, checkAppAccess('ex
     console.error('[exam-trainer] gemini-generate Fehler:', err.message);
     res.status(500).json({ error: err.message });
   }
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  APP: FOCUS TIMER  →  /apps/focus-timer
+// ══════════════════════════════════════════════════════════════════════════════
+app.use('/apps/focus-timer', checkAuth, checkAppAccess('focus-timer'),
+  express.static(path.join(__dirname, 'apps/focus-timer')));
+
+// Live-Status pro User im RAM (für Overlay / Electron-App)
+const focusTimerCurrent = {};
+
+// Einstellungen laden (mit Defaults)
+app.get('/apps/focus-timer/api/settings', checkAuth, checkAppAccess('focus-timer'), (req, res) => {
+  db.get('SELECT work_minutes, short_break, long_break, cycles_before_long FROM focus_timer_settings WHERE user_id = ?',
+    [req.session.userId],
+    (err, row) => {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json(row || { work_minutes: 25, short_break: 5, long_break: 15, cycles_before_long: 4 });
+    });
+});
+
+// Einstellungen speichern (Upsert)
+app.post('/apps/focus-timer/api/settings', checkAuth, checkAppAccess('focus-timer'), (req, res) => {
+  const { work_minutes, short_break, long_break, cycles_before_long } = req.body || {};
+  db.run(
+    `INSERT INTO focus_timer_settings (user_id, work_minutes, short_break, long_break, cycles_before_long)
+     VALUES (?, ?, ?, ?, ?)
+     ON CONFLICT(user_id) DO UPDATE SET
+       work_minutes = excluded.work_minutes,
+       short_break = excluded.short_break,
+       long_break = excluded.long_break,
+       cycles_before_long = excluded.cycles_before_long`,
+    [req.session.userId, work_minutes ?? 25, short_break ?? 5, long_break ?? 15, cycles_before_long ?? 4],
+    (err) => {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json({ ok: true });
+    });
+});
+
+// Abgeschlossenen Block loggen
+app.post('/apps/focus-timer/api/log', checkAuth, checkAppAccess('focus-timer'), (req, res) => {
+  const { type, duration_minutes } = req.body || {};
+  if (!type || duration_minutes == null)
+    return res.status(400).json({ error: 'type und duration_minutes erforderlich.' });
+  db.run('INSERT INTO focus_timer_log (user_id, type, duration_minutes) VALUES (?, ?, ?)',
+    [req.session.userId, type, duration_minutes],
+    (err) => {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json({ ok: true });
+    });
+});
+
+// Statistiken (nur work-Blöcke zählen)
+app.get('/apps/focus-timer/api/stats', checkAuth, checkAppAccess('focus-timer'), (req, res) => {
+  db.get(
+    `SELECT
+       COALESCE(SUM(CASE WHEN date(completed_at) = date('now') THEN duration_minutes END), 0) AS today_work_minutes,
+       COALESCE(SUM(CASE WHEN date(completed_at) = date('now') THEN 1 END), 0)                AS today_sessions,
+       COALESCE(SUM(duration_minutes), 0)                                                     AS total_work_minutes,
+       COUNT(*)                                                                               AS total_sessions
+     FROM focus_timer_log
+     WHERE user_id = ? AND type = 'work'`,
+    [req.session.userId],
+    (err, row) => {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json(row);
+    });
+});
+
+// Live-Status (Overlay & Electron) — nur checkAuth, kein App-Zugriffscheck nötig
+app.get('/api/focus-timer/current', checkAuth, (req, res) => {
+  res.json(focusTimerCurrent[req.session.userId] ||
+    { phase: 'work', remaining_seconds: 0, is_running: false, settings: {} });
+});
+
+app.post('/api/focus-timer/current', checkAuth, (req, res) => {
+  focusTimerCurrent[req.session.userId] = req.body || {};
+  res.json({ ok: true });
 });
 
 // ── Start ──────────────────────────────────────────────────────────────────

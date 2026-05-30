@@ -1,16 +1,16 @@
-# Graph Report - dashboard  (2026-05-29)
+# Graph Report - dashboard  (2026-05-30)
 
 ## Corpus Check
-- 14 files · ~68,441 words
+- 14 files · ~70,945 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 196 nodes · 222 edges · 16 communities (9 shown, 7 thin omitted)
+- 197 nodes · 223 edges · 16 communities (9 shown, 7 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `7464ee78`
+- Built from commit: `71a6b26e`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -50,7 +50,7 @@
 
 ### Community 0 - "Community 0"
 Cohesion: 0.02
-Nodes (89): ALLOWED, app, APP_SLUGS, areas, b, bcrypt, body, chat (+81 more)
+Nodes (90): ALLOWED, app, APP_SLUGS, areas, b, bcrypt, body, chat (+82 more)
 
 ### Community 1 - "Community 1"
 Cohesion: 0.08
@@ -81,7 +81,7 @@ Cohesion: 0.67
 Nodes (3): compileLaTeX(), findLatexCompiler(), runLatexCompiler()
 
 ## Knowledge Gaps
-- **130 isolated node(s):** `express`, `{ execFile, exec, spawn }`, `fs`, `os`, `path` (+125 more)
+- **131 isolated node(s):** `express`, `{ execFile, exec, spawn }`, `fs`, `os`, `path` (+126 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **7 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
@@ -89,7 +89,7 @@ Nodes (3): compileLaTeX(), findLatexCompiler(), runLatexCompiler()
 _Questions this graph is uniquely positioned to answer:_
 
 - **What connects `express`, `{ execFile, exec, spawn }`, `fs` to the rest of the system?**
-  _130 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _131 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Community 0` be split into smaller, more focused modules?**
   _Cohesion score 0.02 - nodes in this community are weakly interconnected._
 - **Should `Community 1` be split into smaller, more focused modules?**

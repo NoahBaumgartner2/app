@@ -1,7 +1,7 @@
 {
   "/home/miniserver/development/dashboard/server.js": {
-    "mtime": 1780065343.5551527,
-    "hash": "132a72767bfa2633fc1a84ab99a1bde9"
+    "mtime": 1780125406.6872523,
+    "hash": "d22b8632caccad4a20aadd138181f98e"
   },
   "/home/miniserver/development/dashboard/public/sw.js": {
     "mtime": 1778329325.7067266,
@@ -52,8 +52,8 @@
     "hash": "da79aa9343cd2b362206f03762160abc"
   },
   "/home/miniserver/development/dashboard/public/index.html": {
-    "mtime": 1778851232.9705164,
-    "hash": "7287cc4074eb6f4e92a190440189122c"
+    "mtime": 1780123587.7201824,
+    "hash": "5cd1ab44f3657f6341077e4cc250be2d"
   },
   "/home/miniserver/development/dashboard/latexConverter/README.md": {
     "mtime": 1778257479.5323355,
@@ -87,6 +87,14 @@
     "mtime": 1778357576.2296264,
     "hash": "063a1d059ddf384e95d9424a33c2482e"
   },
+  "/home/miniserver/development/dashboard/apps/focus-timer/index.html": {
+    "mtime": 1780123492.0138109,
+    "hash": "606820f51d7c0eef7769e9ed57a4d15d"
+  },
+  "/home/miniserver/development/dashboard/apps/focus-timer/overlay.html": {
+    "mtime": 1780123492.7188137,
+    "hash": "777f988a33e93eedc026cb8e21e1d6ee"
+  },
   "/home/miniserver/development/dashboard/apps/latexConverter/index.html": {
     "mtime": 1778748811.628805,
     "hash": "c5d61d82a2eef124370f118e125aa8ab"
@@ -108,8 +116,8 @@
     "hash": "9559c5fee4345f215942b33e41db2bb6"
   },
   "/home/miniserver/development/dashboard/apps/admin/index.html": {
-    "mtime": 1778405264.583029,
-    "hash": "9f9891202fd9d6abcc52389da8e95d06"
+    "mtime": 1780123552.7150464,
+    "hash": "76c555cdae7019c8909e13b714453050"
   },
   "/home/miniserver/development/dashboard/apps/petMeds/index.html": {
     "mtime": 1778446696.578867,

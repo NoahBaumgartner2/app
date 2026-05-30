@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Focus Timer</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg: #0a0a0a;
+    --surface: #141414;
+    --border: #262626;
+    --text: #e8e8e8;
+    --muted: #888;
+    --accent: #3b82f6;
+    --work: #3b82f6;
+    --short: #22c55e;
+    --long: #a855f7;
+    --mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 1.5rem;
+  }
+  .back-btn {
+    display: inline-flex; align-items: center; gap: 0.4rem;
+    color: var(--muted); text-decoration: none;
+    font-family: var(--mono); font-size: 0.8rem;
+    margin-bottom: 1.5rem; transition: color 0.2s;
+  }
+  .back-btn:hover { color: var(--text); }
+  h1 { font-size: 1.5rem; font-weight: 600; margin-bottom: 0.25rem; }
+  .sub { color: var(--muted); font-size: 0.85rem; margin-bottom: 1.75rem; }
+
+  .layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    max-width: 900px;
+  }
+  @media (max-width: 720px) { .layout { grid-template-columns: 1fr; } }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 1.75rem;
+  }
+
+  /* ── Timer ── */
+  .timer-panel { display: flex; flex-direction: column; align-items: center; gap: 1.25rem; }
+  .ring-wrap { position: relative; width: 220px; height: 220px; }
+  .ring-wrap svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+  .ring-bg { fill: none; stroke: var(--border); stroke-width: 12; }
+  .ring-fg {
+    fill: none; stroke: var(--accent); stroke-width: 12; stroke-linecap: round;
+    transition: stroke-dashoffset 0.5s linear, stroke 0.3s;
+  }
+  .ring-center {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+  }
+  .countdown { font-family: var(--mono); font-size: 64px; font-weight: 700; line-height: 1; letter-spacing: -2px; }
+  .phase-label { margin-top: 0.5rem; font-size: 0.95rem; color: var(--muted); }
+
+  .controls { display: flex; gap: 0.5rem; flex-wrap: wrap; justify-content: center; }
+  button {
+    font-family: inherit; font-size: 0.9rem; cursor: pointer;
+    background: var(--surface); color: var(--text);
+    border: 1px solid var(--border); border-radius: 9px;
+    padding: 0.6rem 1rem; transition: all 0.15s;
+  }
+  button:hover { border-color: var(--muted); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button.primary:hover { filter: brightness(1.1); }
+  button.icon-btn { padding: 0.6rem 0.75rem; }
+  button.active { background: #1e293b; border-color: var(--accent); color: var(--accent); }
+
+  .secondary-controls { display: flex; gap: 0.5rem; align-items: center; }
+
+  /* ── Settings ── */
+  .label { display: block; font-family: var(--mono); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin-bottom: 0.4rem; }
+  .field { margin-bottom: 1rem; }
+  input[type="number"] {
+    width: 100%; font-family: var(--mono); font-size: 1rem;
+    background: var(--bg); color: var(--text);
+    border: 1px solid var(--border); border-radius: 9px; padding: 0.6rem 0.75rem;
+  }
+  input[type="number"]:focus { outline: none; border-color: var(--accent); }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+  .save-row { display: flex; align-items: center; gap: 0.75rem; margin-top: 0.5rem; }
+  .saved-hint { font-size: 0.8rem; color: var(--short); opacity: 0; transition: opacity 0.2s; }
+  .saved-hint.show { opacity: 1; }
+  hr { border: none; border-top: 1px solid var(--border); margin: 1.5rem 0; }
+
+  .stats { display: flex; flex-direction: column; gap: 0.75rem; }
+  .stat-row { display: flex; justify-content: space-between; align-items: baseline; }
+  .stat-key { font-family: var(--mono); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+  .stat-val { font-family: var(--mono); font-size: 0.95rem; }
+  .stat-val b { font-size: 1.25rem; color: var(--accent); }
+  h3 { font-size: 1rem; font-weight: 600; margin-bottom: 1rem; }
+</style>
+</head>
+<body>
+  <a class="back-btn" href="/">← Dashboard</a>
+  <h1>⏱️ Focus Timer</h1>
+  <p class="sub">Pomodoro-Timer mit Lernblöcken, Pausen und Tages-Statistik</p>
+
+  <div class="layout">
+    <!-- LEFT: Timer -->
+    <div class="panel timer-panel">
+      <div class="ring-wrap">
+        <svg viewBox="0 0 200 200">
+          <circle class="ring-bg" cx="100" cy="100" r="90"></circle>
+          <circle class="ring-fg" id="ring" cx="100" cy="100" r="90"></circle>
+        </svg>
+        <div class="ring-center">
+          <div class="countdown" id="countdown">25:00</div>
+        </div>
+      </div>
+      <div class="phase-label" id="phaseLabel">🎓 Lernblock 1/4</div>
+
+      <div class="controls">
+        <button class="primary" id="startBtn">▶ Start</button>
+        <button id="pauseBtn">⏸ Pause</button>
+        <button id="resetBtn">↺ Reset</button>
+        <button id="skipBtn">⏭ Skip</button>
+      </div>
+
+      <div class="secondary-controls">
+        <button class="icon-btn active" id="soundBtn" title="Ton an/aus">🔔</button>
+        <button class="icon-btn" id="overlayBtn" title="Overlay-Fenster öffnen">🖥 Overlay öffnen</button>
+      </div>
+    </div>
+
+    <!-- RIGHT: Settings + Stats -->
+    <div class="panel">
+      <h3>Einstellungen</h3>
+      <div class="grid2">
+        <div class="field">
+          <label class="label" for="workMin">Lernblock (min)</label>
+          <input type="number" id="workMin" min="1" max="180" value="25">
+        </div>
+        <div class="field">
+          <label class="label" for="shortMin">Kurze Pause (min)</label>
+          <input type="number" id="shortMin" min="1" max="60" value="5">
+        </div>
+        <div class="field">
+          <label class="label" for="longMin">Lange Pause (min)</label>
+          <input type="number" id="longMin" min="1" max="120" value="15">
+        </div>
+        <div class="field">
+          <label class="label" for="cycles">Blöcke bis lange Pause</label>
+          <input type="number" id="cycles" min="1" max="12" value="4">
+        </div>
+      </div>
+      <div class="save-row">
+        <button class="primary" id="saveBtn">Speichern</button>
+        <span class="saved-hint" id="savedHint">✓ Gespeichert</span>
+      </div>
+
+      <hr>
+
+      <h3>Statistik</h3>
+      <div class="stats">
+        <div class="stat-row">
+          <span class="stat-key">Heute</span>
+          <span class="stat-val"><b id="todayBlocks">0</b> Blöcke · <b id="todayMin">0</b> min</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-key">Gesamt</span>
+          <span class="stat-val"><b id="totalBlocks">0</b> Blöcke · <b id="totalMin">0</b> min</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+const API      = 'api';                       // relativ zu /apps/focus-timer/
+const CURRENT  = '/api/focus-timer/current';  // öffentlicher Live-Status
+const RING_R   = 90;
+const CIRC     = 2 * Math.PI * RING_R;        // ≈ 565.49
+
+const PHASE = {
+  work:        { label: (i, n) => `🎓 Lernblock ${i}/${n}`, color: 'var(--work)',  mins: s => s.work_minutes },
+  short_break: { label: ()      => '☕ Kurze Pause',         color: 'var(--short)', mins: s => s.short_break },
+  long_break:  { label: ()      => '🌿 Lange Pause',         color: 'var(--long)',  mins: s => s.long_break },
+};
+
+let settings = { work_minutes: 25, short_break: 5, long_break: 15, cycles_before_long: 4 };
+let phase = 'work';
+let blockInCycle = 0;                 // wie viele work-Blöcke im aktuellen Zyklus fertig (0..cycles-1)
+let remaining = settings.work_minutes * 60;
+let total = remaining;
+let running = false;
+let soundOn = true;
+let ticker = null;
+let pendingNext = null;               // Timeout-Handle für Auto-Weiter
+
+const $ = id => document.getElementById(id);
+
+/* ───────── Anzeige ───────── */
+function fmt(sec) {
+  sec = Math.max(0, Math.round(sec));
+  const m = Math.floor(sec / 60), s = sec % 60;
+  return String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+}
+
+function render() {
+  const cfg = PHASE[phase];
+  const workIndex = blockInCycle + 1;
+  $('countdown').textContent = fmt(remaining);
+  $('phaseLabel').textContent = cfg.label(workIndex, settings.cycles_before_long);
+  const ring = $('ring');
+  ring.style.strokeDasharray = CIRC;
+  ring.style.strokeDashoffset = CIRC * (1 - (total ? remaining / total : 0));
+  ring.style.stroke = cfg.color;
+  document.title = fmt(remaining) + ' · Focus Timer';
+}
+
+/* ───────── Ton (Web Audio API) ───────── */
+let audioCtx = null;
+function beep() {
+  if (!soundOn) return;
+  try {
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    const t = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(440, t);
+    osc.frequency.exponentialRampToValueAtTime(880, t + 0.3);
+    gain.gain.setValueAtTime(0.25, t);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.3);
+    osc.connect(gain).connect(audioCtx.destination);
+    osc.start(t);
+    osc.stop(t + 0.3);
+  } catch (e) { /* ignore */ }
+}
+
+/* ───────── Timer-Engine ───────── */
+function phaseDuration(p) { return PHASE[p].mins(settings) * 60; }
+
+function setPhase(p) {
+  phase = p;
+  total = phaseDuration(p);
+  remaining = total;
+  render();
+}
+
+function tick() {
+  if (document.visibilityState === 'hidden') return;  // pausiert bei verstecktem Tab
+  remaining -= 1;
+  if (remaining <= 0) {
+    remaining = 0;
+    render();
+    completePhase();
+    return;
+  }
+  render();
+  pushCurrent();
+}
+
+function start() {
+  if (running) return;
+  clearTimeout(pendingNext); pendingNext = null;
+  running = true;
+  ticker = setInterval(tick, 1000);
+  if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission();
+  render(); pushCurrent();
+}
+
+function pause() {
+  running = false;
+  clearInterval(ticker); ticker = null;
+  pushCurrent();
+}
+
+function reset() {
+  pause();
+  clearTimeout(pendingNext); pendingNext = null;
+  blockInCycle = 0;
+  setPhase('work');
+  pushCurrent();
+}
+
+function notify(text) {
+  if ('Notification' in window && Notification.permission === 'granted') {
+    try { new Notification('Focus Timer', { body: text, silent: true }); } catch (e) {}
+  }
+}
+
+function nextPhaseName() {
+  if (phase === 'work') {
+    const done = blockInCycle + 1;
+    return (done >= settings.cycles_before_long) ? 'long_break' : 'short_break';
+  }
+  return 'work';
+}
+
+// Wird am Ende JEDER Phase aufgerufen (Countdown bei 0)
+function completePhase() {
+  pause();
+  beep();
+  const finished = phase;
+  const cfg = PHASE[finished];
+
+  // work-Phase abschließen: loggen + Zyklus hochzählen
+  if (finished === 'work') {
+    logSession('work', settings.work_minutes);
+    blockInCycle += 1;
+  }
+
+  // nächste Phase bestimmen (blockInCycle wurde oben ggf. schon erhöht)
+  let next;
+  if (finished === 'work') {
+    next = (blockInCycle >= settings.cycles_before_long) ? 'long_break' : 'short_break';
+  } else {
+    if (finished === 'long_break') blockInCycle = 0;  // Zyklus zurücksetzen
+    next = 'work';
+  }
+
+  notify(PHASE[next].label(blockInCycle + 1, settings.cycles_before_long) + ' beginnt in 5 s');
+  setPhase(next);
+  pushCurrent(true);
+
+  // Auto-weiter nach 5 s
+  pendingNext = setTimeout(() => { pendingNext = null; start(); }, 5000);
+}
+
+function skip() {
+  clearTimeout(pendingNext); pendingNext = null;
+  pause();
+  // work zählt beim Skip NICHT als abgeschlossen (kein Log), aber der Zyklus läuft weiter
+  if (phase === 'work') {
+    blockInCycle += 1;
+    setPhase(blockInCycle >= settings.cycles_before_long ? 'long_break' : 'short_break');
+  } else {
+    if (phase === 'long_break') blockInCycle = 0;
+    setPhase('work');
+  }
+  pushCurrent(true);
+}
+
+/* ───────── Backend ───────── */
+async function loadSettings() {
+  try {
+    const r = await fetch(API + '/settings');
+    if (r.ok) {
+      const d = await r.json();
+      settings = {
+        work_minutes: d.work_minutes ?? 25,
+        short_break: d.short_break ?? 5,
+        long_break: d.long_break ?? 15,
+        cycles_before_long: d.cycles_before_long ?? 4,
+      };
+    }
+  } catch (e) { /* Defaults */ }
+  $('workMin').value  = settings.work_minutes;
+  $('shortMin').value = settings.short_break;
+  $('longMin').value  = settings.long_break;
+  $('cycles').value   = settings.cycles_before_long;
+}
+
+async function saveSettings() {
+  settings = {
+    work_minutes: clamp($('workMin').value, 1, 180, 25),
+    short_break:  clamp($('shortMin').value, 1, 60, 5),
+    long_break:   clamp($('longMin').value, 1, 120, 15),
+    cycles_before_long: clamp($('cycles').value, 1, 12, 4),
+  };
+  try {
+    await fetch(API + '/settings', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(settings),
+    });
+    $('savedHint').classList.add('show');
+    setTimeout(() => $('savedHint').classList.remove('show'), 1800);
+  } catch (e) {}
+  if (!running) { clearTimeout(pendingNext); pendingNext = null; setPhase(phase); }
+  pushCurrent();
+}
+
+function clamp(v, min, max, fb) {
+  v = parseInt(v, 10);
+  if (isNaN(v)) v = fb;
+  return Math.min(max, Math.max(min, v));
+}
+
+async function logSession(type, minutes) {
+  try {
+    await fetch(API + '/log', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type, duration_minutes: minutes }),
+    });
+    loadStats();
+  } catch (e) {}
+}
+
+async function loadStats() {
+  try {
+    const r = await fetch(API + '/stats');
+    if (!r.ok) return;
+    const d = await r.json();
+    $('todayBlocks').textContent = d.today_sessions ?? 0;
+    $('todayMin').textContent    = d.today_work_minutes ?? 0;
+    $('totalBlocks').textContent = d.total_sessions ?? 0;
+    $('totalMin').textContent    = d.total_work_minutes ?? 0;
+  } catch (e) {}
+}
+
+// Live-Status an Server pushen (für Overlay / Electron)
+let lastPush = 0;
+function pushCurrent(force) {
+  const now = Date.now();
+  if (!force && now - lastPush < 900) return;   // throttle ~1/s
+  lastPush = now;
+  fetch(CURRENT, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      phase, remaining_seconds: Math.round(remaining), is_running: running, settings,
+    }),
+  }).catch(() => {});
+}
+
+/* ───────── Events ───────── */
+$('startBtn').addEventListener('click', start);
+$('pauseBtn').addEventListener('click', pause);
+$('resetBtn').addEventListener('click', reset);
+$('skipBtn').addEventListener('click', skip);
+$('saveBtn').addEventListener('click', saveSettings);
+$('soundBtn').addEventListener('click', () => {
+  soundOn = !soundOn;
+  $('soundBtn').classList.toggle('active', soundOn);
+  $('soundBtn').textContent = soundOn ? '🔔' : '🔕';
+});
+$('overlayBtn').addEventListener('click', () => {
+  window.open('/apps/focus-timer/overlay.html', 'focusOverlay',
+    'width=400,height=200,menubar=no,toolbar=no,location=no,status=no,resizable=yes');
+});
+document.addEventListener('visibilitychange', () => { if (!document.hidden) render(); });
+
+/* ───────── Init ───────── */
+(async () => {
+  await loadSettings();
+  setPhase('work');
+  loadStats();
+  pushCurrent(true);
+})();
+</script>
+</body>
+</html>

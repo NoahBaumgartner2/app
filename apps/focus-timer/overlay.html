@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Focus · Overlay</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-user-select: none; user-select: none; }
+  html, body { height: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: rgba(0, 0, 0, 0.85);
+    color: #fff;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 6px; padding: 10px; overflow: hidden;
+    -webkit-app-region: drag;   /* Electron: Fenster ziehbar */
+  }
+  .countdown {
+    font-family: 'JetBrains Mono', ui-monospace, Menlo, monospace;
+    font-size: 48px; font-weight: 700; line-height: 1; letter-spacing: -1px;
+  }
+  .phase { font-size: 14px; color: #9ca3af; }
+  .controls { display: flex; gap: 8px; margin-top: 4px; -webkit-app-region: no-drag; }
+  button {
+    font-family: inherit; font-size: 16px; cursor: pointer;
+    background: rgba(255,255,255,0.08); color: #fff;
+    border: 1px solid rgba(255,255,255,0.18); border-radius: 8px;
+    padding: 5px 12px; transition: background 0.15s;
+  }
+  button:hover { background: rgba(255,255,255,0.18); }
+  .hint { font-size: 10px; color: #6b7280; margin-top: 6px; text-align: center; }
+</style>
+</head>
+<body>
+  <div class="countdown" id="countdown">--:--</div>
+  <div class="phase" id="phase">…</div>
+  <div class="controls">
+    <button id="toggleBtn" title="Start/Pause">▶</button>
+    <button id="skipBtn" title="Skip">⏭</button>
+  </div>
+  <div class="hint">Tipp: Für Always-on-Top die Focus-Overlay Mac App verwenden</div>
+
+<script>
+const CURRENT = '/api/focus-timer/current';
+const LABEL = {
+  work: '🎓 Lernblock',
+  short_break: '☕ Kurze Pause',
+  long_break: '🌿 Lange Pause',
+};
+let state = { phase: 'work', remaining_seconds: 0, is_running: false, settings: {} };
+
+function fmt(sec) {
+  sec = Math.max(0, Math.round(sec || 0));
+  const m = Math.floor(sec / 60), s = sec % 60;
+  return String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+}
+
+function render() {
+  document.getElementById('countdown').textContent = fmt(state.remaining_seconds);
+  document.getElementById('phase').textContent = LABEL[state.phase] || state.phase;
+  document.getElementById('toggleBtn').textContent = state.is_running ? '⏸' : '▶';
+  document.title = fmt(state.remaining_seconds) + ' · Focus';
+}
+
+async function poll() {
+  try {
+    const r = await fetch(CURRENT, { cache: 'no-store' });
+    if (r.ok) { state = await r.json(); render(); }
+  } catch (e) { /* offline / Session abgelaufen */ }
+}
+
+async function push() {
+  try {
+    await fetch(CURRENT, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(state),
+    });
+  } catch (e) {}
+}
+
+// Steuerung über den geteilten Server-Status (die Electron-App / das Haupt-Tab reagiert darauf)
+document.getElementById('toggleBtn').addEventListener('click', () => {
+  state.is_running = !state.is_running;
+  render(); push();
+});
+document.getElementById('skipBtn').addEventListener('click', () => {
+  state.phase = 'work';
+  state.is_running = false;
+  render(); push();
+});
+
+poll();
+setInterval(poll, 2000);
+</script>
+</body>
+</html>
