@@ -183,6 +183,7 @@ const API      = 'api';                       // relativ zu /apps/focus-timer/
 const CURRENT  = '/api/focus-timer/current';  // öffentlicher Live-Status
 const RING_R   = 90;
 const CIRC     = 2 * Math.PI * RING_R;        // ≈ 565.49
+const STORE_KEY = 'focusTimerState';          // localStorage: überlebt Seitenwechsel
 
 const PHASE = {
   work:        { label: (i, n) => `🎓 Lernblock ${i}/${n}`, color: 'var(--work)',  mins: s => s.work_minutes },
@@ -199,6 +200,9 @@ let running = false;
 let soundOn = true;
 let ticker = null;
 let pendingNext = null;               // Timeout-Handle für Auto-Weiter
+let pendingUntil = 0;                 // Date.now()-Deadline des Auto-Weiter (überlebt Reload)
+let startedAt = 0;                    // Date.now() beim Start/Fortsetzen
+let startedWithSeconds = 0;           // remaining-Snapshot beim Start/Fortsetzen
 
 const $ = id => document.getElementById(id);
 
@@ -249,11 +253,13 @@ function setPhase(p) {
   total = phaseDuration(p);
   remaining = total;
   render();
+  saveState();
 }
 
+// Zeit kommt immer aus Date.now() — läuft auch im Hintergrund-Tab weiter
 function tick() {
-  if (document.visibilityState === 'hidden') return;  // pausiert bei verstecktem Tab
-  remaining -= 1;
+  const elapsed = Math.floor((Date.now() - startedAt) / 1000);
+  remaining = startedWithSeconds - elapsed;
   if (remaining <= 0) {
     remaining = 0;
     render();
@@ -266,22 +272,30 @@ function tick() {
 
 function start() {
   if (running) return;
-  clearTimeout(pendingNext); pendingNext = null;
+  clearTimeout(pendingNext); pendingNext = null; pendingUntil = 0;
   running = true;
-  ticker = setInterval(tick, 1000);
+  startedAt = Date.now();
+  startedWithSeconds = remaining;
+  // 500ms-Tick nur für flüssige Anzeige — die echte Zeit kommt aus Date.now()
+  ticker = setInterval(tick, 500);
   if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission();
-  render(); pushCurrent();
+  render(); pushCurrent(); saveState();
 }
 
 function pause() {
+  if (running) {
+    // verbleibende Zeit als Snapshot festhalten
+    const elapsed = Math.floor((Date.now() - startedAt) / 1000);
+    remaining = Math.max(0, startedWithSeconds - elapsed);
+  }
   running = false;
   clearInterval(ticker); ticker = null;
-  pushCurrent();
+  pushCurrent(); saveState();
 }
 
 function reset() {
   pause();
-  clearTimeout(pendingNext); pendingNext = null;
+  clearTimeout(pendingNext); pendingNext = null; pendingUntil = 0;
   blockInCycle = 0;
   setPhase('work');
   pushCurrent();
@@ -327,12 +341,14 @@ function completePhase() {
   setPhase(next);
   pushCurrent(true);
 
-  // Auto-weiter nach 5 s
-  pendingNext = setTimeout(() => { pendingNext = null; start(); }, 5000);
+  // Auto-weiter nach 5 s — Deadline merken, damit der Übergang einen Reload überlebt
+  pendingUntil = Date.now() + 5000;
+  pendingNext = setTimeout(() => { pendingNext = null; pendingUntil = 0; start(); }, 5000);
+  saveState();
 }
 
 function skip() {
-  clearTimeout(pendingNext); pendingNext = null;
+  clearTimeout(pendingNext); pendingNext = null; pendingUntil = 0;
   pause();
   // work zählt beim Skip NICHT als abgeschlossen (kein Log), aber der Zyklus läuft weiter
   if (phase === 'work') {
@@ -380,8 +396,8 @@ async function saveSettings() {
     $('savedHint').classList.add('show');
     setTimeout(() => $('savedHint').classList.remove('show'), 1800);
   } catch (e) {}
-  if (!running) { clearTimeout(pendingNext); pendingNext = null; setPhase(phase); }
-  pushCurrent();
+  if (!running) { clearTimeout(pendingNext); pendingNext = null; pendingUntil = 0; setPhase(phase); }
+  pushCurrent(); saveState();
 }
 
 function clamp(v, min, max, fb) {
@@ -426,6 +442,59 @@ function pushCurrent(force) {
   }).catch(() => {});
 }
 
+/* ───────── Persistenz (localStorage) ─────────
+   Hält den Timer-Zustand über Seitenwechsel (z.B. zurück zum Dashboard) hinweg.
+   Restzeit wird beim Wiederherstellen aus Date.now() neu berechnet → läuft nahtlos weiter. */
+function saveState() {
+  try {
+    localStorage.setItem(STORE_KEY, JSON.stringify({
+      phase, blockInCycle, running,
+      startedAt, startedWithSeconds,
+      remaining: Math.round(remaining),
+      pendingUntil, soundOn,
+    }));
+  } catch (e) { /* ignore */ }
+}
+
+function restoreState() {
+  let raw;
+  try { raw = JSON.parse(localStorage.getItem(STORE_KEY) || 'null'); } catch (e) { return false; }
+  if (!raw || !raw.phase) return false;
+
+  phase = raw.phase;
+  blockInCycle = raw.blockInCycle || 0;
+  total = phaseDuration(phase);
+  if (typeof raw.soundOn === 'boolean') {
+    soundOn = raw.soundOn;
+    $('soundBtn').classList.toggle('active', soundOn);
+    $('soundBtn').textContent = soundOn ? '🔔' : '🔕';
+  }
+
+  if (raw.running) {
+    // lief beim Verlassen → Timestamps übernehmen, NICHT neu setzen
+    startedAt = raw.startedAt;
+    startedWithSeconds = raw.startedWithSeconds;
+    running = true;
+    ticker = setInterval(tick, 500);
+    tick();                       // sofort echte Restzeit berechnen (ggf. Phasenwechsel)
+    return true;
+  }
+
+  // pausiert oder im 5s-Übergang zwischen zwei Phasen
+  remaining = (raw.remaining != null) ? raw.remaining : total;
+  render();
+
+  if (raw.pendingUntil && raw.pendingUntil > 0) {
+    const wait = raw.pendingUntil - Date.now();
+    if (wait <= 0) { start(); }                 // Übergang ist abgelaufen → direkt weiter
+    else {
+      pendingUntil = raw.pendingUntil;
+      pendingNext = setTimeout(() => { pendingNext = null; pendingUntil = 0; start(); }, wait);
+    }
+  }
+  return true;
+}
+
 /* ───────── Events ───────── */
 $('startBtn').addEventListener('click', start);
 $('pauseBtn').addEventListener('click', pause);
@@ -436,6 +505,7 @@ $('soundBtn').addEventListener('click', () => {
   soundOn = !soundOn;
   $('soundBtn').classList.toggle('active', soundOn);
   $('soundBtn').textContent = soundOn ? '🔔' : '🔕';
+  saveState();
 });
 $('overlayBtn').addEventListener('click', () => {
   window.open('/apps/focus-timer/overlay.html', 'focusOverlay',
@@ -446,7 +516,9 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) rend
 /* ───────── Init ───────── */
 (async () => {
   await loadSettings();
-  setPhase('work');
+  // Gespeicherten Zustand wiederherstellen (überlebt Zurück-zum-Dashboard);
+  // nur wenn keiner existiert, frisch mit 'work' starten.
+  if (!restoreState()) setPhase('work');
   loadStats();
   pushCurrent(true);
 })();
