@@ -650,6 +650,88 @@ let mathGeminiResults = [];
 const geminiFileCache = new Map(); // key: driveFile.id → { uri, uploadedAt }
 const GEMINI_URI_TTL  = 45 * 60 * 1000;
 
+let openDrafts  = {}; // ungespeicherte Textfeld-Entwürfe offener Fragen, key: Frage-Index
+let kprimDrafts = {}; // noch nicht bestätigte KPrim-Auswahlen, key: Frage-Index → [val pro Zeile]
+
+// ── Persistenz: laufende Prüfung über Seitenwechsel hinweg behalten ─────────
+const ET_LS_KEY = 'examTrainer_examState';
+
+function saveExamState() {
+  // Nur speichern, solange eine Prüfung aktiv läuft (Exam-Ansicht offen)
+  if (!questions.length) return;
+  if (!document.getElementById('vExam')?.classList.contains('active')) return;
+
+  // Live-Entwurf der aktuellen offenen Frage übernehmen
+  const taEl = document.getElementById('openTA');
+  if (taEl && questions[currentQ]?.type === 'open') openDrafts[currentQ] = taEl.value;
+
+  const base = {
+    v: 1,
+    examFormat, answers, hintsShown, mathGeminiResults,
+    currentQ, sessionStart, sessionSaved, savedDuration, openDrafts, kprimDrafts,
+    // Timer als absolute Deadline → bleibt auch während Abwesenheit korrekt
+    timerDeadline: timerHandle ? Date.now() + timerRemain * 1000 : 0,
+    timerRemain,
+    subject: document.getElementById('subject')?.value || '',
+    savedAt: Date.now(),
+  };
+  try {
+    localStorage.setItem(ET_LS_KEY, JSON.stringify({ ...base, questions, mathUploads }));
+  } catch (e) {
+    // Quota überschritten (meist durch Mathe-Bild-Uploads) → ohne Uploads erneut versuchen
+    try {
+      localStorage.setItem(ET_LS_KEY, JSON.stringify({
+        ...base, questions, mathUploads: mathUploads.map(() => []),
+      }));
+    } catch {}
+  }
+}
+
+function clearExamState() {
+  try { localStorage.removeItem(ET_LS_KEY); } catch {}
+}
+
+function restoreExamState() {
+  let s;
+  try { s = JSON.parse(localStorage.getItem(ET_LS_KEY) || 'null'); } catch { return false; }
+  if (!s || !Array.isArray(s.questions) || !s.questions.length) return false;
+
+  examFormat        = s.examFormat || 'concept';
+  questions         = s.questions;
+  answers           = s.answers           || new Array(questions.length).fill(null);
+  hintsShown        = s.hintsShown        || new Array(questions.length).fill(0);
+  mathGeminiResults = s.mathGeminiResults || new Array(questions.length).fill(null);
+  mathUploads       = s.mathUploads       || new Array(questions.length).fill(null).map(() => []);
+  currentQ          = s.currentQ          || 0;
+  sessionStart      = s.sessionStart      || Date.now();
+  sessionSaved      = !!s.sessionSaved;
+  savedDuration     = s.savedDuration     || 0;
+  openDrafts        = s.openDrafts        || {};
+  kprimDrafts       = s.kprimDrafts       || {};
+  if (s.subject) { const el = document.getElementById('subject'); if (el) el.value = s.subject; }
+
+  // Timer aus absoluter Deadline rekonstruieren
+  if (s.timerDeadline) {
+    timerRemain = Math.round((s.timerDeadline - Date.now()) / 1000);
+    if (timerRemain <= 0) { // Zeit ist während der Abwesenheit abgelaufen
+      timerRemain = 0;
+      showView('Exam');
+      renderQuestion();
+      finishExam();
+      return true;
+    }
+  } else {
+    timerRemain = s.timerRemain || 0;
+  }
+
+  document.getElementById('tabExam').classList.add('active');
+  document.getElementById('tabHistory').classList.remove('active');
+  showView('Exam');
+  renderQuestion();
+  if (timerRemain > 0) startTimer();
+  return true;
+}
+
 // ── KaTeX rendering ───────────────────────────────────────────────────────
 function renderLatex(el) {
   if (!el || !window.renderMathInElement) return;
@@ -686,6 +768,7 @@ function showSetup() {
   document.getElementById('tabExam').classList.add('active');
   document.getElementById('tabHistory').classList.remove('active');
   stopTimer();
+  clearExamState();
   showView('Setup');
 }
 
@@ -746,6 +829,31 @@ function saveClientIdAndConnect() {
   connectDrive();
 }
 
+// ── Drive-Token über Seitenwechsel behalten (gleiche Browser-Sitzung) ───────
+const DRIVE_TOKEN_KEY = 'examTrainer_driveToken';
+
+function saveDriveToken(token, expiresInSec) {
+  try {
+    sessionStorage.setItem(DRIVE_TOKEN_KEY, JSON.stringify({
+      token, expiresAt: Date.now() + (expiresInSec || 3600) * 1000,
+    }));
+  } catch {}
+}
+
+function clearDriveToken() {
+  try { sessionStorage.removeItem(DRIVE_TOKEN_KEY); } catch {}
+}
+
+function restoreDriveToken() {
+  let d;
+  try { d = JSON.parse(sessionStorage.getItem(DRIVE_TOKEN_KEY) || 'null'); } catch { return false; }
+  if (!d || !d.token) return false;
+  if (Date.now() > (d.expiresAt || 0) - 60000) { clearDriveToken(); return false; } // abgelaufen (60s Puffer)
+  driveToken = d.token;
+  showDriveConnected();
+  return true;
+}
+
 function handleOAuthReturn() {
   if (!window.location.hash) return false;
   const params = new URLSearchParams(window.location.hash.substring(1));
@@ -753,6 +861,7 @@ function handleOAuthReturn() {
   if (!token) return false;
   history.replaceState(null, '', window.location.pathname);
   driveToken = token;
+  saveDriveToken(token, parseInt(params.get('expires_in') || '3600', 10));
   showDriveConnected();
   loadDriveFolder('root');
   return true;
@@ -769,6 +878,7 @@ function disconnectDrive() {
   document.getElementById('driveDisconnected').style.display = '';
   document.getElementById('driveConnected').style.display   = 'none';
   document.getElementById('clientIdWrap').style.display     = 'none';
+  clearDriveToken();
   persistSelectedFiles();
   renderSelectedFiles();
 }
@@ -784,6 +894,12 @@ async function loadDriveFolder(folderId) {
   const url    = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}&fields=${encodeURIComponent(fields)}&orderBy=folder,name`;
   try {
     const res  = await fetch(url, { headers: { Authorization: `Bearer ${driveToken}` } });
+    if (res.status === 401) {
+      clearDriveToken(); driveToken = null;
+      document.getElementById('driveDisconnected').style.display = '';
+      document.getElementById('driveConnected').style.display   = 'none';
+      throw new Error('Google-Token abgelaufen – bitte neu verbinden');
+    }
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
     driveFiles = data.files || [];
@@ -1091,6 +1207,8 @@ async function generate() {
     currentQ          = 0;
     sessionStart      = Date.now();
     sessionSaved      = false;
+    openDrafts        = {};
+    kprimDrafts       = {};
 
     const timerMin = parseInt(document.querySelector('[data-timer].active')?.dataset.timer || '0');
     timerRemain = timerMin * 60;
@@ -1098,6 +1216,7 @@ async function generate() {
 
     showView('Exam');
     renderQuestion();
+    saveExamState();
 
   } catch (err) {
     console.error('[ExamTrainer] Fehler:', err?.name, err?.message, err);
@@ -1240,6 +1359,45 @@ function renderQuestion() {
       <div id="openFB" class="open-feedback"></div>`;
   }
 
+  // Bereits gegebene Antwort / Entwurf wiederherstellen (z. B. nach Seitenwechsel)
+  const prev = answers[currentQ];
+  if (prev) {
+    if (q.type === 'multiple_choice') {
+      document.querySelectorAll('.mc-opt').forEach(b => {
+        b.disabled = true;
+        if (b.dataset.opt === prev.userAnswer) { b.classList.add('sel'); b.disabled = false; }
+      });
+    } else if (q.type === 'true_false') {
+      document.querySelectorAll('.tf-btn').forEach(b => { b.disabled = true; });
+      document.querySelector(prev.userAnswer === 'Wahr' ? '.tf-true' : '.tf-false')?.classList.add('sel');
+    } else if (q.type === 'kprim') {
+      (prev.userAnswer || '').split(',').forEach((v, i) => {
+        document.getElementById(`kprim-row-${i}`)?.querySelector(`.kprim-btn[data-val="${v}"]`)?.classList.add('sel');
+      });
+    } else if (q.type === 'open') {
+      const ta = document.getElementById('openTA');
+      if (ta) ta.value = prev.userAnswer || '';
+      if (prev.openScore != null) {
+        const fb = document.getElementById('openFB');
+        if (fb) {
+          fb.className   = 'open-feedback ' + (prev.isCorrect ? 'ok' : 'bad');
+          fb.textContent = `${prev.isCorrect ? '✓' : '✗'} ${prev.openScore}/100 — ${prev.feedback || ''}`;
+        }
+      }
+    }
+    document.getElementById('nextBtn').disabled = false;
+  } else if (q.type === 'open') {
+    const ta = document.getElementById('openTA');
+    if (ta && openDrafts[currentQ]) ta.value = openDrafts[currentQ];
+  } else if (q.type === 'kprim' && kprimDrafts[currentQ]) {
+    kprimDrafts[currentQ].forEach((v, i) => {
+      if (v) document.getElementById(`kprim-row-${i}`)?.querySelector(`.kprim-btn[data-val="${v}"]`)?.classList.add('sel');
+    });
+    const opts = (q.options || []).slice(0, 4);
+    if (opts.length && opts.every((_, i) => kprimDrafts[currentQ][i]))
+      document.getElementById('nextBtn').disabled = false;
+  }
+
   renderLatex(qTextEl);
   renderLatex(area);
 }
@@ -1265,6 +1423,7 @@ function showNextHint() {
       btn.textContent = `💡 Hint anzeigen (${shown + 1}/${q.hints.length}) — kostet −${(shown + 1) * 10}% der Punkte`;
     }
   }
+  saveExamState();
 }
 
 // ── Math upload helpers ───────────────────────────────────────────────────
@@ -1290,11 +1449,13 @@ async function handleMathFiles(files) {
   renderMathUploadPreviews();
   const inp = document.getElementById('mathFileInput');
   if (inp) inp.value = '';
+  saveExamState();
 }
 
 function removeMathUpload(idx) {
   if (mathUploads[currentQ]) mathUploads[currentQ].splice(idx, 1);
   renderMathUploadPreviews();
+  saveExamState();
 }
 
 function renderMathUploadPreviews() {
@@ -1358,6 +1519,7 @@ function selectMC(btn) {
   btn.classList.add('sel'); btn.disabled = false;
   answers[currentQ] = { userAnswer: answer, isCorrect: norm(answer) === norm(questions[currentQ].correct_answer) };
   document.getElementById('nextBtn').disabled = false;
+  saveExamState();
 }
 
 function selectTF(btn, answer) {
@@ -1368,6 +1530,7 @@ function selectTF(btn, answer) {
   const ua = norm(answer);
   answers[currentQ] = { userAnswer: answer, isCorrect: ua === ca || (ua === 'wahr' && ca === 'true') || (ua === 'falsch' && ca === 'false') };
   document.getElementById('nextBtn').disabled = false;
+  saveExamState();
 }
 
 function selectKprim(btn, rowIdx) {
@@ -1375,11 +1538,14 @@ function selectKprim(btn, rowIdx) {
   row.querySelectorAll('.kprim-btn').forEach(b => b.classList.remove('sel'));
   btn.classList.add('sel');
   const opts = (questions[currentQ].options || []).slice(0, 4);
+  kprimDrafts[currentQ] = opts.map((_, i) =>
+    document.getElementById(`kprim-row-${i}`)?.querySelector('.kprim-btn.sel')?.dataset.val || null);
   const allAnswered = opts.every((_, i) => {
     const r = document.getElementById(`kprim-row-${i}`);
     return r && r.querySelector('.kprim-btn.sel');
   });
   if (allAnswered) document.getElementById('nextBtn').disabled = false;
+  saveExamState();
 }
 
 async function checkOpen() {
@@ -1408,12 +1574,14 @@ async function checkOpen() {
     const result = JSON.parse(raw.replace(/^```(?:json)?\s*/i,'').replace(/\s*```$/i,''));
     const score  = Math.min(100, Math.max(0, parseInt(result.score) || 0));
     const isOk   = score >= 60;
-    answers[currentQ] = { userAnswer: ua, isCorrect: isOk, openScore: score };
+    answers[currentQ] = { userAnswer: ua, isCorrect: isOk, openScore: score, feedback: result.feedback || '' };
+    saveExamState();
     const fb = document.getElementById('openFB');
     fb.className  = 'open-feedback ' + (isOk ? 'ok' : 'bad');
     fb.textContent = `${isOk ? '✓' : '✗'} ${score}/100 — ${result.feedback || ''}`;
   } catch {
     answers[currentQ] = { userAnswer: ua, isCorrect: false, openScore: 0 };
+    saveExamState();
     const fb = document.getElementById('openFB');
     fb.className  = 'open-feedback bad';
     fb.textContent = '⚠ Bewertung fehlgeschlagen — als nicht korrekt gewertet.';
@@ -1470,7 +1638,7 @@ async function nextQuestion() {
     };
   }
 
-  if (currentQ < questions.length - 1) { currentQ++; renderQuestion(); }
+  if (currentQ < questions.length - 1) { currentQ++; renderQuestion(); saveExamState(); }
   else finishExam();
 }
 
@@ -1488,6 +1656,7 @@ document.addEventListener('keydown', e => {
 // ── Finish exam ───────────────────────────────────────────────────────────
 async function finishExam() {
   stopTimer();
+  clearExamState();
   savedDuration = Math.round((Date.now() - sessionStart) / 1000);
 
   // Handle current question if it's a math question that wasn't graded (e.g. timer expired)
@@ -1686,11 +1855,14 @@ function retryWrong() {
   currentQ          = 0;
   sessionStart      = Date.now();
   sessionSaved      = false;
+  openDrafts        = {};
+  kprimDrafts       = {};
   const timerMin = parseInt(document.querySelector('[data-timer].active')?.dataset.timer || '0');
   timerRemain = timerMin * 60;
   if (timerRemain > 0) startTimer();
   showView('Exam');
   renderQuestion();
+  saveExamState();
 }
 
 // ── Save session ──────────────────────────────────────────────────────────
@@ -1899,7 +2071,10 @@ function persistSelectedFiles() {
   const s = await fetch('/api/secrets').then(r => r.ok ? r.json() : {}).catch(() => ({}));
   geminiApiKey = s.gemini_api_key || '';
   updateGeminiBadge();
-  handleOAuthReturn();
+  // OAuth-Rückkehr verarbeiten; sonst gespeicherten Token wiederherstellen
+  if (!handleOAuthReturn() && restoreDriveToken()) {
+    loadDriveFolder(currentFolder);
+  }
   try {
     const saved = sessionStorage.getItem('examTrainer_selectedFiles');
     if (saved) {
@@ -1907,7 +2082,16 @@ function persistSelectedFiles() {
       renderSelectedFiles();
     }
   } catch {}
+
+  // Laufende Prüfung wiederherstellen (überlebt Seitenwechsel zum Dashboard)
+  restoreExamState();
 })();
+
+// Beim Verlassen/Ausblenden der Seite letzten Stand sichern
+window.addEventListener('pagehide', saveExamState);
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') saveExamState();
+});
 </script>
 </body>
 </html>

@@ -75,7 +75,16 @@
       "Bash(bluetoothctl devices *)",
       "Bash(pip install *)",
       "Read(//usr/local/bin/**)",
-      "Bash(pip show *)"
+      "Bash(pip show *)",
+      "Bash(graphify update *)",
+      "Bash(git add *)",
+      "Bash(git commit -q -m ' *)",
+      "Bash(echo \"exit=$?\")",
+      "Bash(awk 'NR>=120 && NR<=290' /home/miniserver/development/dashboard/apps/examTrainer/index.html)",
+      "Bash(awk NR>=133 && NR<=320 {printf \"%d| %s\\\\n\", NR, $0} *)",
+      "Bash(awk *)",
+      "Bash(python3 *)",
+      "Bash(read f *)"
     ]
   }
 }

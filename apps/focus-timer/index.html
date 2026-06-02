@@ -261,9 +261,31 @@ function tick() {
   const elapsed = Math.floor((Date.now() - startedAt) / 1000);
   remaining = startedWithSeconds - elapsed;
   if (remaining <= 0) {
-    remaining = 0;
+    const overshoot = -remaining;       // Sekunden über das Phasenende hinaus
+    // Live (Tab im Vordergrund): nur Sekundenbruchteile drüber → schöne 5s-Pause + Ton.
+    if (overshoot <= 2) {
+      remaining = 0;
+      render();
+      completePhase();
+      return;
+    }
+    // Aufholen nach Hintergrund-Drosselung / Seitenwechsel: ALLE verpassten Phasen
+    // abarbeiten und jeden Work-Block nachloggen — nicht nur einen.
+    let over = overshoot, guard = 0;
+    while (guard++ < 2000) {
+      rolloverPhase();                  // beendet aktuelle Phase, setzt phase/total/remaining
+      if (total <= 0) { remaining = 0; break; }
+      if (over < total) {               // in dieser Phase stecken wir gerade noch
+        startedAt = Date.now() - over * 1000;
+        startedWithSeconds = total;
+        remaining = total - over;
+        break;
+      }
+      over -= total;                    // diese Phase ist ebenfalls komplett vergangen
+    }
     render();
-    completePhase();
+    pushCurrent();
+    saveState();
     return;
   }
   render();
@@ -313,6 +335,27 @@ function nextPhaseName() {
     return (done >= settings.cycles_before_long) ? 'long_break' : 'short_break';
   }
   return 'work';
+}
+
+// Schaltet eine Phase weiter OHNE Ton/5s-Pause — für die Aufhol-Logik in tick(),
+// wenn nach Hintergrund-Drosselung oder Seitenwechsel mehrere Phasen verstrichen sind.
+// Loggt abgeschlossene Work-Blöcke, damit die Statistik nicht hängenbleibt.
+function rolloverPhase() {
+  const finished = phase;
+  if (finished === 'work') {
+    logSession('work', settings.work_minutes);
+    blockInCycle += 1;
+  }
+  let next;
+  if (finished === 'work') {
+    next = (blockInCycle >= settings.cycles_before_long) ? 'long_break' : 'short_break';
+  } else {
+    if (finished === 'long_break') blockInCycle = 0;
+    next = 'work';
+  }
+  phase = next;
+  total = phaseDuration(next);
+  remaining = total;
 }
 
 // Wird am Ende JEDER Phase aufgerufen (Countdown bei 0)
