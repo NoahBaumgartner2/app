@@ -132,6 +132,7 @@
 
       <div class="secondary-controls">
         <button class="icon-btn active" id="soundBtn" title="Ton an/aus">🔔</button>
+        <button class="icon-btn" id="notifyBtn" title="Browser-Benachrichtigungen aktivieren">🔕 Benachrichtigungen</button>
         <button class="icon-btn" id="overlayBtn" title="Overlay-Fenster öffnen">🖥 Overlay öffnen</button>
       </div>
     </div>
@@ -332,6 +333,53 @@ function notify(text) {
   if ('Notification' in window && Notification.permission === 'granted') {
     try { new Notification('Focus Timer', { body: text, silent: true }); } catch (e) {}
   }
+}
+
+// Spiegelt den aktuellen Berechtigungs-Status in den Button — so sieht man sofort,
+// warum (k)eine Benachrichtigung kommt.
+function updateNotifyBtn() {
+  const b = $('notifyBtn');
+  if (!b) return;
+  if (!('Notification' in window)) {
+    b.textContent = '🚫 nicht verfügbar';
+    b.title = 'Benachrichtigungen brauchen HTTPS oder localhost — dieser Kontext unterstützt sie nicht';
+    b.classList.remove('active'); b.disabled = true; return;
+  }
+  const p = Notification.permission;
+  if (p === 'granted') {
+    b.textContent = '🔔 Benachrichtigungen an';
+    b.title = 'Benachrichtigungen sind aktiv'; b.classList.add('active');
+  } else if (p === 'denied') {
+    b.textContent = '🚫 blockiert';
+    b.title = 'Im Browser für diese Seite blockiert — über das Schloss-Symbol in der Adressleiste erlauben';
+    b.classList.remove('active');
+  } else {
+    b.textContent = '🔕 Benachrichtigungen';
+    b.title = 'Klicken, um Browser-Benachrichtigungen zu aktivieren';
+    b.classList.remove('active');
+  }
+}
+
+// Fordert die Erlaubnis per echtem Klick an (User-Geste) — anders als der stille
+// Auto-Request in start(), den der Browser ohne Geste ignoriert.
+async function requestNotify() {
+  if (!('Notification' in window)) {
+    alert('Dieser Browser/Kontext unterstützt keine Benachrichtigungen (HTTPS oder localhost nötig).');
+    return;
+  }
+  if (Notification.permission === 'denied') {
+    alert('Benachrichtigungen sind im Browser für diese Seite blockiert.\n\nBitte über das Schloss-Symbol links in der Adressleiste → Benachrichtigungen → "Erlauben" wieder freischalten.');
+    return;
+  }
+  try {
+    const res = await Notification.requestPermission();
+    updateNotifyBtn();
+    if (res === 'granted') {
+      try { new Notification('Focus Timer', { body: 'Benachrichtigungen aktiviert ✓', silent: true }); } catch (e) {}
+    } else {
+      alert('Erlaubnis wurde nicht erteilt. Du bekommst weiterhin nur den Ton.');
+    }
+  } catch (e) {}
 }
 
 function nextPhaseName() {
@@ -555,6 +603,7 @@ $('soundBtn').addEventListener('click', () => {
   $('soundBtn').textContent = soundOn ? '🔔' : '🔕';
   saveState();
 });
+$('notifyBtn').addEventListener('click', requestNotify);
 $('overlayBtn').addEventListener('click', () => {
   window.open('/apps/focus-timer/overlay.html', 'focusOverlay',
     'width=400,height=200,menubar=no,toolbar=no,location=no,status=no,resizable=yes');
@@ -568,6 +617,7 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) rend
   // nur wenn keiner existiert, frisch mit 'work' starten.
   if (!restoreState()) setPhase('work');
   loadStats();
+  updateNotifyBtn();
   pushCurrent(true);
 })();
 </script>
