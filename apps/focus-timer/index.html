@@ -283,6 +283,11 @@ function tick() {
       }
       over -= total;                    // diese Phase ist ebenfalls komplett vergangen
     }
+    // Auch beim Aufholen den Nutzer EINMAL benachrichtigen — sonst verpasst man
+    // den Phasenwechsel komplett, wenn der Timer im Hintergrund-Tab läuft
+    // (genau der Normalfall: man arbeitet währenddessen in einem anderen Tab).
+    beep();
+    notify(PHASE[phase].label(blockInCycle + 1, settings.cycles_before_long) + ' läuft');
     render();
     pushCurrent();
     saveState();
