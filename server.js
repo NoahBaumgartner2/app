@@ -255,10 +255,11 @@ app.use(session({
   secret: process.env.SESSION_SECRET || 'dashboard-local-secret-bitte-aendern',
   resave: false,
   saveUninitialized: false,
+  rolling: true,
   cookie: {
     httpOnly: true,
     sameSite: 'lax',
-    maxAge: 7 * 24 * 60 * 60 * 1000   // 7 Tage
+    maxAge: 10 * 365 * 24 * 60 * 60 * 1000   // 10 Jahre
   }
 }));
 
